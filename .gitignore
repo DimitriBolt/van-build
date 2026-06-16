@@ -1,0 +1,20 @@
+# FreeCAD backups / scratch
+*.FCBak
+*.FCStd1
+
+# Python
+__pycache__/
+*.pyc
+
+# Локальные настройки агента/редактора
+.claude/
+
+# Приватные данные машины (VIN и т.п.) — не публиковать
+vehicle-private.md
+
+# Дубликат загрузки (тот же .skp лежит распакованным рядом)
+fiat-ducato-ram-promaster-136-wheel-base-high-roof-camper-conversion-1.snapshot.1.zip
+
+# Временные скриншоты рендеров
+s_*.png
+shot_*.png
