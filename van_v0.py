@@ -110,7 +110,8 @@ PARAMS = {
 # направляющими для обшивки/оборудования.
 BED = {
     "enable": True,
-    "mattress_width_x": 1400,   # ВДОЛЬ X (от задних дверей вперёд); 1200 — альтернатива, НЕ решено
+    "mattress_width_x": 1400,   # передний край настила = bed_cx + это/2 (перед к кабине)
+    "deck_rear_x":      20,     # задний край настила — почти у задней двери (X≈0), по просьбе
     "top_z":            980,    # верх продольных несущих ≈ высота заводской резьбовой точки
     "wall_clear":       30,     # отступ центра ноги от внутр. поверхности борта
     "strut_deep_w":     41.3,   # 1-5/8" глубокий профиль (ноги + продольные несущие)
@@ -118,17 +119,22 @@ BED = {
     "cross_w":          41.3,   # поперечины: 1-5/8×13/16 неглубокий профиль — дешевле/легче
     "cross_h":          21.0,
     "deck_th":          18,     # фанерный настил 3/4"
-    "mattress_th":      150,    # матрас (визуал)
+    "mattress_th":      150,    # матрас из поролона (визуал; режется по форме)
     "n_cross":          5,      # число поперечин под фанеру
+    "rear_feet":        True,   # задние опорные ножки на полу под свес настила к двери
+    "foot_inset":       40,     # отступ задней ножки от заднего края настила, мм
     "post_margin_top":  30,     # запас под крышей сверху стойки
 }
-# Прайс-ориентир (США ~2026, Home Depot Superstrut) для оценки сметы — SEED, уточнить:
+# Прайс-ориентир (США, июнь 2026; Home Depot/Lowe's/Amazon) — оценка, уточнять при заказе.
 BED_PRICES = {
-    "deep_10ft":   28.0,   # глубокий strut 1-5/8×1-5/8, 10 ft, 12 ga
-    "shallow_10ft": 20.0,  # неглубокий strut 1-5/8×13/16, 10 ft
-    "angle_fitting": 5.0,  # угловой кронштейн (p1325 и т.п.)
-    "channel_nut":  1.5,   # пружинная гайка в канал
-    "bolt":         0.7,   # болт M8/M10 / 1/2"
+    "deep_10ft":    40.0,   # Superstrut ZA12HS10EG 1-5/8×1-5/8 12ga 10ft (Home Depot ~$40)
+    "shallow_10ft": 33.0,   # Superstrut ZB1400HS 1-5/8×13/16 14ga 10ft (~$32–40)
+    "angle_fitting": 3.2,   # Superstrut ZAB205 4-отв. угол 90° (~$3.1–3.5; на Amazon мультипак дешевле)
+    "spring_set":    0.8,   # пружинная гайка+болт, набор 50шт на Amazon ~$40 → ~$0.8/комплект
+    "wall_bolt":     1.0,   # болт M8/M10 в заводскую резьбовую точку
+    "end_cap":       0.4,   # пластиковая заглушка на рез
+    "post_base":     6.0,   # опорная пятка ножки на пол (опц.)
+    "ply_sheet":    45.0,   # лист фанеры 3/4" 4×8 ft (~$40–60)
 }
 
 DOC_NAME    = "van_v0"
@@ -542,7 +548,9 @@ def build():
         leg_xs = [rear_thread_x, middle_thread_x]         # 360, 1680 (заводские точки)
         bed_cx = sum(leg_xs) / 2.0
         bw = B["mattress_width_x"]
-        deck_x0, deck_x1 = bed_cx - bw / 2.0, bed_cx + bw / 2.0
+        # передний край — от bed_cx; задний край тянем почти до задней двери (X≈0) по просьбе
+        deck_x1 = bed_cx + bw / 2.0
+        deck_x0 = B.get("deck_rear_x", bed_cx - bw / 2.0)
 
         # высота стойки: вверх до Z, где борт ещё не ушёл внутрь Y ноги (под крышу)
         crown = half[-1][1]
@@ -577,6 +585,18 @@ def build():
                   (deck_x1 - deck_x0, sw, sh),
                   (deck_x0, ly - sw / 2.0, bz - sh), "deep")
 
+        # задние опорные ножки на полу: настил вынесен назад к двери за ноги (X=360),
+        # поэтому продольные свешиваются ~340 мм назад — подпираем их ножками у пола.
+        foot_h = bz - sh
+        if B.get("rear_feet"):
+            fx = deck_x0 + B.get("foot_inset", 40)
+            for ysign, tag in ((+1, "pY"), (-1, "nY")):
+                ly = ysign * (yL - sw)
+                strut("BedRearFoot_%s" % tag,
+                      "Задняя опорная ножка strut %s X=%.0f (пол→настил, под свес)" % (tag, fx),
+                      (sw, sw, foot_h),
+                      (fx - sw / 2.0, ly - sw / 2.0, 0.0), "deep")
+
         # поперечины (вдоль Y) поверх продольных, под фанеру; неглубокий профиль
         cross_span = yL - sw / 2.0                # до внутр. грани ноги
         nC = B["n_cross"]
@@ -606,24 +626,49 @@ def build():
                   (front_thread_x - sw / 2.0, yL - sw / 2.0, 0.0), "deep")
 
         # ── смета / cut-list ──
+        # Хлысты считаем УПАКОВКОЙ (First-Fit-Decreasing): длинные ~1.8 м куски часто
+        # дают 1 шт на 10-фт хлыст + большой остаток — обычный ceil(сумма/хлыст) врёт.
         STICK = 3048.0  # 10 ft
-        deep_mm = sum(L_ for _, L_, k in cutlist if k == "deep")
-        shal_mm = sum(L_ for _, L_, k in cutlist if k == "shallow")
-        deep_sticks = math.ceil(deep_mm / STICK)
-        shal_sticks = math.ceil(shal_mm / STICK)
-        # фитинги: 5 настенных (угол+болт), 4 нога↔продольная (угол), поперечины (2 гайки+2 болта)
-        n_wall, n_legrail = 5, 4
-        n_angles = n_wall + n_legrail
-        n_nuts = 2 * nC
-        n_bolts = n_wall + 2 * nC
+        KERF = 4.0      # пропил
+        def _pack(lengths):
+            bins = []
+            for Lp in sorted(lengths, reverse=True):
+                for b in range(len(bins)):
+                    if bins[b] + Lp + KERF <= STICK:
+                        bins[b] += Lp + KERF
+                        break
+                else:
+                    bins.append(Lp + KERF)
+            return len(bins)
+        deep_L = [Lp for _, Lp, k in cutlist if k == "deep"]
+        shal_L = [Lp for _, Lp, k in cutlist if k == "shallow"]
+        deep_mm, shal_mm = sum(deep_L), sum(shal_L)
+        deep_sticks, shal_sticks = _pack(deep_L), _pack(shal_L)
+
+        # — крепёж (реалистично; см. BOM в FURNITURE_MEMORY.md) —
+        n_wall_mounts = 5                 # 4 ноги кровати + 1 стойка оборудования → к борту
+        n_leg_rail    = 4                 # ноги ↔ продольные несущие (2 ноги × 2 борта)
+        n_foot_rail   = 2 if B.get("rear_feet") else 0   # задние ножки ↔ продольные
+        n_angles  = n_wall_mounts + n_leg_rail + n_foot_rail
+        n_spring  = 2 * n_angles + 2 * nC   # ~2 комплекта на угол + по 2 на поперечину
+        n_wall_bolts = n_wall_mounts
+        n_end_caps   = len(cutlist)          # по заглушке на видимый рез
+        n_bases      = n_foot_rail
+        n_ply        = 2                     # листа фанеры на настил
+
         pr = BED_PRICES
-        cost = (deep_sticks * pr["deep_10ft"] + shal_sticks * pr["shallow_10ft"]
-                + n_angles * pr["angle_fitting"] + n_nuts * pr["channel_nut"]
-                + n_bolts * pr["bolt"])
+        cost_strut = deep_sticks * pr["deep_10ft"] + shal_sticks * pr["shallow_10ft"]
+        cost_fit   = (n_angles * pr["angle_fitting"] + n_spring * pr["spring_set"]
+                      + n_wall_bolts * pr["wall_bolt"] + n_end_caps * pr["end_cap"]
+                      + n_bases * pr["post_base"])
+        cost_ply   = n_ply * pr["ply_sheet"]
+        cost = cost_strut + cost_fit + cost_ply
         bed_summary = dict(
             yL=yL, post_top=post_top, deck=(deck_x0, deck_x1), span_y=2 * cross_span,
             deep_mm=deep_mm, shal_mm=shal_mm, deep_sticks=deep_sticks, shal_sticks=shal_sticks,
-            n_angles=n_angles, n_nuts=n_nuts, n_bolts=n_bolts, cost=cost,
+            n_angles=n_angles, n_spring=n_spring, n_wall_bolts=n_wall_bolts,
+            n_end_caps=n_end_caps, n_ply=n_ply,
+            cost_strut=cost_strut, cost_fit=cost_fit, cost_ply=cost_ply, cost=cost,
             n_members=len(cutlist) + 2)
 
     # ═══════ ПРОЁМЫ (реф-рамки) ═══════
@@ -697,13 +742,14 @@ def build():
         print("  Ноги: 4 у бортов (X=%s, Y=±%.0f) + 1 под оборудование (pY X=%g)" % (
             [int(rear_thread_x), int(middle_thread_x)], bs["yL"], front_thread_x))
         print("  Стойки от пола Z=0 до Z=%.0f (под крышу; служат направляющими)" % bs["post_top"])
-        print("  Настил (фанера) X=%.0f..%.0f, спим поперёк на %.0f мм (борт↔борт)" % (
+        print("  Настил (фанера) X=%.0f..%.0f (задний край у двери), спим поперёк %.0f мм" % (
             bs["deck"][0], bs["deck"][1], bs["span_y"]))
         print("  Strut: глубокий %.2f м (%d×10ft) + неглубокий %.2f м (%d×10ft)" % (
             bs["deep_mm"] / 1000, bs["deep_sticks"], bs["shal_mm"] / 1000, bs["shal_sticks"]))
-        print("  Фитинги: %d уголков, %d channel-nut, %d болтов (M8/M10 в заводские точки)" % (
-            bs["n_angles"], bs["n_nuts"], bs["n_bolts"]))
-        print("  ОЦЕНКА сметы (США ~2026, SEED): ~$%.0f" % bs["cost"])
+        print("  Крепёж: %d уголков, %d компл. гайка+болт, %d болтов в борт, %d заглушек" % (
+            bs["n_angles"], bs["n_spring"], bs["n_wall_bolts"], bs["n_end_caps"]))
+        print("  ОЦЕНКА (США, июнь 2026): strut ~$%.0f + крепёж ~$%.0f + фанера ~$%.0f = ~$%.0f" % (
+            bs["cost_strut"], bs["cost_fit"], bs["cost_ply"], bs["cost"]))
     print("-" * 70)
     if bb:
         print("Bounding box (вкл. обшивку): %.0f x %.0f x %.0f мм" % (
