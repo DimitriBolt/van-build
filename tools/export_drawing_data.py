@@ -1,0 +1,106 @@
+# -*- coding: utf-8 -*-
+"""Собрать van_v0.py (headless) и выгрузить данные для 2D-чертежей в docs/drawing_data.json.
+
+    freecadcmd tools/export_drawing_data.py          # (на M6800: FreeCAD.AppImage --console …)
+
+Что выгружается: параметры (WHEEL_ARCH, BED, BATTERY_RACK, WATER_TANK, FLOOR), габариты всех
+деталей (Part::Feature → bbox), сечения бака/арки/подставки (для чертежа бака).
+Чертежи строит tools/drawings/*.py (обычный python3 + matplotlib), всё вместе — tools/make_docs.sh.
+"""
+import io
+import json
+import os
+import contextlib
+import traceback
+
+
+def _repo_dir():
+    if os.environ.get("VAN_REPO"):
+        return os.environ["VAN_REPO"]
+    f = globals().get("__file__")
+    if f:
+        return os.path.dirname(os.path.dirname(os.path.abspath(f)))
+    return os.path.expanduser("~/van-build")
+
+
+REPO = _repo_dir()
+SCRIPT = os.path.join(REPO, "van_v0.py")
+OUT = os.path.join(REPO, "docs", "drawing_data.json")
+rc = 0
+res = {}
+try:
+    g = {"__file__": SCRIPT, "__name__": "__main__"}
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        exec(compile(open(SCRIPT, encoding="utf-8").read(), SCRIPT, "exec"), g)
+    import FreeCAD as App
+    doc = App.ActiveDocument
+    res["summary"] = buf.getvalue()[buf.getvalue().find("[Кровать"):] if "[Кровать" in buf.getvalue() else ""
+    for k in ("WHEEL_ARCH", "BED", "BATTERY_RACK", "WATER_TANK", "FLOOR", "PARAMS"):
+        res[k] = json.loads(json.dumps(g[k], default=lambda o: list(o) if isinstance(o, tuple) else str(o)))
+    boxes = {}
+    for o in doc.Objects:
+        sh = getattr(o, "Shape", None)
+        if o.isDerivedFrom("Part::Feature") and sh is not None and not sh.isNull():
+            b = sh.BoundBox
+            boxes[o.Name] = [b.XMin, b.XMax, b.YMin, b.YMax, b.ZMin, b.ZMax]
+    res["boxes"] = boxes
+    half = g["measured_half_profile"](g["scan_points"]())
+    yz = g["y_at_z"]
+    B, P = g["BED"], g["PARAMS"]
+    floor_top = P["floor_corrugation_height"] + g["FLOOR"]["xps_th"] + g["FLOOR"]["ply_th"]
+    z_bolt = floor_top + B["body_bolt_h"]
+    res["geo"] = dict(floor_top=floor_top, arch_ywall=yz(half, 0.0), yw_post=yz(half, z_bolt),
+                      z_bolt=z_bolt, z_rail_top=floor_top + B["rail_top_h"] + B.get("rail_raise", 0.0))
+
+    # — сечения бака (если он есть) —
+    tank_o = doc.getObject("WaterTank_TORVA33")
+    if tank_o is not None:
+        T = g["WATER_TANK"]
+        sgn = T["side"]
+        tag = "pY" if sgn > 0 else "nY"
+        tank, arch = tank_o.Shape, doc.getObject("WheelArch_%s" % tag).Shape
+        risers = [o.Shape for o in doc.Objects if o.Name.startswith("TankRiser_")]
+        ywall = res["geo"]["arch_ywall"]
+
+        def slice_pts(shape, normal, d):
+            out = []
+            for w in shape.slice(App.Vector(*normal), d):
+                out.append([(p.x, p.y, p.z) for p in w.discretize(Distance=4.0)])
+            return out
+
+        yb = ywall - T["wall_standoff"]
+        d, sol, _ = tank.distToShape(arch)
+        tk = dict(y_back=yb, closest=[[sol[0][0].x, sol[0][0].y, sol[0][0].z],
+                                      [sol[0][1].x, sol[0][1].y, sol[0][1].z], d])
+        ye = sgn * (yb - 5.0)
+        tk["elev_tank"] = slice_pts(tank, (0, 1, 0), ye)
+        tk["elev_arch"] = slice_pts(arch, (0, 1, 0), ye)
+        tk["elev_arch_wall"] = slice_pts(arch, (0, 1, 0), sgn * (ywall - 2.0))
+        tk["elev_riser"] = sum((slice_pts(r, (0, 1, 0), sgn * (yb - 300.0)) for r in risers), [])
+        tk["sec"] = {}
+        for x in (1000.0,):
+            tk["sec"][str(x)] = dict(tank=slice_pts(tank, (1, 0, 0), x), arch=slice_pts(arch, (1, 0, 0), x),
+                                     riser=sum((slice_pts(r, (1, 0, 0), x) for r in risers), []))
+        lift = boxes["TankRiser_Sleeper_Foot1"][5] - floor_top
+        zt = floor_top + lift + 150.0
+        tk["plan_z"] = zt
+        tk["plan_tank"] = slice_pts(tank, (0, 0, 1), zt)
+        tk["plan_arch"] = slice_pts(arch, (0, 0, 1), zt)
+        tk["plan_arch0"] = slice_pts(arch, (0, 0, 1), 60.0)
+        dp = doc.getObject("DPillarFace_%s_ref" % tag).Shape
+        tk["dpillar_plan"] = [(v.X, v.Y) for v in dp.Vertexes if abs(v.Z) < 1e-6]
+        tb = tank.BoundBox
+        tk["lift"] = lift
+        tk["tank_bb"] = [tb.XMin, tb.XMax, tb.YMin, tb.YMax, floor_top + lift, floor_top + lift + T["size"][2]]
+        res["tank"] = tk
+except Exception:
+    res["error"] = traceback.format_exc()
+    rc = 1
+os.makedirs(os.path.dirname(OUT), exist_ok=True)
+with open(OUT, "w", encoding="utf-8") as f:
+    json.dump(res, f, ensure_ascii=False)
+print("export_drawing_data:", OUT, "OK" if rc == 0 else "ERROR")
+if rc:
+    print(res.get("error"))
+os._exit(rc)

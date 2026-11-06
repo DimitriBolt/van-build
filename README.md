@@ -29,6 +29,10 @@
 | `freecad_rpc.py` | Клиент к живому FreeCAD GUI (`van_rpc_server.FCMacro` на `127.0.0.1:9875`) |
 | `tools/render_views.py` | Сборка в GUI (с цветами) + PNG-виды в `renders/` |
 | `tools/build_headless.py` | Headless-сборка без падения при выходе (обход segfault FreeCAD 1.1.3 на Mesh) |
+| `tools/make_docs.sh` | **Все рисунки из модели** → `docs/` (2D-чертежи + 3D-виды) и `van_v0.FCStd` с цветами |
+| `tools/export_drawing_data.py`, `tools/drawings/*.py` | Данные модели → `docs/drawing_data.json` → чертежи (matplotlib) |
+| `docs/` | Последние версии всех чертежей и видов — индекс в `docs/README.md` |
+| `FURNITURE_MEMORY.md` | Память по мебели: кровать, блоки батарей, бак для воды |
 | `van_v0.FCStd` | Собранный документ FreeCAD (каркас + меш-обшивка) |
 | `Ducato_L2H2_body_reference.stl` | Чистая наружная оболочка кузова (нужна скрипту) |
 | `Ducato+L2H2+lit+superpose2.stl` | Плотный скан целиком (с мебелью/человеком) |
@@ -51,6 +55,12 @@ Headless (быстро, но **без цветов** — в `van_v0.FCStd` не 
 
 Картинки — в `renders/` (папка в `.gitignore`). На сервере без экрана — то же через
 `xvfb-run -a -s "-screen 0 1920x1200x24"`.
+
+Все рисунки проекта (чертежи и виды, которые хранятся в git) — одной командой:
+
+```bash
+FREECADCMD="$HOME/Applications/FreeCAD.AppImage --console" FREECAD="$HOME/Applications/FreeCAD.AppImage" tools/make_docs.sh
+```
 
 Скрипт измеряет профиль борта из `Ducato_L2H2_body_reference.stl`, строит каркас,
 кладёт скан как обшивку и сохраняет `van_v0.FCStd` рядом с собой.

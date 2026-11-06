@@ -19,3 +19,7 @@ fiat-ducato-ram-promaster-136-wheel-base-high-roof-camper-conversion-1.snapshot.
 s_*.png
 shot_*.png
 renders/
+
+# …кроме последних 3D-видов проекта в docs/renders (хранятся в git); журнал рендера — нет
+!docs/renders/
+docs/renders/render_log.txt

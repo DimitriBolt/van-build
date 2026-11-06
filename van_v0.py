@@ -166,8 +166,10 @@ BED = {
     "body_bolt_h":    762,   # болт стойки в заводское ребро: ~30″ над чистовым полом (фото 2, 3, 4)
     # рама настила
     "rail_top_h":     701,   # верх продольных реек и поперечин: ~27.6″ над чистовым полом (фото 2, 14)
-    "rail_raise":     0.0,   # подъём кровати (рейки скользят по прорезям стоек). Был +1″ под отдельные
-                             # стяжки этажерки; с 2026-11-06 стяжки = поперечины кровати → не нужен
+    "rail_raise":    50.8,   # подъём кровати (рейки скользят по прорезям стоек). 2026-11-06: +2″ (один шаг
+                             # прорезей strut) — над баком для воды ~62 мм вместо 12 (ремни, штуцеры, запас
+                             # на форму арки). Dimitri: «кровать можно поднимать на любую высоту — это не сложно».
+                             # P3/P4 этажерок и бака доходят до поперечин → удлиняются на ту же величину.
     "cross_n":          3,   # поперечины strut: у задней стойки, посередине, у передней (съёмные)
     "deck_th":         19,   # плита «MR TIPO/TYPE II … 1220 mm» (влагостойкая MDF/ДСП) ~3/4″
     "deck_len":      1220,   # = ширина листа (маркировка «1220 mm»), от задней грани задней стойки;
@@ -218,7 +220,8 @@ BATTERY_RACK = {
     "p34_plate": (76, 102, 1.6),        # пластины под P3/P4 (X×Y×толщ.), уходят к центру
 }
 
-# ─────────── БАК ДЛЯ ВОДЫ у водительской арки (между D-стойкой и аркой), проект 2026-11-06 ───────────
+# ─────────── БАК ДЛЯ ВОДЫ у водительской арки (между D-стойкой и аркой) — УТВЕРЖДЕНО 2026-11-06 ───────────
+# (схема утверждена; подъём и отступ уточнить замерами арки — FURNITURE_MEMORY.md §1d)
 # TORVA 33 gal (125 л), Amazon B0FBLCF2DN — по форме клон NW Conversions SP-L-33 (водительская версия:
 # «нога» бака позади арки). 48 × 12.5 × 20″, пустой 11 кг, полный ≈136 кг. Продавец: «для ProMaster
 # поднять на 3.5″»; «не подвешивать на ремнях и не класть на бак груз» → дно опирается на подставку.
@@ -1005,7 +1008,7 @@ def build():
     if B.get("enable") and T.get("enable") and W.get("enable"):
         ts = T["side"]
         tg = doc.addObject("App::DocumentObjectGroup", "WaterTank")
-        tg.Label = "Бак для воды TORVA 33 gal (125 л) — водительский борт, D-стойка ↔ арка (проект 2026-11-06)"
+        tg.Label = "Бак для воды TORVA 33 gal (125 л) — водительский борт, D-стойка ↔ арка — УТВЕРЖДЕНО 2026-11-06"
         TL, TD, TH = T["size"]
         tdep, tr = T["tunnel_depth"], T["tunnel_r"]
 
@@ -1167,6 +1170,38 @@ def build():
                             under_cross=(z_rail_top - sw) - (z_b + TH),
                             vol=tank.Volume / 1e6)
 
+    # ═══════ НАСТИЛ: вырезы под новые стойки P2 и под головки болтов в кузов ═══════
+    # (при подъёме кровати настил может оказаться на высоте болтов стоек — головки торчат из стоек в салон)
+    deck_notes = []
+    deck_o = doc.getObject("BedDeck") if B.get("enable") else None
+    if deck_o is not None:
+        dsh = deck_o.Shape
+        dz0, dz1 = dsh.BoundBox.ZMin, dsh.BoundBox.ZMax
+        cut = []
+        for o in doc.Objects:
+            if o.Name.startswith("BedPost_nY_rackP2"):                      # P2 обоих блоков
+                bb = o.Shape.BoundBox
+                cut.append(Part.makeBox(bb.XLength + 6, bb.YLength + 6, bb.ZLength,
+                                        App.Vector(bb.XMin - 3, bb.YMin - 3, bb.ZMin)))
+        n_bolt = 0
+        bh, bw_, bd = 14.0, 30.0, 12.0                                       # головка+шайба: ⌀~14, выступ ~12
+        for o in doc.Objects:
+            if o.Name.startswith("BedPostBodyBolt_") or o.Name.startswith("RackP2_BodyBolt"):
+                c = o.Placement.Base                                 # Part::Sphere: центр (Shape — после recompute)
+                if c.z + bh / 2.0 > dz0 and c.z - bh / 2.0 < dz1:
+                    # вырез: от внутренней грани стойки (|Y|=post_in) на bd+3 в салон
+                    y0 = (post_in - bd - 3.0) if c.y > 0 else -post_in
+                    cut.append(Part.makeBox(bw_, bd + 3.0, dz1 - dz0 + 2.0,
+                                            App.Vector(c.x - bw_ / 2.0, y0, dz0 - 1.0)))
+                    n_bolt += 1
+        if cut:
+            for s in cut:
+                dsh = dsh.cut(s)
+            deck_o.Shape = dsh
+        if n_bolt:
+            deck_notes.append("настил на высоте болтов стоек в кузов: %d выреза %g×%g мм под головки" % (
+                n_bolt, bw_, bd + 3.0))
+
     # ═══════ ПРОЁМЫ (реф-рамки) ═══════
     op = doc.addObject("App::DocumentObjectGroup", "Openings")
     op.Label = "Проёмы дверей (реф-рамки, SEED)"
@@ -1254,6 +1289,8 @@ def build():
         print("  Strut по деталям: " + "; ".join(
             "%s %d×%.0f" % (k, len(v), v[0]) for k, v in kinds.items()))
         print("  Strut всего: %.2f м" % (sum(Lp for _, Lp in bs["cutlist"]) / 1000.0))
+        for note in deck_notes:
+            print("  ⚠ " + note)
     for rs in rack_summary:
         f0 = rs["floor_top"]
         mm = lambda v: ("%.1f мм" % v) if v is not None else "—"
