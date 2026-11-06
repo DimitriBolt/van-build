@@ -56,10 +56,12 @@ except Exception:
 # ─────────────── КОЛЁСНЫЕ АРКИ (внутренние кожухи) — по фото 2026-11-05 ───────────────
 WHEEL_ARCH = {
     "enable":     True,
-    "center_x":   1000,   # центр колеса: по скану вырез колеса в обшивке X≈700..1300 (на Z=100)
-    "len_x":       742,   # длина по полу по внутренней грани, рулетка (фото 2, 7): ~29″
-    "protrusion":  270,   # выступ от стены внутрь, рулетка (фото 1): 10-5/8″
-    "height":      450,   # верх над чистовым полом (фанерой), по фото 2: ~16–19″ — SEED
+    "center_x":   1000,   # центр колеса: по скану вырез колеса в обшивке X≈700..1300 (на Z=100).
+                          # ⚠️ абсолютный X не промерен: по фото 5 задняя стойка ближе к двери → центр может быть ~800
+    "len_x":       757,   # длина по полу по ВНУТРЕННЕЙ грани: рулетка фото 2 — 29.8″
+    "len_x_wall":  889,   # длина у СТЕНЫ: 35″ — Upfit Supply (ProMaster, «Wheel Well 35″ W × 17″ H × 9″ D»)
+    "protrusion":  270,   # выступ от стены внутрь, рулетка (фото 1): 10-5/8″ (Upfit: 9″ — от другой базы)
+    "height":      432,   # верх над чистовым полом: 17″ — Upfit Supply (по фото 2 — 16–19″)
 }
 
 # ──────────────────────────── PARAMS (мм) ────────────────────────────
@@ -86,8 +88,8 @@ PARAMS = {
     "wall_rail_section":   40,   # сечение рейки (□), мм
     "wall_rail_inset":      8,   # отступ внутрь от поверхности борта, мм
     "wall_rail_min_segment": 180, # не рисовать короткие хвостики после разрывов
-    "wheel_arch_x_range": (WHEEL_ARCH["center_x"] - WHEEL_ARCH["len_x"] / 2.0,
-                           WHEEL_ARCH["center_x"] + WHEEL_ARCH["len_x"] / 2.0),  # из WHEEL_ARCH (было SEED 520..1650)
+    "wheel_arch_x_range": (WHEEL_ARCH["center_x"] - WHEEL_ARCH["len_x_wall"] / 2.0,
+                           WHEEL_ARCH["center_x"] + WHEEL_ARCH["len_x_wall"] / 2.0),  # из WHEEL_ARCH (было SEED 520..1650)
     "wheel_arch_block_z": 650,    # ниже этой высоты низовая рейка прерывается аркой
     "wheel_arch_margin": 40,      # запас по X вокруг арки
 
@@ -142,10 +144,14 @@ BED = {
     "strut_w":       41.3,   # 1-5/8″
     "strut_d":       20.6,   # 13/16″
     # стойки: прорезями в салон; водительский борт пока считаем симметричным (не подтверждено)
-    # X: шаг между стойками 1217 мм — по фото 2 в плоскости стены (масштаб = шаг прорезей
-    # самих стоек), ≈ ширине листа настила 1220; положение относительно центра колеса — по рулетке
-    "post_rear_x":    370,   # центр задней стойки (у D-стойки), ±50
-    "post_front_x":  1587,   # центр передней (перед аркой; на пассажирском борту — за проёмом сдвижной), ±50
+    # X стоек — ОТ АРКИ (фото 2, 2026-11-05): поперечные полосы на полу переносят показания
+    # рулетки на стену, масштаб на стене — шаг прорезей стойки. Зазор по полу от внутренней
+    # грани арки до грани стойки: сзади 7.7″, спереди 7.1″ (±0.5″). Шаг стоек выходит 1174 мм
+    # = 1220 (лист настила) − 41 (ширина стойки): настил перекрывает обе стойки.
+    "post_rear_x":   None,   # None = от арки через arch_gap_rear (или задать число)
+    "post_front_x":  None,   # None = от арки через arch_gap_front
+    "arch_gap_rear":  196,   # 7.7″: грань задней стойки → задний край арки (по внутренней грани)
+    "arch_gap_front": 180,   # 7.1″: передний край арки (по внутр. грани) → грань передней стойки
     "post_len":      1257,   # ≈49.5″ — грубо (фото 3, 9), уточнить
     "post_wall_gap":    8,   # зелёная проставка между стойкой и ребром кузова
     "plate":   (102, 127, 1.6),  # оцинк. пластина под стойкой ~4×5″ (X×Y×толщ.), шурупы в фанеру пола
@@ -572,8 +578,8 @@ def build():
     floor_top = P["floor_corrugation_height"]          # верх гребней железного пола
     W = WHEEL_ARCH
     arch_ywall = y_at_z(half, 0.0)                     # стена у пола (внутр. поверхность)
-    arch_x0 = W["center_x"] - W["len_x"] / 2.0
-    arch_x1 = W["center_x"] + W["len_x"] / 2.0
+    arch_x0 = W["center_x"] - W["len_x_wall"] / 2.0
+    arch_x1 = W["center_x"] + W["len_x_wall"] / 2.0
 
     def _arch_footprint(sgn, zh):
         """Коробка-габарит арки на борту sgn (для вырезов в полу)."""
@@ -604,21 +610,24 @@ def build():
     # ═══════ КОЛЁСНЫЕ АРКИ (внутренние кожухи, упрощённо: полуэллипс по X-Z) ═══════
     if W.get("enable"):
         arch_g = doc.addObject("App::DocumentObjectGroup", "WheelArches")
-        arch_g.Label = "Колёсные арки (по рулетке на фото; высота — SEED)"
+        arch_g.Label = "Колёсные арки (рулетка на фото + Upfit Supply 35×17″)"
         frame.addObject(arch_g)
-        a_half = W["len_x"] / 2.0
         b_top = floor_top + W["height"]
         n_seg = 36
-        for sgn, tag in ((+1, "pY"), (-1, "nY")):
-            y0 = arch_ywall - W["protrusion"] if sgn > 0 else -arch_ywall
-            pts = [App.Vector(W["center_x"] + a_half * math.cos(math.pi * i / n_seg), y0,
+
+        def _half_ellipse(a_half, y):
+            pts = [App.Vector(W["center_x"] + a_half * math.cos(math.pi * i / n_seg), y,
                               b_top * math.sin(math.pi * i / n_seg)) for i in range(n_seg + 1)]
-            pts.append(pts[0])
-            face = Part.Face(Part.makePolygon(pts))
+            return Part.makePolygon(pts + [pts[0]])
+
+        for sgn, tag in ((+1, "pY"), (-1, "nY")):
+            # кожух сужается от стены (len_x_wall) к внутренней грани (len_x): loft двух полуэллипсов
+            w_wall = _half_ellipse(W["len_x_wall"] / 2.0, sgn * arch_ywall)
+            w_in = _half_ellipse(W["len_x"] / 2.0, sgn * (arch_ywall - W["protrusion"]))
             add_shape(doc, "WheelArch_%s" % tag,
-                      "Колёсная арка %s: %g×%g мм по полу, верх Z=%.0f" % (
-                          tag, W["len_x"], W["protrusion"], b_top),
-                      face.extrude(App.Vector(0.0, W["protrusion"], 0.0)),
+                      "Колёсная арка %s: у стены %g, по внутр. грани %g, выступ %g, верх Z=%.0f" % (
+                          tag, W["len_x_wall"], W["len_x"], W["protrusion"], b_top),
+                      Part.makeLoft([w_wall, w_in], True),
                       color=COL_ARCH, transparency=15, group=arch_g)
 
     # ═══════ КРОВАТЬ — как построена (strut SC14-10-EG), реконструкция по фото ═══════
@@ -629,6 +638,10 @@ def build():
         bed_g.Label = "Кровать (построена) — strut SC14-10-EG, реконструкция по фото 2026-11-05"
         sw, sd = B["strut_w"], B["strut_d"]
         xr, xf = B["post_rear_x"], B["post_front_x"]
+        if xr is None:
+            xr = W["center_x"] - W["len_x"] / 2.0 - B["arch_gap_rear"] - sw / 2.0
+        if xf is None:
+            xf = W["center_x"] + W["len_x"] / 2.0 + B["arch_gap_front"] + sw / 2.0
         z_bolt = floor_top + B["body_bolt_h"]
         z_rail_top = floor_top + B["rail_top_h"]
         z_deck_top = z_rail_top + B["deck_th"]
