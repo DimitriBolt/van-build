@@ -59,6 +59,9 @@ VIEWS += [
     ("rack_3d.png", (-0.55, -1.0, -0.55), _RACK_HIDE),
     ("rack_from_inside.png", "viewRear", _RACK_HIDE),
     ("rack_top.png", "viewTop", _RACK_HIDE),
+    # с поперечинами кровати (= верхние стяжки этажерки), без настила
+    ("rack_with_cross.png", (-0.55, -1.0, -0.55),
+     tuple(h for h in _RACK_HIDE if h != "BedCross") + ("BedCross_2", "BedCross_3")),
 ]
 
 

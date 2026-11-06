@@ -159,8 +159,8 @@ BED = {
     "body_bolt_h":    762,   # болт стойки в заводское ребро: ~30″ над чистовым полом (фото 2, 3, 4)
     # рама настила
     "rail_top_h":     701,   # верх продольных реек и поперечин: ~27.6″ над чистовым полом (фото 2, 14)
-    "rail_raise":    25.4,   # +1″ (2026-11-06): кровать поднять, чтобы над верхней батареей прошли
-                             # верхние стяжки этажерки (рейки скользят по прорезям стоек, ~3 мин)
+    "rail_raise":     0.0,   # подъём кровати (рейки скользят по прорезям стоек). Был +1″ под отдельные
+                             # стяжки этажерки; с 2026-11-06 стяжки = поперечины кровати → не нужен
     "cross_n":          3,   # поперечины strut: у задней стойки, посередине, у передней (съёмные)
     "deck_th":         19,   # плита «MR TIPO/TYPE II … 1220 mm» (влагостойкая MDF/ДСП) ~3/4″
     "deck_len":      1220,   # = ширина листа (маркировка «1220 mm»), от задней грани задней стойки;
@@ -192,8 +192,12 @@ BATTERY_RACK = {
     "gap_above_b1":    38.0,            # 1.5″ над нижней батареей — клеммы и кабели
     "shelf_th":        12.0,            # фанера 1/2″ поверх реек
     "post_above_b2":   25.0,            # P3/P4 выше верхней батареи (если без стяжек)
-    "top_ties":        True,            # верхние стяжки P1↔P3, P2↔P4 над верхней батареей (2026-11-06)
-    "gap_above_b2":    38.0,            # 1.5″ над верхней батареей — клеммы и кабели под стяжками
+    # верхние стяжки: "bed" — это поперечины кровати (задняя — существующая BedCross_1, передняя —
+    # новая), P3/P4 доходят до них (решение Dimitri 2026-11-06); "short" — отдельные короткие
+    # стяжки над верхней батареей (нужен подъём кровати на 1″); None — без стяжек
+    "top_ties":       "bed",
+    "front_cross_full": True,           # передняя стяжка-поперечина на всю ширину (до противоп. рейки)
+    "gap_above_b2":    38.0,            # 1.5″ над верхней батареей — клеммы (для "short")
     "p2_body_bolt":    True,            # P2 ↔ ребро кузова на высоте болта P1 (M6: резьба/ривнат)
     "p34_plate": (76, 102, 1.6),        # пластины под P3/P4 (X×Y×толщ.), уходят к центру
 }
@@ -786,9 +790,13 @@ def build():
         z_rail1 = z_rail0 + sw                         # рейки полки 1-5/8″ по вертикали
         z_b2 = z_rail1 + R["shelf_th"]
         z_b2_top = z_b2 + bz
-        z_tie0 = z_b2_top + R["gap_above_b2"]
-        z_tie1 = z_tie0 + sw                           # стяжки 1-5/8″ по вертикали
-        z_p34_top = z_tie1 if R.get("top_ties") else z_b2_top + R["post_above_b2"]
+        ties = R.get("top_ties")
+        if ties == "bed":                              # стяжки = поперечины кровати (под настилом)
+            z_tie0, z_tie1 = z_rail_top - sw, z_rail_top
+        else:                                          # отдельные стяжки над верхней батареей
+            z_tie0 = z_b2_top + R["gap_above_b2"]
+            z_tie1 = z_tie0 + sw
+        z_p34_top = z_tie1 if ties else z_b2_top + R["post_above_b2"]
         shapes = {}
 
         def rk_box(name, label, dims, base, color, tr=0):
@@ -839,17 +847,33 @@ def build():
 
         # P3/P4 — короткие стойки со стороны салона, по углам батарей
         qx, qy, qt = R["p34_plate"]
-        for nm, x0 in (("P3", X0), ("P4", X1 - sw)):
+        # P3 — по X как P1 (передняя грань упирается в заднюю поперечину кровати), P4 — у переднего угла
+        p3x0 = xr - sw / 2.0 if ties == "bed" else X0
+        for nm, x0 in (("P3", p3x0), ("P4", X1 - sw)):
             rk_box("RackPostPlate_%s" % nm, "Пластина под %s" % nm,
                    (qx, qy, qt), (x0 + sw / 2.0 - qx / 2.0, ybase(ps, y_in_side, qy), floor_top), COL_STRUT)
             rk_box("RackPost_%s" % nm, "Стойка %s (со стороны салона), L=%.0f" % (nm, z_p34_top - floor_top - qt),
                    (sw, sd, z_p34_top - floor_top - qt), (x0, ybase(ps, y_in_side, sd), floor_top + qt), COL_STRUT)
 
-        # верхние стяжки: над верхней батареей, от стоек у борта до P3/P4 (как рейки полки)
-        if R.get("top_ties"):
+        # верхние стяжки
+        front_cross_len = None
+        if ties == "short":                            # над верхней батареей, от стоек у борта до P3/P4
             for nm, x0 in (("Rear", X0), ("Front", X1 - sd)):
                 rk_box("RackTopTie_%s" % nm, "Верхняя стяжка %s strut, L=%.0f" % (nm, by + sd),
                        (sd, by + sd, sw), (x0, ybase(ps, y_wall_side, by + sd), z_tie0), COL_STRUT)
+        elif ties == "bed":
+            # задняя = BedCross_1 (передняя грань P1 и P3); передняя — новая, сразу перед P4
+            if R.get("front_cross_full"):
+                front_cross_len = 2 * rail_in
+                fy0 = -rail_in
+            else:
+                front_cross_len = rail_in - (y_in_side - sd)
+                fy0 = ybase(ps, rail_in, front_cross_len)
+            rk_box("BedCross_RackFront",
+                   "Поперечина-стяжка перед P4 (под настилом), L=%.0f%s" % (
+                       front_cross_len, " — на всю ширину" if R.get("front_cross_full") else ""),
+                   (sd, front_cross_len, sw), (X1, fy0, z_tie0), COL_STRUT)
+            cutlist.append(("поперечина-стяжка", float(front_cross_len)))
 
         # зазоры для сводки
         gap_arch = bat1.distToShape(arch_shapes[ps])[0] if ps in arch_shapes else None
@@ -859,8 +883,9 @@ def build():
             p2=(p2x0, p2x1), gap_arch=gap_arch, p2_arch=p2_arch,
             above_b2=(z_rail_top - sw) - z_b2_top, p34_len=z_p34_top - floor_top - qt,
             rail_len=by + sd, floor_top=floor_top,
-            tie=(z_tie0, z_tie1) if R.get("top_ties") else None,
-            tie_to_bed=(z_rail_top - sw) - z_tie1 if R.get("top_ties") else None)
+            tie=(z_tie0, z_tie1) if ties else None, ties=ties, front_cross_len=front_cross_len,
+            tie_to_bed=(z_rail_top - sw) - z_tie1 if ties == "short" else None,
+            b2_to_tie=z_tie0 - z_b2_top if ties else None)
 
     # ═══════ ПРОЁМЫ (реф-рамки) ═══════
     op = doc.addObject("App::DocumentObjectGroup", "Openings")
@@ -959,9 +984,13 @@ def build():
             rs["z_b1"][0] - f0, rs["z_b1"][1] - f0, rs["z_rail"][0] - f0, rs["z_rail"][1] - f0,
             rs["z_b2"][0] - f0, rs["z_b2"][1] - f0))
         print("  Над верхней батареей до низа реек кровати: %.0f мм (%.1f″)" % (rs["above_b2"], rs["above_b2"] / 25.4))
-        if rs["tie"]:
+        if rs["ties"] == "short":
             print("  Верхние стяжки: %.0f..%.0f над полом; до низа реек кровати: %.0f мм" % (
                 rs["tie"][0] - f0, rs["tie"][1] - f0, rs["tie_to_bed"]))
+        elif rs["ties"] == "bed":
+            print("  Стяжки = поперечины кровати (%.0f..%.0f над полом): задняя BedCross_1 + передняя L=%.0f;"
+                  " от верхней батареи до них %.0f мм" % (
+                      rs["tie"][0] - f0, rs["tie"][1] - f0, rs["front_cross_len"], rs["b2_to_tie"]))
         print("  Новая стойка P2 X=%.0f..%.0f, до арки %s;  P3/P4 L=%.0f;  рейки полки 2×%.0f" % (
             rs["p2"][0], rs["p2"][1], "%.1f мм" % rs["p2_arch"] if rs["p2_arch"] is not None else "—",
             rs["p34_len"], rs["rail_len"]))
