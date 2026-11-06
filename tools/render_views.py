@@ -51,17 +51,24 @@ VIEWS = [
     # пассажирский борт (−Y) изнутри, зад справа — как фото 2; водительские (_pY) детали скрыты
     ("bed_passenger_wall.png", "viewRear", _NOT_BED + ("_pY", "BedCross", "BedDeck", "BedMattress")),
 ]
-# этажерка под батареи: кровать и всё дальнее скрыто
-_RACK_HIDE = _NOT_BED + ("_pY", "front", "BedSideRail", "BedCross", "BedDeck", "BedMattress",
-                         "BedWall", "BedPostBodyBolt", "RackP2_RailBolt")
+# этажерки под батареи: кровать и всё дальнее скрыто. Элемент, оканчивающийся на "$", —
+# ТОЧНОЕ имя объекта (иначе подстрока).
+_RACK_HIDE = _NOT_BED + ("_pY", "BedSideRail", "BedDeck", "BedMattress", "BedWall",
+                         "BedPostBodyBolt", "RailBolt")
+_REAR_RACK = tuple(n + "$" for n in (
+    "Battery_Lower", "Battery_Upper", "RackPostPlate_P2", "BedPost_nY_rackP2", "RackP2_BodyBolt",
+    "RackShelfRail_Rear", "RackShelfRail_Front", "RackShelfPlate", "RackShelfFrontStop", "RackRubberBlock",
+    "RackPostPlate_P3", "RackPost_P3", "RackPostPlate_P4", "RackPost_P4", "BedCross_RackFront",
+    "DPillarFace_nY_ref", "BedPost_nY_rear", "BedPostPlate_nY_rear", "BedCross_1"))
 VIEWS += [
-    # из салона, сверху-спереди (направление взгляда: назад, к борту −Y, вниз)
-    ("rack_3d.png", (-0.55, -1.0, -0.55), _RACK_HIDE),
-    ("rack_from_inside.png", "viewRear", _RACK_HIDE),
-    ("rack_top.png", "viewTop", _RACK_HIDE),
-    # с поперечинами кровати (= верхние стяжки этажерки), без настила
-    ("rack_with_cross.png", (-0.55, -1.0, -0.55),
-     tuple(h for h in _RACK_HIDE if h != "BedCross") + ("BedCross_2", "BedCross_3")),
+    # оба блока + поперечины-стяжки, из салона сверху-спереди (взгляд назад, к борту −Y, вниз)
+    ("rack_with_cross.png", (-0.55, -1.0, -0.55), _RACK_HIDE + ("BedCross_2",)),
+    ("rack_from_inside.png", "viewRear", _RACK_HIDE + ("BedCross",)),
+    ("rack_top.png", "viewTop", _RACK_HIDE + ("BedCross",)),
+    # задний блок крупно (без поперечин)
+    ("rack_3d.png", (-0.55, -1.0, -0.55), _RACK_HIDE + ("_fwd", "BedPost_nY_front", "BedCross")),
+    # передний блок крупно, взгляд вперёд-к борту (сдвижная дверь — дальше)
+    ("rack_front_3d.png", (0.55, -1.0, -0.55), _RACK_HIDE + _REAR_RACK + ("BedCross_2",)),
 ]
 
 
@@ -87,7 +94,8 @@ def _shot(log, name, view, hide):
     hidden = []
     for o in doc.Objects:
         vo = getattr(o, "ViewObject", None)
-        if vo is not None and vo.Visibility and any(h in o.Name for h in hide):
+        if vo is not None and vo.Visibility and any(
+                (o.Name == h[:-1]) if h.endswith("$") else (h in o.Name) for h in hide):
             vo.Visibility = False
             hidden.append(o)
     v = Gui.ActiveDocument.ActiveView
