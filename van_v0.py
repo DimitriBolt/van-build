@@ -53,6 +53,15 @@ try:
 except Exception:
     _HAVE_NP = False
 
+# ─────────────── КОЛЁСНЫЕ АРКИ (внутренние кожухи) — по фото 2026-11-05 ───────────────
+WHEEL_ARCH = {
+    "enable":     True,
+    "center_x":   1000,   # центр колеса: по скану вырез колеса в обшивке X≈700..1300 (на Z=100)
+    "len_x":       742,   # длина по полу по внутренней грани, рулетка (фото 2, 7): ~29″
+    "protrusion":  270,   # выступ от стены внутрь, рулетка (фото 1): 10-5/8″
+    "height":      450,   # верх над чистовым полом (фанерой), по фото 2: ~16–19″ — SEED
+}
+
 # ──────────────────────────── PARAMS (мм) ────────────────────────────
 PARAMS = {
     # — габариты (измерено по STL); нужны для проёмов, стоек, клампов —
@@ -77,7 +86,8 @@ PARAMS = {
     "wall_rail_section":   40,   # сечение рейки (□), мм
     "wall_rail_inset":      8,   # отступ внутрь от поверхности борта, мм
     "wall_rail_min_segment": 180, # не рисовать короткие хвостики после разрывов
-    "wheel_arch_x_range": (520, 1650),  # SEED по STL: зона задних колёсных арок
+    "wheel_arch_x_range": (WHEEL_ARCH["center_x"] - WHEEL_ARCH["len_x"] / 2.0,
+                           WHEEL_ARCH["center_x"] + WHEEL_ARCH["len_x"] / 2.0),  # из WHEEL_ARCH (было SEED 520..1650)
     "wheel_arch_block_z": 650,    # ниже этой высоты низовая рейка прерывается аркой
     "wheel_arch_margin": 40,      # запас по X вокруг арки
 
@@ -106,41 +116,53 @@ PARAMS = {
     "frame_thickness": 15,
 }
 
-# ──────────────────────── КРОВАТЬ (strut channel) ────────────────────────
-# Поперечная кровать в задней части: ДЛИНА (спим поперёк) = от борта до борта;
-# ШИРИНА вдоль X = от задних дверей вперёд. Каркас из strut channel (Unistrut),
-# БЕЗ СВАРКИ, разборный, на fittings (угловые кронштейны типа p1325, channel nuts).
-# Ноги — strut, болтятся к борту в заводских резьбовых точках Z=980 (см.
-# FactoryThreadedMounts) и идут от пола вверх под крышу, заодно служа
-# направляющими для обшивки/оборудования.
+# ─────────────── ПОЛ: утепление + фанера (по факту, 2026-11-05) ───────────────
+# XPS лежит на гребнях рефлёного железного пола, сверху фанера; фанеру прижимают
+# металлические полосы поперёк фургона (в модели не рисуем). Все высоты кровати
+# ниже (BED[...]_h) отсчитаны от ВЕРХА этой фанеры = «чистовой пол».
+FLOOR = {
+    "enable":   True,
+    "xps_th":   25.4,   # Owens Corning FOAMULAR NGX F-150, 1″ (R-5), 4×8 ft (Home Depot 20WENGX)
+    "ply_th":   11.9,   # фанера 1/2″ (фактически 15/32″ = 11.9 мм)
+    "edge_gap":  5,     # зазор до борта
+}
+
+# ──────────────────────── КРОВАТЬ — как ПОСТРОЕНА (strut) ────────────────────────
+# Реконструкция по 16 фото (2026-11-05), см. FURNITURE_MEMORY.md §1a. Масштаб —
+# шаг прорезей strut 2″ и рулетка у арки. Точность: высоты ±25 мм, X ±50 мм.
+# Поперечная кровать у задних дверей: 4 стойки (по 2 на борт) на пластинах в пол,
+# каждая прикручена к заводскому ребру кузова; по бортам — продольные рейки strut,
+# между ними 3 съёмные поперечины strut; настил — плита MR ~3/4″; матрас ~10 см.
+# Проект июня (ноги до Z=980, 2×4-лаги, фанера 1/2″, смета ~$165) — в git-истории
+# и в FURNITURE_MEMORY.md §1.
 BED = {
     "enable": True,
-    "mattress_width_x": 1400,   # передний край настила = bed_cx + это/2 (перед к кабине); 1200 → влезает в 1 лист фанеры
-    "deck_rear_x":      20,     # задний край настила — почти у задней двери (X≈0), по просьбе
-    "top_z":            980,    # верх продольных несущих ≈ высота заводской резьбовой точки
-    "wall_clear":       30,     # отступ центра ноги от внутр. поверхности борта
-    # ВСЁ из НЕГЛУБОКОГО strut 1-5/8×13/16 (14ga) — Newhouse SC14-10-EG $23/10ft (удешевление).
-    "strut_w":          41.3,   # ширина паза 1-5/8" (как у глубокого → те же фитинги)
-    "strut_h":          21.0,   # глубина 13/16" (неглубокий)
-    "rail_len":         1520,   # продольная несущая = 5ft (1524) кусок: 2 шт из одного 10ft хлыста
-    # Поперечные лаги под фанеру — деревянные 2×4 (у Dimitri БЕСПЛАТНЫЕ, не strut)
-    "joist_w":          89.0,   # 2×4 фактически 1.5×3.5" = 38×89 мм
-    "joist_h":          38.0,   # кладём плашмя (38 мм по Z); на ребро — жёстче (см. md)
-    "n_joist":          4,      # число 2×4-лаг под фанеру (в пролёте продольных)
-    "deck_th":          12,     # фанера 1/2" (дешевле 3/4"); OSB/рейки — ещё дешевле, см. md
-    "mattress_th":      150,    # матрас из поролона (визуал; режется по форме)
-    "post_margin_top":  30,     # запас под крышей сверху стойки
-    "equip_post":       False,  # 5-я стойка под оборудование — ОТЛОЖЕНА (не входит в 3 хлыста)
-}
-# Прайс-ориентир (США, июнь 2026; Home Depot/Lowe's/Amazon) — оценка, уточнять при заказе.
-BED_PRICES = {
-    "strut_10ft":   23.0,   # Newhouse SC14-10-EG 1-5/8×13/16 14ga 10ft (Home Depot $23)
-    "angle_fitting": 2.6,   # уголок 90° 2-отв. (мультипак Amazon ~$2–3/шт)
-    "spring_set":    0.8,   # пружинная гайка+болт, набор 50шт на Amazon ~$40 → ~$0.8/комплект
-    "wall_bolt":     1.0,   # болт M8/M10 в заводскую резьбовую точку
-    "end_cap":       0.4,   # пластиковая заглушка на рез
-    "ply_sheet":    28.0,   # лист фанеры 1/2" 4×8 ft (CDX ~$25–32; OSB ~$15–20)
-    "screws_box":    8.0,   # коробка саморезов по дереву
+    # профиль — Newhouse SC14-10-EG (наклейка на стойках): 1-5/8″ × 13/16″, 14 ga,
+    # half-slot, прорези 9/16″ × 1-1/8″ с шагом 2″
+    "strut_w":       41.3,   # 1-5/8″
+    "strut_d":       20.6,   # 13/16″
+    # стойки: прорезями в салон; водительский борт пока считаем симметричным (не подтверждено)
+    # X: шаг между стойками 1217 мм — по фото 2 в плоскости стены (масштаб = шаг прорезей
+    # самих стоек), ≈ ширине листа настила 1220; положение относительно центра колеса — по рулетке
+    "post_rear_x":    370,   # центр задней стойки (у D-стойки), ±50
+    "post_front_x":  1587,   # центр передней (перед аркой; на пассажирском борту — за проёмом сдвижной), ±50
+    "post_len":      1257,   # ≈49.5″ — грубо (фото 3, 9), уточнить
+    "post_wall_gap":    8,   # зелёная проставка между стойкой и ребром кузова
+    "plate":   (102, 127, 1.6),  # оцинк. пластина под стойкой ~4×5″ (X×Y×толщ.), шурупы в фанеру пола
+    "body_bolt_h":    762,   # болт стойки в заводское ребро: ~30″ над чистовым полом (фото 2, 3, 4)
+    # рама настила
+    "rail_top_h":     701,   # верх продольных реек и поперечин: ~27.6″ над чистовым полом (фото 2, 14)
+    "cross_n":          3,   # поперечины strut: у задней стойки, посередине, у передней (съёмные)
+    "deck_th":         19,   # плита «MR TIPO/TYPE II … 1220 mm» (влагостойкая MDF/ДСП) ~3/4″
+    "deck_len":      1220,   # = ширина листа (маркировка «1220 mm»), от задней грани задней стойки;
+                             # None = до передней грани передней стойки (уточнить)
+    "mattress_th":    100,   # ~10 см (со слов Dimitri)
+    # над настилом, только пассажирский борт: стеновая фанера + брус 2×4 по её верху (фото 3, 4, 15)
+    "wall_panel":    True,
+    "wall_panel_th":  11.9,
+    "ledger_center_above_deck": 450,   # ~17.7″ над настилом
+    "ledger_w":        38,   # 2×4: 1.5″ от стены внутрь
+    "ledger_h":        89,   #      3.5″ по вертикали
 }
 
 DOC_NAME    = "van_v0"
@@ -170,6 +192,10 @@ COL_STRUT    = (0.55, 0.57, 0.62)   # strut channel — сталь/оцинко�
 COL_PLY      = (0.80, 0.66, 0.42)   # фанерный настил
 COL_WOOD     = (0.72, 0.52, 0.30)   # 2×4 деревянные лаги
 COL_MATTRESS = (0.40, 0.55, 0.85)   # матрас (визуал)
+COL_DECK     = (0.86, 0.80, 0.68)   # настил — плита MR (бежевая)
+COL_XPS      = (0.95, 0.62, 0.72)   # XPS FOAMULAR — розовый
+COL_ARCH     = (0.78, 0.78, 0.76)   # кожух колёсной арки
+COL_BOLT     = (0.15, 0.80, 0.30)   # болт стойки в кузов (зелёная проставка)
 
 _SCAN_PTS = None   # кэш облака точек скана в СК модели
 
@@ -542,127 +568,160 @@ def build():
                    P["factory_threaded_radius"], (x, ysign * threaded_yw, threaded_z),
                    color=COL_FACTORY_THREAD, group=threaded_g)
 
-    # ═══════ КРОВАТЬ — каркас из strut channel (без сварки, разборная) ═══════
+    # ═══════ ПОЛ: XPS + фанера (чистовой пол) ═══════
+    floor_top = P["floor_corrugation_height"]          # верх гребней железного пола
+    W = WHEEL_ARCH
+    arch_ywall = y_at_z(half, 0.0)                     # стена у пола (внутр. поверхность)
+    arch_x0 = W["center_x"] - W["len_x"] / 2.0
+    arch_x1 = W["center_x"] + W["len_x"] / 2.0
+
+    def _arch_footprint(sgn, zh):
+        """Коробка-габарит арки на борту sgn (для вырезов в полу)."""
+        y0 = arch_ywall - W["protrusion"] if sgn > 0 else -arch_ywall
+        return Part.makeBox(arch_x1 - arch_x0, W["protrusion"], zh,
+                            App.Vector(arch_x0, y0, -1.0))
+
+    if FLOOR.get("enable"):
+        fl_g = doc.addObject("App::DocumentObjectGroup", "FloorBuildup")
+        fl_g.Label = "Пол: XPS F-150 1″ + фанера 1/2″ (по факту)"
+        frame.addObject(fl_g)
+        fhw = floor_hw - FLOOR["edge_gap"]
+        z_xps = floor_top
+        z_ply = z_xps + FLOOR["xps_th"]
+        cut_h = z_ply + FLOOR["ply_th"] + 10.0
+        xps = Part.makeBox(L, 2 * fhw, FLOOR["xps_th"], App.Vector(0.0, -fhw, z_xps))
+        ply = Part.makeBox(L, 2 * fhw, FLOOR["ply_th"], App.Vector(0.0, -fhw, z_ply))
+        if W.get("enable"):
+            for sgn in (+1, -1):
+                xps = xps.cut(_arch_footprint(sgn, cut_h))
+                ply = ply.cut(_arch_footprint(sgn, cut_h))
+        add_shape(doc, "Floor_XPS", "XPS Owens Corning FOAMULAR NGX F-150, %.1f мм (1″)" % FLOOR["xps_th"],
+                  xps, color=COL_XPS, transparency=30, group=fl_g)
+        add_shape(doc, "Floor_Plywood", "Фанера пола 1/2″ (%.1f мм), прижата полосами" % FLOOR["ply_th"],
+                  ply, color=COL_PLY, transparency=20, group=fl_g)
+        floor_top = z_ply + FLOOR["ply_th"]            # чистовой пол — от него все высоты кровати
+
+    # ═══════ КОЛЁСНЫЕ АРКИ (внутренние кожухи, упрощённо: полуэллипс по X-Z) ═══════
+    if W.get("enable"):
+        arch_g = doc.addObject("App::DocumentObjectGroup", "WheelArches")
+        arch_g.Label = "Колёсные арки (по рулетке на фото; высота — SEED)"
+        frame.addObject(arch_g)
+        a_half = W["len_x"] / 2.0
+        b_top = floor_top + W["height"]
+        n_seg = 36
+        for sgn, tag in ((+1, "pY"), (-1, "nY")):
+            y0 = arch_ywall - W["protrusion"] if sgn > 0 else -arch_ywall
+            pts = [App.Vector(W["center_x"] + a_half * math.cos(math.pi * i / n_seg), y0,
+                              b_top * math.sin(math.pi * i / n_seg)) for i in range(n_seg + 1)]
+            pts.append(pts[0])
+            face = Part.Face(Part.makePolygon(pts))
+            add_shape(doc, "WheelArch_%s" % tag,
+                      "Колёсная арка %s: %g×%g мм по полу, верх Z=%.0f" % (
+                          tag, W["len_x"], W["protrusion"], b_top),
+                      face.extrude(App.Vector(0.0, W["protrusion"], 0.0)),
+                      color=COL_ARCH, transparency=15, group=arch_g)
+
+    # ═══════ КРОВАТЬ — как построена (strut SC14-10-EG), реконструкция по фото ═══════
     bed_summary = None
     B = BED
     if B.get("enable"):
         bed_g = doc.addObject("App::DocumentObjectGroup", "Bed_StrutFrame")
-        bed_g.Label = "Кровать — каркас strut channel (разборный, без сварки)"
-        sw, sh = B["strut_w"], B["strut_h"]               # неглубокий профиль (всё из него)
-        bz = B["top_z"]
-        yL = y_at_z(half, bz) - B["wall_clear"]          # центр ноги у борта
-        leg_xs = [rear_thread_x, middle_thread_x]         # 360, 1680 (заводские точки)
-        bed_cx = sum(leg_xs) / 2.0
-        bw = B["mattress_width_x"]
-        # передний край — от bed_cx; задний край тянем почти до задней двери (X≈0) по просьбе
-        deck_x1 = bed_cx + bw / 2.0
-        deck_x0 = B.get("deck_rear_x", bed_cx - bw / 2.0)
+        bed_g.Label = "Кровать (построена) — strut SC14-10-EG, реконструкция по фото 2026-11-05"
+        sw, sd = B["strut_w"], B["strut_d"]
+        xr, xf = B["post_rear_x"], B["post_front_x"]
+        z_bolt = floor_top + B["body_bolt_h"]
+        z_rail_top = floor_top + B["rail_top_h"]
+        z_deck_top = z_rail_top + B["deck_th"]
+        yw_post = y_at_z(half, z_bolt)                 # стена (рёбра) на высоте болта
+        post_out = yw_post - B["post_wall_gap"]        # грань стойки к стене (|Y|)
+        post_in = post_out - sd                        # грань стойки в салон
+        rail_in = post_in - sd                         # грань продольной рейки в салон
 
-        # высота стойки: вверх до Z, где борт ещё не ушёл внутрь Y ноги (под крышу)
-        crown = half[-1][1]
-        post_top, zq = bz, bz
-        while zq <= crown:
-            if y_at_z(half, zq) >= yL:
-                post_top = zq
-            zq += 10.0
-        post_top -= B["post_margin_top"]
+        def ybase(sgn, y_outer, depth):
+            """Y-начало коробки толщиной depth, прижатой к |Y|=y_outer изнутри."""
+            return y_outer - depth if sgn > 0 else -y_outer
 
-        cutlist = []  # (label, length_mm) — всё неглубокий strut
-        woodlist = []  # (label, length_mm) — 2×4 (бесплатно)
+        cutlist = []   # (что, длина мм) — strut SC14-10-EG
 
-        def strut(name, label, dims, base, group=bed_g):
-            add_box(doc, name, label, dims, base, color=COL_STRUT, group=group)
-            cutlist.append((label, float(max(dims))))
+        def strut(name, label, dims, base, what):
+            add_box(doc, name, label, dims, base, color=COL_STRUT, group=bed_g)
+            cutlist.append((what, float(max(dims))))
 
-        # 4 ноги-стойки (пол → под крышу); болт к борту в заводской точке Z=bz,
-        # заодно направляющие под обшивку/оборудование. Высота ~post_top < 5ft → влезает в кусок.
-        for lx, xr in ((leg_xs[0], "rear"), (leg_xs[1], "mid")):
-            for ysign, tag in ((+1, "pY"), (-1, "nY")):
-                strut("BedLeg_%s_%s" % (tag, xr),
-                      "Нога кровати strut %s X=%g (болт к борту Z=%g, до Z=%.0f)"
-                      % (tag, lx, bz, post_top),
-                      (sw, sh, post_top),
-                      (lx - sw / 2.0, ysign * yL - sh / 2.0, 0.0))
+        # стойки + пластины + болты в кузов
+        px, py, pt = B["plate"]
+        post_solids = []
+        for x, xtag in ((xr, "rear"), (xf, "front")):
+            for sgn, tag in ((+1, "pY"), (-1, "nY")):
+                add_box(doc, "BedPostPlate_%s_%s" % (tag, xtag),
+                        "Пластина под стойкой %s %s (~4×5″, шурупы в фанеру пола)" % (tag, xtag),
+                        (px, py, pt), (x - px / 2.0, ybase(sgn, post_out, py), floor_top),
+                        color=COL_STRUT, group=bed_g)
+                base = (x - sw / 2.0, ybase(sgn, post_out, sd), floor_top + pt)
+                strut("BedPost_%s_%s" % (tag, xtag),
+                      "Стойка %s %s X=%g, L=%g (болт в кузов на %.0f над полом)" % (
+                          tag, xtag, x, B["post_len"], B["body_bolt_h"]),
+                      (sw, sd, B["post_len"]), base, "стойка")
+                post_solids.append(Part.makeBox(sw + 6, sd + 6, B["post_len"],
+                                                App.Vector(base[0] - 3, base[1] - 3, base[2])))
+                add_sphere(doc, "BedPostBodyBolt_%s_%s" % (tag, xtag),
+                           "Болт стойки %s %s в заводское ребро, Z=%.0f (~30″ над полом)" % (tag, xtag, z_bolt),
+                           9, (x, sgn * (post_out + B["post_wall_gap"] / 2.0), z_bolt),
+                           color=COL_BOLT, group=bed_g)
 
-        # 2 продольные несущие (вдоль X) — 5ft куски, передним краем к X=deck_x1, перекрывают обе ноги
-        rail_len = B["rail_len"]
-        rail_x1 = deck_x1
-        rail_x0 = rail_x1 - rail_len
-        for ysign, tag in ((+1, "pY"), (-1, "nY")):
-            ly = ysign * yL
-            strut("BedRailLong_%s" % tag,
-                  "Продольная несущая strut %s 5ft (X %.0f..%.0f)" % (tag, rail_x0, rail_x1),
-                  (rail_len, sw, sh),
-                  (rail_x0, ly - sw / 2.0, bz - sh))
+        # продольные рейки по бортам (1-5/8″ по вертикали, открытой стороной в салон)
+        rx0, rx1 = xr - sw / 2.0, xf + sw / 2.0
+        for sgn, tag in ((+1, "pY"), (-1, "nY")):
+            strut("BedSideRail_%s" % tag,
+                  "Продольная рейка %s X %.0f..%.0f, верх Z=%.0f" % (tag, rx0, rx1, z_rail_top),
+                  (rx1 - rx0, sd, sw), (rx0, ybase(sgn, post_in, sd), z_rail_top - sw), "продольная")
 
-        # поперечные лаги под фанеру — 2×4 ДЕРЕВО (бесплатно), в пролёте продольных рейк
-        joist_w, joist_h = B["joist_w"], B["joist_h"]
-        nJ = B["n_joist"]
-        joist_xs = [rail_x0 + (rail_x1 - rail_x0) * i / (nJ - 1) for i in range(nJ)]
-        for i, jx in enumerate(joist_xs, 1):
-            add_box(doc, "BedJoist2x4_%02d" % i,
-                    "Лага 2×4 #%d X=%.0f (под фанеру, дерево, $0)" % (i, jx),
-                    (joist_w, 2 * yL, joist_h),
-                    (jx - joist_w / 2.0, -yL, bz), color=COL_WOOD, group=bed_g)
-            woodlist.append(("Лага 2×4 #%d" % i, 2 * yL))
+        # 3 съёмные поперечины между рейками
+        nC = max(2, int(B["cross_n"]))
+        cx0, cx1 = xr + sw / 2.0 + sd / 2.0, xf - sw / 2.0 - sd / 2.0
+        for i in range(nC):
+            cx = cx0 + (cx1 - cx0) * i / (nC - 1)
+            strut("BedCross_%d" % (i + 1),
+                  "Поперечина #%d X=%.0f (съёмная), L=%.0f" % (i + 1, cx, 2 * rail_in),
+                  (sd, 2 * rail_in, sw), (cx - sd / 2.0, -rail_in, z_rail_top - sw), "поперечина")
 
-        # фанерный настил + матрас (визуал). Задний край свешивается ~%.0f мм за рейку — консоль ОК.
-        deck_z = bz + joist_h
-        add_box(doc, "BedDeck_Plywood", "Настил — фанера %gмм (на 2×4-лагах)" % B["deck_th"],
-                (deck_x1 - deck_x0, 2 * yL, B["deck_th"]),
-                (deck_x0, -yL, deck_z), color=COL_PLY, transparency=10, group=bed_g)
-        matt_z = deck_z + B["deck_th"]
-        add_box(doc, "BedMattress", "Матрас (визуал, %g×%.0f)" % (bw, 2 * yL),
-                (bw, 2 * yL, B["mattress_th"]),
-                (deck_x0, -yL, matt_z), color=COL_MATTRESS, transparency=55, group=bed_g)
+        # настил (MR-плита) с вырезами под стойки + матрас
+        dx0 = xr - sw / 2.0
+        dx1 = xf + sw / 2.0 if not B.get("deck_len") else dx0 + B["deck_len"]
+        dhw = y_at_z(half, z_rail_top) - 5.0
+        deck = Part.makeBox(dx1 - dx0, 2 * dhw, B["deck_th"], App.Vector(dx0, -dhw, z_rail_top))
+        for s in post_solids:
+            deck = deck.cut(s)
+        add_shape(doc, "BedDeck", "Настил — плита MR Type II %g мм, %.0f×%.0f (вырезы под стойки)" % (
+                      B["deck_th"], dx1 - dx0, 2 * dhw),
+                  deck, color=COL_DECK, transparency=10, group=bed_g)
+        add_box(doc, "BedMattress", "Матрас ~%g мм" % B["mattress_th"],
+                (dx1 - dx0, 2 * post_in, B["mattress_th"]), (dx0, -post_in, z_deck_top),
+                color=COL_MATTRESS, transparency=55, group=bed_g)
 
-        # 5-я стойка — под оборудование (pY front, X=2930), ОТЛОЖЕНА (не для кровати)
-        if B.get("equip_post") and 0 <= front_thread_x <= L:
-            strut("EquipPost_pY_front",
-                  "Стойка под оборудование strut pY X=%g (НЕ кровать; болт Z=%g)"
-                  % (front_thread_x, bz),
-                  (sw, sh, post_top),
-                  (front_thread_x - sw / 2.0, yL - sh / 2.0, 0.0))
+        # над настилом, пассажирский борт (= борт сдвижной двери): стеновая фанера + 2×4
+        if B.get("wall_panel"):
+            ps = P["slider_side"]
+            z_led = z_deck_top + B["ledger_center_above_deck"]
+            lx0, lx1 = xr + sw / 2.0, xf - sw / 2.0
+            yw_l = y_at_z(half, z_led)
+            add_box(doc, "BedWallLedger2x4",
+                    "Брус 2×4 по верху стеновой фанеры, центр Z=%.0f (~%.0f над настилом)" % (
+                        z_led, B["ledger_center_above_deck"]),
+                    (lx1 - lx0, B["ledger_w"], B["ledger_h"]),
+                    (lx0, ybase(ps, yw_l, B["ledger_w"]), z_led - B["ledger_h"] / 2.0),
+                    color=COL_WOOD, group=bed_g)
+            zp0, zp1 = z_deck_top, z_led - B["ledger_h"] / 2.0
+            yw_p = y_at_z(half, (zp0 + zp1) / 2.0)
+            add_box(doc, "BedWallPanel", "Стеновая фанера над настилом (%s)" % ("-Y" if ps < 0 else "+Y"),
+                    (lx1 - lx0, B["wall_panel_th"], zp1 - zp0),
+                    (lx0, ybase(ps, yw_p, B["wall_panel_th"]), zp0),
+                    color=COL_PLY, transparency=25, group=bed_g)
 
-        # ── смета / cut-list ──
-        # Хлысты считаем УПАКОВКОЙ (First-Fit-Decreasing) по 10ft с пропилом.
-        STICK = 3048.0  # 10 ft
-        KERF = 4.0      # пропил
-        def _pack(lengths):
-            bins = []
-            for Lp in sorted(lengths, reverse=True):
-                for b in range(len(bins)):
-                    if bins[b] + Lp + KERF <= STICK:
-                        bins[b] += Lp + KERF
-                        break
-                else:
-                    bins.append(Lp + KERF)
-            return len(bins)
-        strut_L = [Lp for _, Lp in cutlist]
-        strut_mm = sum(strut_L)
-        strut_sticks = _pack(strut_L)
-        wood_mm = sum(Lp for _, Lp in woodlist)
-
-        # — крепёж (реалистично; см. BOM в FURNITURE_MEMORY.md) —
-        n_wall_bolts = 4                  # 4 ноги кровати → болт в заводскую точку борта
-        n_angles     = 4                  # ноги ↔ продольные несущие (2 ноги × 2 борта), уголок 90°
-        n_spring     = 2 * n_angles + 2 * nJ   # 2 компл. на угол + по 2 на лагу-к-рейке
-        n_end_caps   = len(cutlist) * 2        # 2 заглушки на профиль (оба конца)
-        n_ply        = 1 if bw <= 1220 else 2  # 1 лист если ширина ≤ 1220 мм, иначе 2
-
-        pr = BED_PRICES
-        cost_strut = strut_sticks * pr["strut_10ft"]
-        cost_fit   = (n_angles * pr["angle_fitting"] + n_spring * pr["spring_set"]
-                      + n_wall_bolts * pr["wall_bolt"] + n_end_caps * pr["end_cap"])
-        cost_ply   = n_ply * pr["ply_sheet"] + pr["screws_box"]
-        cost = cost_strut + cost_fit + cost_ply
         bed_summary = dict(
-            yL=yL, post_top=post_top, deck=(deck_x0, deck_x1), span_y=2 * yL,
-            strut_mm=strut_mm, strut_sticks=strut_sticks, wood_mm=wood_mm, n_joist=nJ,
-            n_angles=n_angles, n_spring=n_spring, n_wall_bolts=n_wall_bolts,
-            n_end_caps=n_end_caps, n_ply=n_ply,
-            cost_strut=cost_strut, cost_fit=cost_fit, cost_ply=cost_ply, cost=cost,
-            n_members=len(cutlist) + nJ + 2)
+            floor_top=floor_top, z_rail_top=z_rail_top, z_deck_top=z_deck_top, z_bolt=z_bolt,
+            posts=(xr, xf), post_y=post_out - sd / 2.0, deck=(dx0, dx1), deck_w=2 * dhw,
+            garage=z_rail_top - sw - floor_top, arch_top=floor_top + W["height"],
+            cutlist=cutlist)
 
     # ═══════ ПРОЁМЫ (реф-рамки) ═══════
     op = doc.addObject("App::DocumentObjectGroup", "Openings")
@@ -732,19 +791,25 @@ def build():
     if bed_summary:
         bs = bed_summary
         print("-" * 70)
-        print("[Кровать — strut (неглубокий) + 2×4-лаги, поперечная, разборная, без сварки]")
-        print("  Ноги: 4 у бортов (X=%s, Y=±%.0f); 5-я стойка оборуд. — отложена" % (
-            [int(rear_thread_x), int(middle_thread_x)], bs["yL"]))
-        print("  Стойки от пола Z=0 до Z=%.0f (под крышу; служат направляющими)" % bs["post_top"])
-        print("  Настил (фанера) X=%.0f..%.0f (задний край у двери), спим поперёк %.0f мм" % (
-            bs["deck"][0], bs["deck"][1], bs["span_y"]))
-        print("  Strut неглубокий: %.2f м → %d×10ft хлыста ($23/шт)" % (
-            bs["strut_mm"] / 1000, bs["strut_sticks"]))
-        print("  Дерево 2×4 (БЕСПЛАТНО): %d лаг, %.2f м" % (bs["n_joist"], bs["wood_mm"] / 1000))
-        print("  Крепёж: %d уголков, %d компл. гайка+болт, %d болтов в борт, %d заглушек, %d лист(а) фанеры" % (
-            bs["n_angles"], bs["n_spring"], bs["n_wall_bolts"], bs["n_end_caps"], bs["n_ply"]))
-        print("  ОЦЕНКА (США, июнь 2026): strut ~$%.0f + крепёж ~$%.0f + фанера+саморезы ~$%.0f = ~$%.0f" % (
-            bs["cost_strut"], bs["cost_fit"], bs["cost_ply"], bs["cost"]))
+        ff = bs["floor_top"]
+        def _h(z):
+            return "Z=%.0f (%.0f мм / %.1f″ над чистовым полом)" % (z, z - ff, (z - ff) / 25.4)
+        print("[Кровать — как построена; strut SC14-10-EG; реконструкция по фото 2026-11-05]")
+        print("  Чистовой пол (верх фанеры): Z=%.1f  (гребни %.0f + XPS %.1f + фанера %.1f)" % (
+            ff, P["floor_corrugation_height"], FLOOR["xps_th"], FLOOR["ply_th"]))
+        print("  Стойки: 4, X=%s, |Y|=%.0f; болт в кузов %s" % (
+            [int(v) for v in bs["posts"]], bs["post_y"], _h(bs["z_bolt"])))
+        print("  Верх реек/поперечин: %s;  верх настила: %s" % (_h(bs["z_rail_top"]), _h(bs["z_deck_top"])))
+        print("  Настил X=%.0f..%.0f (%.0f мм), поперёк %.0f мм" % (
+            bs["deck"][0], bs["deck"][1], bs["deck"][1] - bs["deck"][0], bs["deck_w"]))
+        print("  «Гараж» под кроватью: %.0f мм (%.1f″);  над аркой: %.0f мм" % (
+            bs["garage"], bs["garage"] / 25.4, bs["z_rail_top"] - 41.3 - bs["arch_top"]))
+        kinds = {}
+        for what, Lp in bs["cutlist"]:
+            kinds.setdefault(what, []).append(Lp)
+        print("  Strut по деталям: " + "; ".join(
+            "%s %d×%.0f" % (k, len(v), v[0]) for k, v in kinds.items()))
+        print("  Strut всего: %.2f м" % (sum(Lp for _, Lp in bs["cutlist"]) / 1000.0))
     print("-" * 70)
     if bb:
         print("Bounding box (вкл. обшивку): %.0f x %.0f x %.0f мм" % (

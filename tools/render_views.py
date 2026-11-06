@@ -38,11 +38,18 @@ H = int(os.environ.get("RENDER_H", 1100))
 
 # (файл, метод вида, префиксы скрываемых объектов)
 # X = длина фургона, поэтому «от задних дверей в салон» = viewLeft (смотрим вдоль +X)
+# Скрытие — по ПОДСТРОКЕ в имени объекта.
+_NOT_BED = ("Scan_Skin", "Opening", "RearDoorLeaf", "Rib_x", "Rail_pY_z", "Rail_nY_z", "Pillar_",
+            "Hole_", "FactoryThread", "FloorCorrugation", "Floor_")
 VIEWS = [
     ("iso_with_skin.png", "viewIsometric", ()),
     ("iso_frame.png", "viewIsometric", ("Scan_Skin",)),
     ("top_frame.png", "viewTop", ("Scan_Skin",)),
     ("from_rear_doors.png", "viewLeft", ("Scan_Skin", "Opening_RearDoors", "RearDoorLeaf")),
+    # кровать крупно
+    ("bed_iso.png", "viewIsometric", _NOT_BED),
+    # пассажирский борт (−Y) изнутри, зад справа — как фото 2; водительские (_pY) детали скрыты
+    ("bed_passenger_wall.png", "viewRear", _NOT_BED + ("_pY", "BedCross", "BedDeck", "BedMattress")),
 ]
 
 
@@ -68,7 +75,7 @@ def _shot(log, name, view, hide):
     hidden = []
     for o in doc.Objects:
         vo = getattr(o, "ViewObject", None)
-        if vo is not None and vo.Visibility and any(o.Name.startswith(h) for h in hide):
+        if vo is not None and vo.Visibility and any(h in o.Name for h in hide):
             vo.Visibility = False
             hidden.append(o)
     v = Gui.ActiveDocument.ActiveView
