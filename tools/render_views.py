@@ -51,6 +51,15 @@ VIEWS = [
     # пассажирский борт (−Y) изнутри, зад справа — как фото 2; водительские (_pY) детали скрыты
     ("bed_passenger_wall.png", "viewRear", _NOT_BED + ("_pY", "BedCross", "BedDeck", "BedMattress")),
 ]
+# этажерка под батареи: кровать и всё дальнее скрыто
+_RACK_HIDE = _NOT_BED + ("_pY", "front", "BedSideRail", "BedCross", "BedDeck", "BedMattress",
+                         "BedWall", "BedPostBodyBolt", "RackP2_RailBolt")
+VIEWS += [
+    # из салона, сверху-спереди (направление взгляда: назад, к борту −Y, вниз)
+    ("rack_3d.png", (-0.55, -1.0, -0.55), _RACK_HIDE),
+    ("rack_from_inside.png", "viewRear", _RACK_HIDE),
+    ("rack_top.png", "viewTop", _RACK_HIDE),
+]
 
 
 def _maximize_view():
@@ -79,7 +88,11 @@ def _shot(log, name, view, hide):
             vo.Visibility = False
             hidden.append(o)
     v = Gui.ActiveDocument.ActiveView
-    getattr(v, view)()
+    if isinstance(view, tuple):
+        v.viewIsometric()
+        v.setViewDirection(view)          # куда смотрит камера
+    else:
+        getattr(v, view)()
     for _ in range(3):
         Gui.updateGui()
         v.fitAll()
