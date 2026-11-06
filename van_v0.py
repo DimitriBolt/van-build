@@ -63,6 +63,11 @@ WHEEL_ARCH = {
                           # Upfit Supply (ProMaster «Wheel Well 35″ W × 17″ H × 9″ D») — 35″
     "protrusion":  270,   # выступ от стены внутрь, рулетка (фото 1): 10-5/8″ (Upfit: 9″ — от другой базы)
     "height":      432,   # верх над чистовым полом: 17″ — Upfit Supply (по фото 2 — 16–19″)
+    # форма (2026-11-06, по фото 7 и 1): сбоку — суперэллипс |x/a|^n + (z/b)^n = 1 (n=2 — эллипс);
+    # по силуэту на фото 7 на 84% высоты арка ещё 78% длины → n≈3.4 («квадратнее» эллипса).
+    # Верхняя внутренняя кромка скруглена (купол, фото 1/7) — радиус оценочный, промерить.
+    "profile_n":   3.4,
+    "top_round":   100,
 }
 
 # ──────────────────────────── PARAMS (мм) ────────────────────────────
@@ -211,6 +216,44 @@ BATTERY_RACK = {
     "front_stop":     (3.2, 38.0),      # упор-уголок по переднему краю полки: толщина, высота над полкой
     "rubber_block":   (60.0, 120.0),    # резиновый брусок над нижней батареей (X×Y), до низа полки
     "p34_plate": (76, 102, 1.6),        # пластины под P3/P4 (X×Y×толщ.), уходят к центру
+}
+
+# ─────────── БАК ДЛЯ ВОДЫ у водительской арки (между D-стойкой и аркой), проект 2026-11-06 ───────────
+# TORVA 33 gal (125 л), Amazon B0FBLCF2DN — по форме клон NW Conversions SP-L-33 (водительская версия:
+# «нога» бака позади арки). 48 × 12.5 × 20″, пустой 11 кг, полный ≈136 кг. Продавец: «для ProMaster
+# поднять на 3.5″»; «не подвешивать на ремнях и не класть на бак груз» → дно опирается на подставку.
+# Тоннель под арку — со стороны стены, открыт спереди и снизу (чертёж продавца: 235 × 325, R≈121).
+# Локальные координаты бака: u — от ПЕРЕДНЕГО (открытого) торца назад, v — от задней (к стене) грани
+# в салон, h — от дна вверх. Стойки кровати у стены оказываются между баком и бортом.
+WATER_TANK = {
+    "enable": True,
+    "side":   +1,                       # +1 = водительский борт (+Y)
+    "size":   (1220.0, 320.0, 508.0),   # u × v × h
+    "tunnel_depth": 235.0,              # от задней грани (стены) — внутренняя стенка тоннеля
+    "tunnel_r":     121.0,              # скругление потолок↔внутренняя стенка (по скрытым линиям; R146 — по воде)
+    # профиль тоннеля (u, h) у стены (потолок 325) и у внутренней стенки (там, где кончается скругление, h=204)
+    "tunnel_wall": [(-10, -10), (-10, 325), (618, 325), (808, 261), (863, 220), (899, 165), (925, 120),
+                    (945, 82), (982, 16), (995, -10)],
+    "tunnel_in":   [(-10, -10), (-10, 204), (618, 204), (680, 196), (725, 179), (760, 147), (794, 101),
+                    (820, 60), (838, 27), (850, -10)],
+    "foot_u":       985.0,              # «нога» (сплошная часть позади арки) — от u=985 до 1220 по дну
+    # зад бака от стены у пола, мм. Стойки кровати — между баком и бортом (нужно ≥45). Чем дальше от стены,
+    # тем дальше назад пускает скошенная D-стойка → скат тоннеля уходит от «плеча» арки. Нужный подъём
+    # (2026-11-06, n — форма арки сбоку): s=60: 115/185/211/260 мм при n=2/3/3.4/4.5; s=100: 115/133/141/187;
+    # s=120: —/127/135/156; s=140: —/120/129/146. Низ поперечин кровати ограничивает подъём ~145 мм.
+    "wall_standoff": 120.0,
+    "dpillar_gap":    5.0,              # задняя грань бака → передняя грань D-стойки (резиновая прокладка)
+    "lift":          None,              # подъём дна над чистовым полом; None = подобрать из riser_stacks
+    "arch_clear":     8.0,              # минимальный зазор бак ↔ арка при подборе подъёма
+    # подставка: доски на ребро (+ фанера сверху); варианты (высота мм, что, толщина фанеры сверху) —
+    # берётся первый ≥ нужного подъёма
+    "riser_stacks": ((108.0, "2×4 на ребро (3.5″) + фанера 3/4″", 19.0),
+                     (120.0, "2×4 на ребро (3.5″) + фанера 3/4″ + 1/2″", 31.0),
+                     (127.0, "2×4 на ребро (3.5″) + фанера 3/4″ × 2", 38.0),
+                     (140.0, "2×6 на ребро (5.5″), без фанеры; под полосой — 2 доски рядом", 0.0),
+                     (159.0, "2×6 на ребро (5.5″) + фанера 3/4″", 19.0)),
+    "post_gap":       3.0,              # P3/P4 → грань бака со стороны салона (резина)
+    "p34_plate":  (76, 102, 1.6),
 }
 
 DOC_NAME    = "van_v0"
@@ -658,21 +701,41 @@ def build():
         arch_g.Label = "Колёсные арки (рулетка на фото + Upfit Supply 35×17″)"
         frame.addObject(arch_g)
         b_top = floor_top + W["height"]
-        n_seg = 36
+        n_seg = 72
+        n_exp = float(W.get("profile_n", 2.0))
+        r_top = float(W.get("top_round", 0.0))
+        prot = W["protrusion"]
 
-        def _half_ellipse(a_half, y):
-            pts = [App.Vector(W["center_x"] + a_half * math.cos(math.pi * i / n_seg), y,
-                              b_top * math.sin(math.pi * i / n_seg)) for i in range(n_seg + 1)]
+        def _half_super(a_half, y, b):
+            """Сечение арки в плоскости |Y|=const: суперэллипс от пола (Z=0) до b."""
+            pts = []
+            for i in range(n_seg + 1):
+                t = math.pi * i / n_seg
+                c, s_ = math.cos(t), math.sin(t)
+                pts.append(App.Vector(W["center_x"] + a_half * math.copysign(abs(c) ** (2.0 / n_exp), c), y,
+                                      b * abs(s_) ** (2.0 / n_exp)))
             return Part.makePolygon(pts + [pts[0]])
 
+        # сечения от стены (d=0) к внутренней грани (d=prot): длина сужается линейно (len_x_wall → len_x),
+        # высота — постоянна до начала скругления верхней внутренней кромки, дальше — по дуге r_top
+        secs = [(0.0, b_top)]
+        if r_top > 0:
+            for ph in (0.0, 30.0, 55.0, 75.0, 90.0):
+                f = math.radians(ph)
+                secs.append((prot - r_top + r_top * math.sin(f), b_top - r_top + r_top * math.cos(f)))
+        else:
+            secs.append((prot, b_top))
+
+        def _a_at(d):
+            return (W["len_x_wall"] - (W["len_x_wall"] - W["len_x"]) * d / prot) / 2.0
+
         for sgn, tag in ((+1, "pY"), (-1, "nY")):
-            # кожух сужается от стены (len_x_wall) к внутренней грани (len_x): loft двух полуэллипсов
-            w_wall = _half_ellipse(W["len_x_wall"] / 2.0, sgn * arch_ywall)
-            w_in = _half_ellipse(W["len_x"] / 2.0, sgn * (arch_ywall - W["protrusion"]))
-            arch_shapes[sgn] = Part.makeLoft([w_wall, w_in], True)
+            wires = [_half_super(_a_at(d), sgn * (arch_ywall - d), b) for d, b in secs]
+            arch_shapes[sgn] = Part.makeLoft(wires, True, True)
             add_shape(doc, "WheelArch_%s" % tag,
-                      "Колёсная арка %s: у стены %g, по внутр. грани %g, выступ %g, верх Z=%.0f" % (
-                          tag, W["len_x_wall"], W["len_x"], W["protrusion"], b_top),
+                      "Колёсная арка %s: у стены %g, по внутр. грани %g, выступ %g, верх Z=%.0f; "
+                      "сбоку суперэллипс n=%g, скругление верхней внутр. кромки R%g (оценка по фото)" % (
+                          tag, W["len_x_wall"], W["len_x"], W["protrusion"], b_top, n_exp, r_top),
                       arch_shapes[sgn], color=COL_ARCH, transparency=15, group=arch_g)
 
     # ═══════ КРОВАТЬ — как построена (strut SC14-10-EG), реконструкция по фото ═══════
@@ -936,6 +999,174 @@ def build():
                 tie=(z_tie0, z_tie1) if ties else None,
                 tie_to_bed=(z_rail_top - sw) - z_tie1 if ties == "short" else None))
 
+    # ═══════ БАК ДЛЯ ВОДЫ у водительской арки (D-стойка ↔ арка), на подставке ═══════
+    tank_summary = None
+    T = WATER_TANK
+    if B.get("enable") and T.get("enable") and W.get("enable"):
+        ts = T["side"]
+        tg = doc.addObject("App::DocumentObjectGroup", "WaterTank")
+        tg.Label = "Бак для воды TORVA 33 gal (125 л) — водительский борт, D-стойка ↔ арка (проект 2026-11-06)"
+        TL, TD, TH = T["size"]
+        tdep, tr = T["tunnel_depth"], T["tunnel_r"]
+
+        # — тело бака в локальных координатах (u→x, v→y, h→z) —
+        def _sec(pts, v):
+            return Part.makePolygon([App.Vector(u, v, h) for u, h in pts] +
+                                    [App.Vector(pts[0][0], v, pts[0][1])])
+        pw, pi_ = T["tunnel_wall"], T["tunnel_in"]
+        v_flat = tdep - tr
+        secs_t = [_sec(pw, -10.0), _sec(pw, v_flat)]
+        for ph in (30.0, 55.0, 75.0, 90.0):
+            f = math.radians(ph)
+            wgt = 1.0 - math.cos(f)
+            blend = [((1 - wgt) * a[0] + wgt * b[0], (1 - wgt) * a[1] + wgt * b[1]) for a, b in zip(pw, pi_)]
+            secs_t.append(_sec(blend, v_flat + tr * math.sin(f)))
+        tunnel_loc = Part.makeLoft(secs_t, True, True)
+        tank_loc = Part.makeBox(TL, TD, TH).cut(tunnel_loc)
+
+        # — положение: зад бака в T["wall_standoff"] от стены (у пола), задний торец — в D-стойку —
+        y_back = arch_ywall - T["wall_standoff"]                       # |Y| задней грани бака
+        x_dp_corner = xr - sw / 2.0 - R["dpillar_gap"]                 # угол D-стойки у борта (как у этажерки)
+        x_dp = x_dp_corner - R["dpillar_slant"] * T["wall_standoff"] / R["dpillar_depth"]
+        x_r = x_dp + T["dpillar_gap"]                                  # задний торец бака
+        x_f = x_r + TL
+
+        def _place(shape_loc, z_b):
+            s = shape_loc.copy()
+            if ts > 0:     # u→−X, v→−Y (поворот 180° вокруг Z): зад бака к +Y-стене
+                s.rotate(App.Vector(0, 0, 0), App.Vector(0, 0, 1), 180.0)
+                s.translate(App.Vector(x_f, y_back, z_b))
+            else:          # зеркально для −Y (на будущее): u→−X, v→+Y
+                s = s.mirror(App.Vector(0, 0, 0), App.Vector(1, 0, 0))
+                s.translate(App.Vector(x_f, -y_back, z_b))
+            return s
+
+        arch = arch_shapes[ts]
+        lift = T.get("lift")
+        lift_min = None
+        stack_txt = ""
+        if lift is None:                                               # минимальный подъём по зазору до арки
+            lo, hi = 0.0, 200.0
+            for _ in range(14):
+                mid = (lo + hi) / 2.0
+                if _place(tank_loc, floor_top + mid).distToShape(arch)[0] >= T["arch_clear"]:
+                    hi = mid
+                else:
+                    lo = mid
+            lift_min = hi
+            lift, stack_txt, ply_top = T["riser_stacks"][-1]
+            for hgt, txt, pt_ in T["riser_stacks"]:
+                if hgt >= lift_min:
+                    lift, stack_txt, ply_top = hgt, txt, pt_
+                    break
+        else:
+            ply_top = 19.0
+        z_b = floor_top + lift
+        tank = _place(tank_loc, z_b)
+        add_shape(doc, "WaterTank_TORVA33",
+                  "Бак TORVA 33 gal 48×12.5×20″ (полный ≈136 кг), дно %.0f над полом, зад %.0f от стены" % (
+                      lift, T["wall_standoff"]),
+                  tank, color=(0.70, 0.86, 0.98), transparency=25, group=tg)
+
+        # — передняя грань D-стойки (реф) на этом борту —
+        ywall0 = arch_ywall
+        y_dp_in = ywall0 - R["dpillar_depth"]
+        sl = R["dpillar_slant"]
+        pts = [App.Vector(x_dp_corner, ts * ywall0, 0.0), App.Vector(x_dp_corner - sl, ts * y_dp_in, 0.0),
+               App.Vector(x_dp_corner - sl - 12.0, ts * y_dp_in, 0.0), App.Vector(x_dp_corner - 12.0, ts * ywall0, 0.0)]
+        dpf = Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(App.Vector(0, 0, z_b + TH + 50.0))
+        add_shape(doc, "DPillarFace_%s_ref" % ("pY" if ts > 0 else "nY"),
+                  "Передняя грань D-стойки (реф, зеркально пассажирской; на водительской — D-ring на торце проёма)",
+                  dpf, color=COL_DPILLAR, transparency=40, group=tg)
+
+        # — подставка: фанера сверху по «ноге» и по полосе под внутренней стенкой, брус 2×4 на ребро —
+        tp = ply_top                                                  # фанера сверху (0 — без неё)
+        fu = T["foot_u"]
+        sk_v0 = tdep                                                  # полоса под внутренней стенкой: v 235..320
+        riser_parts = []
+
+        def _riser(name, label, dims_loc, base_loc, color):
+            b = Part.makeBox(dims_loc[0], dims_loc[1], dims_loc[2], App.Vector(*base_loc))
+            s = _place(b, floor_top)
+            add_shape(doc, name, label, s, color=color, group=tg)
+            riser_parts.append(s)
+            return s
+        if tp > 0:
+            _riser("TankRiser_TopFoot", "Подставка: фанера %.0f мм под «ногой» бака %.0f×%.0f" % (tp, TL - fu, TD),
+                   (TL - fu, TD, tp), (fu, 0.0, lift - tp), COL_PLY)
+            _riser("TankRiser_TopStrip", "Подставка: фанера %.0f мм полосой под внутренней стенкой %.0f×%.0f" % (
+                       tp, fu, TD - sk_v0), (fu, TD - sk_v0, tp), (0.0, sk_v0, lift - tp), COL_PLY)
+        slh = lift - tp                                               # высота досок на ребро
+        bw = 38.0
+        board = "2×6" if slh > 100 else "2×4"
+        for i, u0 in enumerate((TL - bw, (fu + TL - bw) / 2.0, fu)):
+            _riser("TankRiser_Sleeper_Foot%d" % (i + 1), "Доска %s на ребро под «ногой», L=%.0f" % (board, TD),
+                   (bw, TD, slh), (u0, 0.0, 0.0), COL_WOOD)
+        n_strip = 1 if tp > 0 else 2                                  # без фанеры — 2 доски рядом под полосой
+        for j in range(n_strip):
+            v0 = (sk_v0 + (TD - sk_v0 - bw) / 2.0) if n_strip == 1 else (sk_v0 + 4.0 + j * (bw + 1.0))
+            _riser("TankRiser_Sleeper_Strip%d" % (j + 1), "Доска %s на ребро вдоль полосы под стенкой бака, L=%.0f" % (
+                       board, fu), (fu, bw, slh), (0.0, v0, 0.0), COL_WOOD)
+
+        # — P3/P4 со стороны салона: до верха поперечин кровати, болтами к ним (как у этажерок) —
+        qx, qy, qt = T["p34_plate"]
+        y_cab = y_back - TD                                           # |Y| грани бака со стороны салона
+        y_p_out = y_cab - T["post_gap"]                               # грань стоек к баку
+        z_top = z_rail_top
+        p_len = z_top - floor_top - qt
+        tank_posts = {}
+        # P3 — по X как задняя стойка кровати (передней гранью в BedCross_1, как у этажерок);
+        # P4 — позади поперечины-стяжки переднего блока батарей (она на всю ширину), передней гранью в неё;
+        # если её нет — позади BedCross_3. Обе — в пределах длины бака.
+        x4_tie = doc.getObject("BedCross_Rack_fwd")
+        if x4_tie is not None and x4_tie.Shape.BoundBox.XMin - sw > x_r + 200.0:
+            p4x0, p4note = x4_tie.Shape.BoundBox.XMin - sw, "позади поперечины BedCross_Rack_fwd, болт к ней"
+        else:
+            p4x0, p4note = xf - sw / 2.0 - sd - sw, "позади поперечины BedCross_3, болт к ней"
+        if p4x0 + sw > x_f - 20.0:
+            p4x0 = x_f - 20.0 - sw
+        for nm, x0, note in (("P3", xr - sw / 2.0, "по X как задняя стойка кровати, болт к BedCross_1"),
+                             ("P4", p4x0, p4note)):
+            add_box(doc, "TankPostPlate_%s" % nm, "Пластина под %s бака" % nm,
+                    (qx, qy, qt), (x0 + sw / 2.0 - qx / 2.0, ybase(ts, y_p_out, qy), floor_top),
+                    color=COL_STRUT, group=tg)
+            add_box(doc, "TankPost_%s" % nm, "Стойка %s бака (со стороны салона), L=%.0f — %s" % (nm, p_len, note),
+                    (sw, sd, p_len), (x0, ybase(ts, y_p_out, sd), floor_top + qt), color=COL_STRUT, group=tg)
+            tank_posts[nm] = Part.makeBox(sw, sd, p_len, App.Vector(x0, ybase(ts, y_p_out, sd), floor_top + qt))
+            cutlist.append(("стойка бака", float(p_len)))
+
+        # — проставка между задней стойкой кровати (у стены) и задом бака —
+        sp_t = post_in - y_back                                       # зазор стойка ↔ бак
+        if sp_t > 1.0:
+            add_box(doc, "TankSpacer_RearBedPost",
+                    "Проставка (резина/брус) между задней стойкой кровати и баком, %.0f мм" % sp_t,
+                    (sw, sp_t, 300.0), (xr - sw / 2.0, ybase(ts, post_in, sp_t), z_b + 100.0),
+                    color=(0.15, 0.15, 0.15), group=tg)
+
+        # — проверки —
+        def _d(a, b):
+            return a.distToShape(b)[0]
+        obj = lambda n: doc.getObject(n).Shape
+        tag = "pY" if ts > 0 else "nY"
+        checks = [
+            ("арка", _d(tank, arch)),
+            ("D-стойка", _d(tank, dpf)),
+            ("задняя стойка кровати", _d(tank, obj("BedPost_%s_rear" % tag))),
+            ("передняя стойка кровати", _d(tank, obj("BedPost_%s_front" % tag))),
+            ("P3", _d(tank, tank_posts["P3"])), ("P4", _d(tank, tank_posts["P4"])),
+            ("продольная рейка кровати", _d(tank, obj("BedSideRail_%s" % tag))),
+            ("поперечины кровати", min(_d(tank, o.Shape) for o in doc.Objects
+                                        if o.Name.startswith("BedCross") and not o.isDerivedFrom("App::DocumentObjectGroup"))),
+            ("подставка ↔ арка", min(_d(s, arch) for s in riser_parts)),
+            ("подставка ↔ пластина задней стойки", min(_d(s, obj("BedPostPlate_%s_rear" % tag)) for s in riser_parts)),
+        ]
+        # зазоры по сторонам (в X у дна «ноги» и в Y у внутренней стенки тоннеля)
+        tank_summary = dict(lift=lift, lift_min=lift_min, stack=stack_txt, x=(x_r, x_f), y_back=y_back,
+                            y_cab=y_cab, standoff=T["wall_standoff"], top=z_b + TH, checks=checks,
+                            spacer=sp_t, p_len=p_len, x_dp=x_dp, floor_top=floor_top,
+                            under_cross=(z_rail_top - sw) - (z_b + TH),
+                            vol=tank.Volume / 1e6)
+
     # ═══════ ПРОЁМЫ (реф-рамки) ═══════
     op = doc.addObject("App::DocumentObjectGroup", "Openings")
     op.Label = "Проёмы дверей (реф-рамки, SEED)"
@@ -1045,6 +1276,21 @@ def build():
             print("  Стяжки = поперечины кровати: существующая + новая L=%.0f" % rs["cross_len"])
         print("  Новая стойка P2 X=%.0f..%.0f, до арки %s;  P3/P4 L=%.0f;  рейки полки 2×%.0f" % (
             rs["p2"][0], rs["p2"][1], mm(rs["p2_arch"]), rs["p34_len"], rs["rail_len"]))
+    if tank_summary:
+        t = tank_summary
+        f0 = t["floor_top"]
+        print("[Бак для воды TORVA 33 gal — водительский борт, D-стойка ↔ арка]")
+        if t["lift_min"] is not None:
+            print("  Нужный подъём дна (зазор до арки ≥ %.0f мм): %.0f мм (%.1f″) → подставка %.0f мм (%.2f″): %s" % (
+                WATER_TANK["arch_clear"], t["lift_min"], t["lift_min"] / 25.4, t["lift"], t["lift"] / 25.4, t["stack"]))
+        else:
+            print("  Подъём дна (задан): %.0f мм" % t["lift"])
+        print("  X бака %.0f..%.0f; зад бака в %.0f мм от стены, грань в салон в %.0f мм от стены (у пола)" % (
+            t["x"][0], t["x"][1], t["standoff"], t["standoff"] + WATER_TANK["size"][1]))
+        print("  Верх бака %.0f мм над полом; до низа поперечин кровати %.0f мм" % (t["top"] - f0, t["under_cross"]))
+        print("  Зазоры: " + "; ".join("%s %.1f" % (n, v) for n, v in t["checks"]))
+        print("  Проставка задняя стойка кровати ↔ бак: %.0f мм;  P3/P4 L=%.0f;  объём тела в модели %.0f л" % (
+            t["spacer"], t["p_len"], t["vol"]))
     print("-" * 70)
     if bb:
         print("Bounding box (вкл. обшивку): %.0f x %.0f x %.0f мм" % (

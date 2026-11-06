@@ -70,6 +70,16 @@ VIEWS += [
     # передний блок крупно, взгляд вперёд-к борту (сдвижная дверь — дальше)
     ("rack_front_3d.png", (0.55, -1.0, -0.55), _RACK_HIDE + _REAR_RACK + ("BedCross_2",)),
 ]
+# бак для воды у водительской арки: пассажирский борт и всё с него скрыто
+_TANK_HIDE = _NOT_BED + ("_nY", "Battery_", "RackShelf", "RackPost", "RackRubber", "RackLower", "RackP2",
+                         "BedDeck", "BedMattress", "BedWall", "BedPostBodyBolt")
+VIEWS += [
+    # из салона на водительский борт, сверху-сзади (взгляд вперёд-влево-вниз)
+    ("tank_3d.png", (0.45, 1.0, -0.6), _TANK_HIDE),
+    # прямо на водительский борт из салона: зад слева, перед справа
+    ("tank_wall_view.png", "viewFront", _TANK_HIDE + ("BedCross", "BedSideRail")),
+    ("tank_top.png", "viewTop", _TANK_HIDE + ("BedCross", "BedSideRail")),
+]
 
 
 def _maximize_view():
