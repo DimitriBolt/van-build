@@ -199,6 +199,8 @@ BATTERY_RACK = {
     "front_cross_full": True,           # передняя стяжка-поперечина на всю ширину (до противоп. рейки)
     "gap_above_b2":    38.0,            # 1.5″ над верхней батареей — клеммы (для "short")
     "p2_body_bolt":    True,            # P2 ↔ ребро кузова на высоте болта P1 (M6: резьба/ривнат)
+    "front_stop":     (3.2, 38.0),      # упор-уголок по переднему краю полки: толщина, высота над полкой
+    "rubber_block":   (60.0, 120.0),    # резиновый брусок над нижней батареей (X×Y), до низа полки
     "p34_plate": (76, 102, 1.6),        # пластины под P3/P4 (X×Y×толщ.), уходят к центру
 }
 
@@ -776,7 +778,8 @@ def build():
     R = BATTERY_RACK
     if B.get("enable") and R.get("enable"):
         rk_g = doc.addObject("App::DocumentObjectGroup", "BatteryRack")
-        rk_g.Label = "Этажерка: батареи Buknuwo 150Ah между D-стойкой и аркой (пассажирский борт)"
+        rk_g.Label = ("Этажерка: батареи Buknuwo 150Ah между D-стойкой и аркой (пассажирский борт)"
+                      " — УТВЕРЖДЕНО 2026-11-06")
         ps = P["slider_side"]                          # пассажирский борт (−Y)
         bx, by, bz = R["battery"]
         X0 = xr - sw / 2.0 - R["dpillar_gap"]          # задняя грань батарей = передняя грань D-стойки
@@ -844,6 +847,18 @@ def build():
                    (sd, by + sd, sw), (x0, ybase(ps, y_wall_side, by + sd), z_rail0), COL_STRUT)
         rk_box("RackShelfPlate", "Полка — фанера 1/2″ %.0f×%.0f" % (bx, by),
                (bx, by, R["shelf_th"]), (X0, ybase(ps, y_wall_side, by), z_rail1), COL_PLY, tr=10)
+        # упор верхней батареи вперёд (арка на этой высоте уже не держит): уголок на передней рейке
+        if R.get("front_stop"):
+            st, sh = R["front_stop"]
+            rk_box("RackShelfFrontStop", "Упор-уголок по переднему краю полки (держит верхнюю батарею вперёд)",
+                   (st, by, (z_b2 + sh) - z_rail0), (X1, ybase(ps, y_wall_side, by), z_rail0), COL_STRUT)
+        # резиновый брусок: нижняя батарея не подпрыгивает (ставить не над клеммами)
+        if R.get("rubber_block"):
+            rbx, rby = R["rubber_block"]
+            rk_box("RackRubberBlock", "Резиновый брусок над нижней батареей (до низа полки)",
+                   (rbx, rby, z_rail1 - z_b1_top),
+                   ((X0 + X1 - rbx) / 2.0, ybase(ps, y_wall_side - (by - rby) / 2.0, rby), z_b1_top),
+                   (0.15, 0.15, 0.15))
 
         # P3/P4 — короткие стойки со стороны салона, по углам батарей
         qx, qy, qt = R["p34_plate"]
