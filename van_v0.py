@@ -11,7 +11,12 @@ van_v0.py — КАРКАСНАЯ модель RAM ProMaster 136" High Roof, по
 
 СИСТЕМА КООРДИНАТ:
   ноль — пол у порога ЗАДНИХ дверей, на центральной оси.
-  X = длина:  0 сзади, +X к кабине;  Y = ширина: 0 центр, +Y пассажир;  Z = высота: 0 пол.
+  X = длина:  0 сзади, +X к кабине;  Y = ширина: 0 центр;  Z = высота: 0 пол.
+  СК правая (как во FreeCAD): если смотреть вперёд на кабину (+X), то
+    +Y = ЛЕВЫЙ борт  = сторона ВОДИТЕЛЯ (US),
+    −Y = ПРАВЫЙ борт = сторона ПАССАЖИРА, там штатная сдвижная дверь US ProMaster.
+  (До 2026-11-05 в подписях было наоборот, «+Y пассажир», — геометрия была верной,
+   ошибочными были только подписи.)
 
 ОТКУДА ГЕОМЕТРИЯ:
   Профиль сечения каркаса измеряется из Ducato_L2H2_body_reference.stl (наружная
@@ -96,7 +101,7 @@ PARAMS = {
 
     # — проёмы дверей (реф-рамки; SEED — уточнить по замеру) —
     "slider_w":  1250, "slider_h": 1755, "slider_front_from_rear": 3130, "slider_sill_z": 0,  # каталог/Ducato: ~1250x1755 мм
-    "slider_side": -1,  # -1 = левый/driver борт (-Y); +1 = passenger борт (+Y)
+    "slider_side": -1,  # -1 = правый/passenger борт (-Y) — так у этого фургона (подтверждено 2026-11-05); +1 = левый/driver борт (+Y)
     "rear_w":    1562, "rear_h":   1572, "rear_sill_z": 0,
     "frame_thickness": 15,
 }
@@ -140,9 +145,9 @@ BED_PRICES = {
 
 DOC_NAME    = "van_v0"
 _REAL_HOME  = os.environ.get("SNAP_REAL_HOME") or os.path.expanduser("~")
-SAVE_PATH   = os.path.join(_REAL_HOME, "van-build", "van_v0.FCStd")
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() \
               else os.path.join(_REAL_HOME, "van-build")
+SAVE_PATH   = os.path.join(PROJECT_DIR, "van_v0.FCStd")   # рядом со скриптом (на M6800 = ~/van-build)
 BODY_STL_PATH = os.path.join(PROJECT_DIR, "Ducato_L2H2_body_reference.stl")
 
 # ── Выравнивание скан → СК модели (измерено по body_reference) ──
@@ -274,7 +279,7 @@ def measured_half_profile(P):
 
 
 def full_hoop(half):
-    """Полный обруч (борт+крыша) из полу-профиля: правый борт→свод→левый борт.
+    """Полный обруч (борт+крыша) из полу-профиля: борт +Y (левый, водитель)→свод→борт −Y (правый, пассажир).
     Открыт снизу (U), пол не пересекает. Возвращает список (y, z)."""
     right = list(half)                       # (y, z) от пола до свода, y>=0
     left = [(-y, z) for (y, z) in reversed(right[:-1])]  # свод-1 … пол, y<=0
@@ -674,13 +679,14 @@ def build():
             (0.0, -P["rear_w"] / 2.0, P["rear_sill_z"]),
             color=COL_REAR, transparency=35, group=op)
     leaf_w = P["rear_w"] / 2.0
-    add_box(doc, "RearDoorLeaf_Driver", "Левая половина задней распашной двери (реф)",
-            (t, leaf_w, P["rear_h"]),
-            (-t, -leaf_w, P["rear_sill_z"]),
-            color=COL_REAR, transparency=72, group=op)
-    add_box(doc, "RearDoorLeaf_Passenger", "Правая половина задней распашной двери (реф)",
+    # створки задней двери: водительская на +Y (слева по ходу), пассажирская на −Y
+    add_box(doc, "RearDoorLeaf_Driver", "Створка задней двери со стороны водителя (+Y, слева по ходу; реф)",
             (t, leaf_w, P["rear_h"]),
             (-t, 0.0, P["rear_sill_z"]),
+            color=COL_REAR, transparency=72, group=op)
+    add_box(doc, "RearDoorLeaf_Passenger", "Створка задней двери со стороны пассажира (−Y, справа по ходу; реф)",
+            (t, leaf_w, P["rear_h"]),
+            (-t, -leaf_w, P["rear_sill_z"]),
             color=COL_REAR, transparency=72, group=op)
 
     doc.recompute()
