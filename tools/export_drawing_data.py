@@ -36,7 +36,7 @@ try:
     import FreeCAD as App
     doc = App.ActiveDocument
     res["summary"] = buf.getvalue()[buf.getvalue().find("[Кровать"):] if "[Кровать" in buf.getvalue() else ""
-    for k in ("WHEEL_ARCH", "BED", "BATTERY_RACK", "WATER_TANK", "FLOOR", "PARAMS"):
+    for k in ("WHEEL_ARCH", "BED", "BATTERY_RACK", "WATER_TANK", "SHOWER_KITCHEN", "FLOOR", "PARAMS"):
         res[k] = json.loads(json.dumps(g[k], default=lambda o: list(o) if isinstance(o, tuple) else str(o)))
     boxes = {}
     for o in doc.Objects:
@@ -52,6 +52,31 @@ try:
     z_bolt = floor_top + B["body_bolt_h"]
     res["geo"] = dict(floor_top=floor_top, arch_ywall=yz(half, 0.0), yw_post=yz(half, z_bolt),
                       z_bolt=z_bolt, z_rail_top=floor_top + B["rail_top_h"] + B.get("rail_raise", 0.0))
+
+    res["geo"]["half"] = [list(p) for p in half]
+
+    def _slice(shape, normal, d):
+        out = []
+        for w in shape.slice(App.Vector(*normal), d):
+            out.append([(p.x, p.y, p.z) for p in w.discretize(Distance=3.0)])
+        return out
+
+    # — душ + кухня: поперечные сечения (YZ) —
+    if doc.getObject("Shower_Pan") is not None:
+        sb, kb = boxes["Shower_Pan"], boxes["Kitchen_Carcass"]
+        xs_sh = (sb[0] + sb[1]) / 2.0
+        xs_k = (boxes["Kitchen_Sink"][0] + boxes["Kitchen_Sink"][1]) / 2.0
+        sec = {"x_shower": xs_sh, "x_kitchen": xs_k, "shower": {}, "kitchen": {}}
+        for o in doc.Objects:
+            if o.Name.startswith("Shower_") and o.Name != "Shower_WallRear":
+                x = (boxes["Shower_WallFront"][0] + boxes["Shower_WallFront"][1]) / 2.0 \
+                    if o.Name == "Shower_WallFront" else xs_sh
+                sec["shower"][o.Name] = _slice(o.Shape, (1, 0, 0), x)
+            elif o.Name.startswith("Kitchen_"):
+                sec["kitchen"][o.Name] = _slice(o.Shape, (1, 0, 0), xs_k)
+        sec["kitchen"]["Kitchen_Kettle"] = _slice(doc.getObject("Kitchen_Kettle").Shape, (1, 0, 0),
+                                                  (boxes["Kitchen_Kettle"][0] + boxes["Kitchen_Kettle"][1]) / 2.0)
+        res["galley"] = sec
 
     # — сечения бака (если он есть) —
     tank_o = doc.getObject("WaterTank_TORVA33")

@@ -19,6 +19,7 @@ FREECADCMD="$HOME/Applications/FreeCAD.AppImage --console" FREECAD="$HOME/Applic
 | `battery_rack_drawing.png` | задний блок батарей (пассажирский борт, D-стойка ↔ арка) | `FURNITURE_MEMORY.md` §1b |
 | `battery_rack_front_drawing.png` | передний блок батарей (арка ↔ сдвижная дверь) | §1c |
 | `water_tank_drawing.png` | бак для воды TORVA 33 gal у водительской арки: вид на борт, сверху, разрез по колесу | §1d |
+| `shower_kitchen_drawing.png` | душ 32×32″ + мини-кухня по водительскому борту: вид на борт, план, разрезы (высота в душе) | §1e |
 
 ## 3D-виды (`renders/`)
 
@@ -29,6 +30,7 @@ FREECADCMD="$HOME/Applications/FreeCAD.AppImage --console" FREECAD="$HOME/Applic
 | `bed_iso.png`, `bed_passenger_wall.png` | кровать крупно; пассажирский борт изнутри |
 | `rack_with_cross.png`, `rack_3d.png`, `rack_front_3d.png`, `rack_from_inside.png`, `rack_top.png` | блоки батарей |
 | `tank_3d.png`, `tank_wall_view.png`, `tank_top.png` | бак для воды |
+| `galley_3d.png`, `galley_wall_view.png`, `galley_top.png` | душ + мини-кухня |
 
 ## Архив (`archive/`)
 

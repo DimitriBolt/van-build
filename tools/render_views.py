@@ -80,6 +80,18 @@ VIEWS += [
     ("tank_wall_view.png", "viewFront", _TANK_HIDE + ("BedCross", "BedSideRail")),
     ("tank_top.png", "viewTop", _TANK_HIDE + ("BedCross", "BedSideRail")),
 ]
+# душ + мини-кухня (водительский борт, перед кроватью)
+_GALLEY_HIDE = _NOT_BED + ("_nY", "Battery_", "RackShelf", "RackPost", "RackRubber", "RackLower", "RackP2",
+                           "BedWall", "BedPostBodyBolt", "DPillar")
+VIEWS += [
+    # из прохода у сдвижной двери на водительский борт, сверху-сзади
+    ("galley_3d.png", (0.55, 1.0, -0.5), _GALLEY_HIDE),
+    # прямо на водительский борт (зад слева, кабина справа); шторка и дверца сняты, чтобы видеть внутри
+    ("galley_wall_view.png", "viewFront", _GALLEY_HIDE + ("Shower_Curtain$", "Kitchen_DoorUpper$", "BedMattress")),
+    # сверху: без потолка душа и верхнего шкафчика
+    ("galley_top.png", "viewTop", _GALLEY_HIDE + ("Shower_Ceiling$", "Shower_ExhaustFan$", "Kitchen_UpperCabinet$",
+                                                 "BedDeck", "BedMattress", "BedCross", "BedSideRail")),
+]
 
 
 def _maximize_view():

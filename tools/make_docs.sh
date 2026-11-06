@@ -14,7 +14,8 @@ FREECAD=${FREECAD:-freecad}
 export LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONIOENCODING=utf-8
 
 $FREECADCMD tools/export_drawing_data.py
-for s in tools/drawings/battery_rack_rear.py tools/drawings/battery_rack_front.py tools/drawings/water_tank.py; do
+for s in tools/drawings/battery_rack_rear.py tools/drawings/battery_rack_front.py tools/drawings/water_tank.py \
+         tools/drawings/shower_kitchen.py; do
     (cd tools/drawings && python3 "$(basename "$s")")
 done
 if [ -z "${DISPLAY:-}" ] && command -v xvfb-run >/dev/null; then

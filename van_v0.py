@@ -259,6 +259,36 @@ WATER_TANK = {
     "p34_plate":  (76, 102, 1.6),
 }
 
+# ─────────── ДУШ + МИНИ-КУХНЯ по водительскому борту: от кровати к кабине — проект 2026-11-06 ───────────
+# Dimitri: «между кроватью и водительским сиденьем — душевая и кухонный блок; придумывай сам»;
+# кухня — совсем маленькая: вскипятить чай и помыть одну чашку. Место у водительской стены от края
+# настила (X≈1604) до плоскости спинок сидений (X≈3190; Upfit: стена водителя 111″ от задней рамы) ≈62.7″.
+# Задние панели — в wall_gap от обшивки (рёбра кузова ~55 мм + будущий утеплитель); всё, что выше
+# ~1.1 м, повторяет завал борта к крыше (профиль из скана).
+SHOWER_KITCHEN = {
+    "enable": True,
+    "side": +1,                     # водительский борт
+    "wall_gap": 60.0,
+    "gap_bed": 27.0,                # от переднего края настила до задней стенки душа (пластина передней
+                                    # стойки кровати 4×5″ выступает на ~1″ вперёд — душ её не задевает)
+    "panel": 19.0,                  # стенки — фанера 3/4″ (в душе — + панели FRP)
+    # душ: поддон RV 32×32″ низкий (~3.5″) прямо на фанере пола; потолок душа — под крышей
+    "shower_in": (813.0, 813.0),    # внутри: вдоль борта × от стены
+    "pan_h": 89.0,
+    "pan_recess": True,             # поддон утоплен в пол: под ним вырезаны фанера+XPS, стоит на железе (+1.5″ высоты)
+    "roof_clear": 55.0,             # потолок душа ниже железа крыши (под дугами крыши + утеплитель)
+    # мини-кухня
+    "kitchen_end_x": 3150.0,        # ~40 мм до плоскости спинок (сиденье не упирается)
+    "kitchen_depth": 560.0,         # 22″ от задней панели
+    "counter_h": 914.0,             # 36″ — верх столешницы над чистовым полом
+    "counter_th": 25.0,             # мебельный щит/butcher block 1″
+    "sink": (305.0, 305.0, 140.0),  # барная мойка 12×12″, глубина 5.5″
+    "fridge": (597.0, 368.0, 445.0),  # 12V ларь ~30 qt (габарит-заглушка: подобрать модель ≤$300, кувшин 10″)
+    "fridge_slide": 400.0,          # выдвигается в проход на 400 мм, чтобы открыть крышку
+    "plinth": (80.0, 60.0),         # цоколь: высота, отступ
+    "upper": (1450.0, 300.0),       # верхний шкафчик: низ над полом, глубина
+}
+
 DOC_NAME    = "van_v0"
 _REAL_HOME  = os.environ.get("SNAP_REAL_HOME") or os.path.expanduser("~")
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() \
@@ -1170,6 +1200,172 @@ def build():
                             under_cross=(z_rail_top - sw) - (z_b + TH),
                             vol=tank.Volume / 1e6)
 
+    # ═══════ ДУШ + МИНИ-КУХНЯ (водительский борт, между кроватью и кабиной) ═══════
+    galley_summary = None
+    K = SHOWER_KITCHEN
+    if B.get("enable") and K.get("enable"):
+        ks = K["side"]
+        if ks < 0:
+            raise RuntimeError("SHOWER_KITCHEN: пока только водительский борт (side=+1)")
+        gap, pt_ = K["wall_gap"], K["panel"]
+        crown = half[-1][1]
+        z_ceil = crown - K["roof_clear"]
+        prof_z = sorted(z for _, z in half if z < crown)
+
+        def yw(z):                                   # |Y| задней плоскости (обшивка − gap) на высоте z
+            return y_at_z(half, min(z, prof_z[-1])) - gap
+
+        def env_solid(x0, xl, y_front, z0, z1, g_extra=0.0):
+            """Призма вдоль X: спереди |Y|=y_front, сзади — по завалу борта (обшивка − gap − g_extra)."""
+            pts = [(y_front, z0), (y_front, z1)]
+            zs = [z1] + [z for z in reversed(prof_z) if z0 < z < z1] + [z0]
+            pts += [(yw(z) - g_extra, z) for z in zs]
+            vec = [App.Vector(x0, ks * y, z) for y, z in pts]
+            face = Part.Face(Part.makePolygon(vec + [vec[0]]))
+            return face.extrude(App.Vector(xl, 0, 0))
+
+        sg = doc.addObject("App::DocumentObjectGroup", "ShowerKitchen")
+        sg.Label = "Душ 32×32″ + мини-кухня (чай) — водительский борт, кровать ↔ кабина (проект 2026-11-06)"
+        COL_WALL = (0.93, 0.93, 0.90)
+        COL_PAN = (0.98, 0.98, 0.98)
+        COL_STEEL = (0.70, 0.72, 0.75)
+        COL_CAB = (0.80, 0.62, 0.40)
+        COL_TOP = (0.62, 0.42, 0.24)
+        COL_DARK = (0.18, 0.18, 0.18)
+        COL_FRIDGE = (0.25, 0.42, 0.55)
+        parts = {}
+
+        def put(name, label, shape, color, tr=0):
+            add_shape(doc, name, label, shape, color=color, transparency=tr, group=sg)
+            parts[name] = shape
+            return shape
+
+        # — душ —
+        sx0 = (dx1 if B.get("deck_len") else xf + sw / 2.0) + K["gap_bed"]   # задняя (к кровати) стенка
+        six, siy = K["shower_in"]
+        sx1 = sx0 + pt_ + six + pt_
+        z_pan0 = P["floor_corrugation_height"] if K.get("pan_recess") else floor_top
+        z_pan = z_pan0 + K["pan_h"]
+        y_back_pan = yw(z_pan) - 12.0                                # поддон упирается в заднюю панель (12 мм)
+        y_sf = y_back_pan - siy                                      # фронт душа (линия шторки)
+        put("Shower_Pan", "Поддон душа RV 32×32″ низкий (~3.5″), слив в центре → серый бак%s" % (
+                "; утоплен в пол (вырез фанеры+XPS)" if K.get("pan_recess") else ""),
+            Part.makeBox(six, siy, K["pan_h"], App.Vector(sx0 + pt_, y_sf, z_pan0)), COL_PAN)
+        if K.get("pan_recess"):                                      # вырез в полу под поддон
+            hole = Part.makeBox(six, siy, floor_top + 1.0, App.Vector(sx0 + pt_, y_sf, 0.5))
+            for fn in ("Floor_XPS", "Floor_Plywood"):
+                fo = doc.getObject(fn)
+                if fo is not None:
+                    fo.Shape = fo.Shape.cut(hole)
+        for nm, x0 in (("Shower_WallRear", sx0), ("Shower_WallFront", sx1 - pt_)):
+            put(nm, "Стенка душа %s (фанера 3/4″ + FRP), по завалу борта" % ("к кровати" if "Rear" in nm else "к кухне"),
+                env_solid(x0, pt_, y_sf, floor_top, z_ceil), COL_WALL, 10)
+        back = env_solid(sx0 + pt_, six, y_sf, floor_top, z_ceil).cut(
+            env_solid(sx0 + pt_ - 1, six + 2, y_sf - 5, floor_top - 1, z_ceil + 1, g_extra=12.0))
+        put("Shower_WallBack", "Задняя стенка душа по борту (фанера 1/2″ + FRP)", back, COL_WALL, 10)
+        y_ceil_back = yw(z_ceil)
+        put("Shower_Ceiling", "Потолок душа (фанера 1/2″ + FRP), Z=%.0f" % z_ceil,
+            Part.makeBox(six, y_ceil_back - y_sf, 12.0,
+                         App.Vector(sx0 + pt_, y_sf if ks > 0 else -y_ceil_back, z_ceil - 12.0)), COL_WALL, 10)
+        rod = Part.makeCylinder(10.0, six, App.Vector(sx0 + pt_, ks * (y_sf + 15.0), z_ceil - 40.0), App.Vector(1, 0, 0))
+        put("Shower_CurtainRod", "Карниз шторки", rod, COL_STEEL)
+        put("Shower_Curtain", "Шторка душа (со стороны прохода)",
+            Part.makeBox(six - 40, 3.0, z_ceil - 60.0 - (z_pan + 40.0),
+                         App.Vector(sx0 + pt_ + 20, ks * (y_sf + 20.0) - (0 if ks > 0 else 3.0), z_pan + 40.0)),
+            (0.55, 0.75, 0.85), 55)
+        yb_h = yw(1650.0) - 12.0
+        head = Part.makeCylinder(55.0, 25.0, App.Vector(sx0 + pt_ + six / 2.0, ks * (yb_h - 25.0), 1650.0 + floor_top),
+                                 App.Vector(0, ks, 0))
+        put("Shower_Head", "Лейка душа на штанге / смеситель", head, COL_STEEL)
+        fan = Part.makeCylinder(60.0, 40.0, App.Vector(sx0 + pt_ + six / 2.0, ks * (y_ceil_back - 120.0), z_ceil - 12.0),
+                                App.Vector(0, 0, 1))
+        put("Shower_ExhaustFan", "Вытяжка 12V ~4″ в потолке душа → небольшое отверстие в стене", fan, COL_DARK)
+
+        # — мини-кухня —
+        kx0 = sx1 + 5.0
+        kx1 = K["kitchen_end_x"]
+        kl = kx1 - kx0
+        z_ct = floor_top + K["counter_h"]
+        z_cb = z_ct - K["counter_th"]
+        y_kb = yw(z_cb)                                              # задняя плоскость у столешницы
+        y_kf = yw(500.0) - K["kitchen_depth"]                        # фронт короба
+        ph, pr = K["plinth"]
+        carc = env_solid(kx0, kl, y_kf, floor_top + ph, z_cb)
+        fx, fy, fz = K["fridge"]
+        z_f0 = floor_top + ph + pt_ + 15.0                           # ларь на салазках над дном короба
+        cav_f = Part.makeBox(kl - 2 * pt_, fy + 40.0, fz + 35.0, App.Vector(kx0 + pt_, y_kf - 1.0, z_f0 - 15.0))
+        z_shelf = z_f0 + fz + 20.0
+        cav_u = Part.makeBox(kl - 2 * pt_, (y_kb - y_kf) - pt_, (z_cb - z_shelf - pt_),
+                             App.Vector(kx0 + pt_, y_kf - 1.0, z_shelf + pt_))
+        carc = carc.cut(cav_f).cut(cav_u)
+        put("Kitchen_Carcass", "Короб мини-кухни (фанера 3/4″), %.0f×%.0f, открыт спереди" % (kl, K["kitchen_depth"]),
+            carc, COL_CAB)
+        put("Kitchen_Plinth", "Цоколь кухни",
+            Part.makeBox(kl, (y_kb - y_kf) - pr, ph, App.Vector(kx0, y_kf + pr, floor_top)), (0.35, 0.30, 0.25))
+        top = env_solid(kx0, kl, y_kf - 20.0, z_cb, z_ct).cut(
+            Part.makeBox(K["sink"][0], K["sink"][1], K["counter_th"] + 2,
+                         App.Vector(kx0 + 60.0, (y_kf + y_kb) / 2.0 - K["sink"][1] / 2.0 + 40.0, z_cb - 1)))
+        put("Kitchen_Countertop", "Столешница 1″ (мебельный щит), верх %.0f над полом (36″)" % K["counter_h"], top, COL_TOP)
+        skx, sky, skz = K["sink"]
+        sk_o = App.Vector(kx0 + 60.0, (y_kf + y_kb) / 2.0 - sky / 2.0 + 40.0, z_ct - skz)
+        sink = Part.makeBox(skx, sky, skz, sk_o).cut(
+            Part.makeBox(skx - 4, sky - 4, skz, App.Vector(sk_o.x + 2, sk_o.y + 2, sk_o.z + 2)))
+        put("Kitchen_Sink", "Барная мойка 12×12″ из нержавейки", sink, COL_STEEL)
+        fct = App.Vector(sk_o.x + skx / 2.0, sk_o.y + sky + 30.0, z_ct)
+        faucet = Part.makeCylinder(12.0, 260.0, fct).fuse(
+            Part.makeCylinder(10.0, 170.0, App.Vector(fct.x, fct.y, fct.z + 250.0), App.Vector(0, -1, 0)))
+        put("Kitchen_Faucet", "Кран (насос 12V включается по давлению)", faucet, COL_STEEL)
+        put("Kitchen_Kettle", "Электрочайник (от инвертора) или 12V-чайник",
+            Part.makeCylinder(85.0, 230.0, App.Vector(kx1 - 150.0, (y_kf + y_kb) / 2.0, z_ct)), (0.85, 0.85, 0.88))
+        put("Kitchen_Outlet", "Розетка 120V + USB над столешницей",
+            Part.makeBox(70.0, 20.0, 115.0, App.Vector(kx1 - 150.0 - 35.0, yw(z_ct + 150.0) - 20.0, z_ct + 120.0)),
+            (0.95, 0.95, 0.95))
+        fridge_x0 = kx0 + (kl - fx) / 2.0
+        put("Kitchen_Fridge", "12V холодильник-ларь ~30 qt на салазках (выдвигается в проход на %.0f мм)" % K["fridge_slide"],
+            Part.makeBox(fx, fy, fz, App.Vector(fridge_x0, y_kf + 8.0, z_f0)), COL_FRIDGE)
+        put("Kitchen_FridgeSlide", "Салазки холодильника (полного выдвижения, под ~45 кг)",
+            Part.makeBox(fx, fy, 15.0, App.Vector(fridge_x0, y_kf + 8.0, z_f0 - 15.0)), COL_STEEL)
+        put("Kitchen_DoorUpper", "Дверца под мойкой (чашки, чай, фильтр)",
+            Part.makeBox(kl - 6.0, 12.0, z_cb - z_shelf - 6.0, App.Vector(kx0 + 3.0, y_kf - 12.0, z_shelf + 3.0)),
+            (0.86, 0.70, 0.48))
+        zu0 = floor_top + K["upper"][0]
+        zu1 = z_ceil
+        y_uf = yw(zu0) - K["upper"][1]
+        put("Kitchen_UpperCabinet", "Верхний шкафчик (чашки/чай), по завалу борта",
+            env_solid(kx0, kl, y_uf, zu0, zu1), COL_CAB)
+
+        # — техотсек под передним краем кровати: насос, бойлер (рядом с баком) —
+        tb_x0 = 1440.0
+        put("Water_Pump12V", "Насос 12V + фильтр + гидроаккумулятор (под кроватью, у переднего торца бака)",
+            Part.makeBox(150.0, 120.0, 130.0, App.Vector(tb_x0, 400.0, floor_top)), (0.20, 0.35, 0.75))
+        put("Water_Heater12V", "Место под бойлер 12V ~6–10 л (под кроватью)",
+            Part.makeCylinder(130.0, 380.0, App.Vector(1465.0, 230.0, floor_top)), (0.85, 0.85, 0.85))
+
+        # — проверки —
+        def _dd(a, b):
+            return a.distToShape(b)[0]
+        objs = lambda pfx: [o.Shape for o in doc.Objects
+                            if o.Name.startswith(pfx) and o.isDerivedFrom("Part::Feature") and not o.Shape.isNull()]
+        pall = list(parts.values())
+        checks = []
+        no_plate = lambda pfx: [s_ for o, s_ in ((o, o.Shape) for o in doc.Objects
+                                                if o.Name.startswith(pfx) and "Plate" not in o.Name
+                                                and o.isDerivedFrom("Part::Feature") and not o.Shape.isNull())]
+        for lab, ss in (("кровать (стойки/рейки/настил/матрас)", no_plate("Bed")), ("бак", objs("WaterTank")),
+                        ("подставка бака", objs("TankRiser")), ("стойки бака", objs("TankPost"))):
+            if ss:
+                checks.append((lab, min(_dd(p, s_) for p in pall for s_ in ss)))
+        pl = doc.getObject("BedPostPlate_pY_front")
+        if pl is not None and min(_dd(p, pl.Shape) for p in pall) < 0.5:
+            checks.append(("пластина передней стойки кровати (1.6 мм) — душ заходит на её край: подложить", 0.0))
+        aisle_sh = y_sf + y_at_z(half, 900.0)                       # от шторки до противоположной стены
+        aisle_k = (y_kf - 20.0) + y_at_z(half, 900.0)
+        galley_summary = dict(
+            shower_x=(sx0, sx1), shower_in=(six, siy), y_sf=y_sf, z_pan=z_pan, z_ceil=z_ceil,
+            headroom=(z_ceil - 12.0) - z_pan, kitchen_x=(kx0, kx1), kl=kl, y_kf=y_kf, counter=K["counter_h"],
+            seat_gap=3190.0 - kx1, aisle_sh=aisle_sh, aisle_k=aisle_k, checks=checks,
+            floor_top=floor_top, wall_y=y_at_z(half, 900.0))
+
     # ═══════ НАСТИЛ: вырезы под новые стойки P2 и под головки болтов в кузов ═══════
     # (при подъёме кровати настил может оказаться на высоте болтов стоек — головки торчат из стоек в салон)
     deck_notes = []
@@ -1328,6 +1524,20 @@ def build():
         print("  Зазоры: " + "; ".join("%s %.1f" % (n, v) for n, v in t["checks"]))
         print("  Проставка задняя стойка кровати ↔ бак: %.0f мм;  P3/P4 L=%.0f;  объём тела в модели %.0f л" % (
             t["spacer"], t["p_len"], t["vol"]))
+    if galley_summary:
+        k = galley_summary
+        f0 = k["floor_top"]
+        print("[Душ + мини-кухня — водительский борт, кровать ↔ кабина]")
+        print("  Душ X %.0f..%.0f (%.0f мм / %.1f″ вдоль борта), внутри %.0f×%.0f (32×32″); шторка в %.0f мм от стены" % (
+            k["shower_x"][0], k["shower_x"][1], k["shower_x"][1] - k["shower_x"][0],
+            (k["shower_x"][1] - k["shower_x"][0]) / 25.4, k["shower_in"][0], k["shower_in"][1], k["wall_y"] - k["y_sf"]))
+        print("  В душе: верх поддона %.0f над полом, низ потолка %.0f → от поддона до потолка %.0f мм (%.1f″)" % (
+            k["z_pan"] - f0, k["z_ceil"] - 12.0 - f0, k["headroom"], k["headroom"] / 25.4))
+        print("  Кухня X %.0f..%.0f (%.0f мм / %.1f″), глубина до %.0f мм от стены, столешница %.0f (36″); до спинок сидений %.0f мм" % (
+            k["kitchen_x"][0], k["kitchen_x"][1], k["kl"], k["kl"] / 25.4, k["wall_y"] - k["y_kf"] + 20, k["counter"], k["seat_gap"]))
+        print("  Проход: у душа %.0f мм (%.1f″), у кухни %.0f мм (%.1f″)" % (
+            k["aisle_sh"], k["aisle_sh"] / 25.4, k["aisle_k"], k["aisle_k"] / 25.4))
+        print("  Зазоры: " + "; ".join("%s %.1f" % (n, v) for n, v in k["checks"]))
     print("-" * 70)
     if bb:
         print("Bounding box (вкл. обшивку): %.0f x %.0f x %.0f мм" % (
