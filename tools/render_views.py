@@ -63,8 +63,7 @@ _REAR_RACK = tuple(n + "$" for n in (
     "RackLowerFrontStop", "DPillarFace_nY_ref", "BedPost_nY_rear", "BedPostPlate_nY_rear", "BedCross_1"))
 VIEWS += [
     # этажерка на 4 батареи (пассажирский борт): из салона спереди-сверху, сзади-сверху, на борт, сверху
-    ("bank_3d.png", (0.55, -1.0, -0.55), _RACK_HIDE + ("BedCross",)),
-    ("bank_from_rear.png", (-0.55, -1.0, -0.55), _RACK_HIDE + ("BedCross",)),
+    ("bank_3d.png", (0.55, 1.0, -0.55), _RACK_HIDE + ("BedCross",)),          # из салона, сзади-сверху
     ("bank_wall_view.png", "viewRear", _RACK_HIDE + ("BedCross",)),
     ("bank_top.png", "viewTop", _RACK_HIDE + ("BedCross",)),
 ]

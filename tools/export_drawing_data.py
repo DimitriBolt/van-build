@@ -36,7 +36,8 @@ try:
     import FreeCAD as App
     doc = App.ActiveDocument
     res["summary"] = buf.getvalue()[buf.getvalue().find("[Кровать"):] if "[Кровать" in buf.getvalue() else ""
-    for k in ("WHEEL_ARCH", "DPILLAR", "BED", "BATTERY_RACK", "WATER_TANK", "SHOWER_KITCHEN", "FLOOR", "PARAMS"):
+    for k in ("WHEEL_ARCH", "DPILLAR", "BED", "BATTERY_RACK", "ELECTRICAL", "WATER_TANK", "SHOWER_KITCHEN", "FLOOR",
+          "PARAMS"):
         res[k] = json.loads(json.dumps(g[k], default=lambda o: list(o) if isinstance(o, tuple) else str(o)))
     boxes = {}
     for o in doc.Objects:
