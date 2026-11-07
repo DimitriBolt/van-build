@@ -78,7 +78,7 @@ VIEWS += [
     ("tank_top.png", "viewTop", _TANK_HIDE + ("BedCross", "BedSideRail")),
 ]
 # душ + мини-кухня (водительский борт, перед кроватью)
-_GALLEY_HIDE = _NOT_BED + ("_nY", "Battery_", "Bank", "RackShelf", "RackPost", "RackRubber", "RackLower", "RackP2",
+_GALLEY_HIDE = _NOT_BED + ("_nY", "Battery_", "Bank", "Elec_", "Cable_", "RackShelf", "RackPost", "RackRubber", "RackLower", "RackP2",
                            "BedWall", "BedPostBodyBolt", "DPillar")
 VIEWS += [
     # из прохода у сдвижной двери на водительский борт, сверху-сзади

@@ -82,6 +82,8 @@ try:
     if doc.getObject("Shower_Pan") is not None:
         sb, kb = boxes["Shower_Pan"], boxes["Kitchen_Carcass"]
         xs_sh = (sb[0] + sb[1]) / 2.0
+        if "Shower_Drain" in boxes:                          # поддон-сектор: разрез через слив
+            xs_sh = (boxes["Shower_Drain"][0] + boxes["Shower_Drain"][1]) / 2.0
         xs_k = (boxes["Kitchen_Sink"][0] + boxes["Kitchen_Sink"][1]) / 2.0
         sec = {"x_shower": xs_sh, "x_kitchen": xs_k, "shower": {}, "kitchen": {}}
         for o in doc.Objects:

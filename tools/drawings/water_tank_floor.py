@@ -80,7 +80,7 @@ RUNNERS = sorted(k for k in B if k.startswith("TankFloor_Runner_"))
 CLEATS = sorted(k for k in B if k.startswith("TankFloor_Cleat_"))
 SPACERS = sorted(k for k in B if k.startswith("TankFloor_ArchSpacer_"))
 DECK0, DECK1 = mx(B["BedDeck"][0]), mx(B["BedDeck"][1])
-SHOWER = mx(B["Shower_WallRear"][0]) if "Shower_WallRear" in B else None
+SHOWER = mx(B["Shower_Pan"][0]) if "Shower_Pan" in B else None          # задний край поддона душа
 XL, XR = -8.5, mx(B["BedPost_pY_front"][1]) + 4.5
 R_T = TF["tank_r"] / IN
 FR = S.get("fittings_end") == "front"
@@ -158,7 +158,7 @@ for n in CROSS:
                            zorder=8))
     ax.text((cx0 + cx1) / 2, -YMAX - 1.6, n.replace("BedCross_", "#"), ha="center", fontsize=7.5, color="#263238")
 for xx, lab, col in ((DECK0, "задний край\nщита", "#6d4c41"), (DECK1, "передний край\nщита кровати", "#6d4c41"),
-                     (SHOWER, "задняя стенка\nдуша", "#1565c0")):
+                     (SHOWER, "поддон\nдуша", "#1565c0")):
     if xx is None:
         continue
     ax.plot([xx, xx], [-YMAX - 1.0, 1.2], color=col, ls="--", lw=1.1)
@@ -248,7 +248,7 @@ if "Toilet_Camco" in B:
         ax.annotate("в душ (позже)", xy=(SHOWER - 0.2, 5.0), xytext=(ux1 + 0.6, 5.0), fontsize=7.5, color="#2e7d32",
                     va="center", arrowprops=dict(arrowstyle="->", lw=1.4, color="#2e7d32"), zorder=8)
         ax.plot([SHOWER, SHOWER], [zs, 33.0], color="#1565c0", ls="--", lw=1.0)
-        ax.text(SHOWER + 0.2, 33.3, "задняя стенка душа", fontsize=7.5, color="#1565c0")
+        ax.text(SHOWER + 0.2, 33.3, "поддон душа", fontsize=7.5, color="#1565c0")
 ax.plot([DECK0, DECK0], [0, zr("BedDeck")[1]], color="#6d4c41", ls="--", lw=1.0, zorder=8)
 hdim(ax, z0 + 8.0, DECK0, x0, "", fs=7.5)
 ax.text(DECK0 - 0.3, z0 + 9.0, ("%.1f″ под\nштуцеры" if not FR else "%.2f″ до\nдвери") % (S["behind"] / IN),

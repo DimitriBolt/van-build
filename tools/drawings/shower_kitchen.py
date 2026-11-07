@@ -1,6 +1,8 @@
-"""Чертёж: душ 32×32″ + мини-кухня по водительскому борту (между кроватью и кабиной).
+"""Чертёж: душ (поддон-сектор 32″, задняя стенка — только сверху) + мини-кухня по водительскому борту.
 Дюймы. Вид на борт и план: x — вдоль борта, 0 = передний край настила кровати, + к кабине;
 план: y — от стены в салон; разрезы: y — от стены, z — от чистового пола. Данные — из модели."""
+import math
+
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon, Rectangle, Circle
 
@@ -56,7 +58,10 @@ def hdim(ax, z, x0, x1, txt, fs=8.5, dz=0.5, color="k"):
 
 C_WALL, C_PAN, C_CAB, C_TOP, C_FR, C_ST = "#e3e6ea", "#ffffff", "#d9a066", "#9c6b3c", "#3f6b8c", "#9aa4ad"
 SEAT = mx(3190.0)
-sx0, sx1 = bx("Shower_WallRear")[0], bx("Shower_WallFront")[1]
+sx0, sx1 = bx("Shower_WallRear")[0], bx("Shower_Pan")[1]
+PB = bx("Shower_Pan")
+XP0, YPB, RP = PB[0], PB[3], PB[1] - PB[0]                   # угол сектора (у задней стенки и борта), радиус
+TOILET = "Toilet_Camco" in B
 kx0, kx1 = bx("Kitchen_Carcass")[0], bx("Kitchen_Carcass")[1]
 z_pan = bx("Shower_Pan")[5]
 z_ceil = bx("Shower_Ceiling")[4]
@@ -85,7 +90,7 @@ r_xz(ax, "BedMattress", fc="#9fb4e0", alpha=0.45, ec="#5c6bc0")
 r_xz(ax, "BedSideRail_pY", fc="#90a4ae")
 r_xz(ax, "BedPost_pY_front", fc="#90a4ae", ec="#607d8b")
 ax.text(-7, mz(bx("BedMattress")[5]) + 0.6, "кровать (край)", ha="center", fontsize=9)
-TANK = next((n for n in ("WaterTank_T4100", "WaterTank_T3500") if n in d["boxes"]), None)
+TANK = next((n for n in sorted(d["boxes"]) if n.startswith("WaterTank_")), None)
 for n in ("TankShelf", "TankFloor_BasePly"):
     if n in d["boxes"]:
         r_xz(ax, n, fc="#d7b98e", alpha=0.8, ec="#8d6e63")
@@ -95,16 +100,24 @@ if TANK:
             "на полке" if TANK.endswith("3500") else "на полу"), fontsize=8, color="#1f5f8b")
 r_xz(ax, "Water_Heater12V", fc="#cfcfcf", ec="#424242", alpha=0.9)
 ax.text(mx(bx("Water_Heater12V")[0]) + 0.3, mz(bx("Water_Heater12V")[5]) + 0.6, "бойлер 12V", fontsize=7.5)
+if TOILET:
+    r_xz(ax, "Toilet_Camco", fc="#bdbdbd", ec="#424242", lw=1.2)
+    ax.text(mx(sum(bx("Toilet_Camco")[:2]) / 2), mz(bx("Toilet_Camco")[5]) - 3.5, "туалет", ha="center", fontsize=8.5)
+    ax.annotate("", xy=(mx(XP0) + 4.0, 6.0), xytext=(mx(bx("Toilet_Camco")[1]) + 0.3, 6.0),
+                arrowprops=dict(arrowstyle="->", lw=1.5, color="#2e7d32"))
 # душ
-for n in ("Shower_WallRear", "Shower_WallFront"):
+for n in ("Shower_WallRear", "Shower_DripLedge"):
     r_xz(ax, n, fc=C_WALL, ec="#78909c")
+r_xz(ax, "Shower_CurtainLower", fc="#4fc3f7", alpha=0.35, ec="#0277bd", ls="--")
+ax.text(mx(sx0) + 0.4, mz(bx("Shower_WallRear")[4]) - 6.0, "проём под\nзадней стенкой:\nтуалет выезжает\nв душ; нижняя\nшторка", fontsize=7.5,
+        color="#0277bd")
 r_xz(ax, "Shower_WallBack", fc="#f5f7f9", ec="none", zorder=0)
 r_xz(ax, "Shower_Ceiling", fc=C_WALL, ec="#78909c")
 r_xz(ax, "Shower_Pan", fc=C_PAN, ec="#455a64", lw=1.2)
 r_xz(ax, "Shower_CurtainRod", fc=C_ST)
 r_xz(ax, "Shower_Head", fc=C_ST, ec="#455a64")
 r_xz(ax, "Shower_ExhaustFan", fc="#263238")
-ax.text(mx((sx0 + sx1) / 2), mz(1100), "ДУШ\n32×32″ внутри\n(шторка снята)", ha="center", fontsize=11, weight="bold",
+ax.text(mx((XP0 + sx1) / 2), mz(1100), "ДУШ\nподдон-сектор 32″\n(шторка снята)", ha="center", fontsize=11, weight="bold",
         color="#37474f")
 ax.text(mx(bx("Shower_Head")[1]) + 0.3, mz(bx("Shower_Head")[5]), "лейка", fontsize=8)
 ax.text(mx(bx("Shower_ExhaustFan")[1]) + 0.3, mz(bx("Shower_ExhaustFan")[4]) - 1.2, "вытяжка 12V → в стену", fontsize=8)
@@ -136,9 +149,11 @@ ax.plot([mx(slx[0]), mx(slx[1])], [-3.0, -3.0], color="#2e7d32", lw=4, solid_cap
 ax.text(mx(slx[0]), -4.3, "сдвижная дверь — на противоположном борту", fontsize=8, color="#2e7d32")
 # размеры
 hdim(ax, mz(1990), mx(sx0), mx(sx1), "душ %.1f″ (%.0f)" % ((sx1 - sx0) / IN, sx1 - sx0))
+hdim(ax, mz(PB[5]) + 1.2, mx(sx0), mx(XP0), "%.1f″" % ((XP0 - sx0) / IN), fs=7.5)
+ax.text(mx(XP0) + 0.3, mz(PB[5]) + 2.6, "поддон упёрся в арку", fontsize=7.5)
 hdim(ax, mz(1990), mx(kx0), mx(kx1), "кухня %.1f″ (%.0f)" % ((kx1 - kx0) / IN, kx1 - kx0))
 hdim(ax, mz(2060), 0, SEAT, "от кровати до спинки водителя %.1f″ (%.0f)" % (SEAT, 3190.0 - X0))
-vdim(ax, mx(sx0) + 2.2, mz(z_pan), mz(z_ceil), "%.1f″ (%.0f)\nот поддона до потолка" % ((z_ceil - z_pan) / IN, z_ceil - z_pan))
+vdim(ax, mx(XP0) + 8.0, mz(z_pan), mz(z_ceil), "%.1f″ (%.0f)\nот поддона до потолка" % ((z_ceil - z_pan) / IN, z_ceil - z_pan))
 vdim(ax, mx(kx1) + 0.6, 0, mz(z_ct), "36″", fs=8.5)
 vdim(ax, mx(kx1) + 0.6, mz(z_ct), mz(z_up), "%.1f″" % ((z_up - z_ct) / IN), fs=8.5)
 vdim(ax, mx(kx1) + 0.6, 0, mz(z_pan), "", fs=7)
@@ -164,15 +179,29 @@ ax.text(SEAT + 2, yop / 2, "сиденья", rotation=90, ha="center", va="cente
 r_xy(ax, "BedDeck", fc="#d7ccc8", ec="#8d6e63", alpha=0.6)
 ax.text(-7, yop / 2, "кровать", ha="center", fontsize=10)
 r_xy(ax, "BedPost_pY_front", fc="#607d8b")
-r_xy(ax, "Shower_Pan", fc=C_PAN, ec="#455a64", lw=1.2)
-ax.add_patch(Circle((mx((sx0 + sx1) / 2), my((bx("Shower_Pan")[2] + bx("Shower_Pan")[3]) / 2)), 0.8,
-                    fc="#90a4ae", ec="#455a64"))
-for n in ("Shower_WallRear", "Shower_WallFront"):
-    r_xy(ax, n, fc="#b0bec5")
-r_xy(ax, "Shower_Curtain", fc="#4fc3f7")
-ax.text(mx((sx0 + sx1) / 2), my(bx("Shower_Pan")[2]) - 3.5, "ДУШ 32×32″\nслив в центре", ha="center", fontsize=10,
-        weight="bold", color="#37474f")
-ax.text(mx((sx0 + sx1) / 2), my(bx("Shower_Curtain")[2]) + 1.4, "шторка", ha="center", fontsize=8, color="#0277bd")
+arc = lambda r: [(mx(XP0 + r * math.cos(t)), my(YPB - r * math.sin(t))) for t in [math.pi / 2 * i / 60 for i in range(61)]]
+ax.add_patch(Polygon([(mx(XP0), my(YPB))] + arc(RP), fc=C_PAN, ec="#455a64", lw=1.2, zorder=2))
+ax.add_patch(Polygon([(mx(XP0), my(YPB))] + arc(RP - 64.0), fill=False, ec="#90a4ae", lw=0.8, ls=":", zorder=2))
+dr = bx("Shower_Drain")
+ax.add_patch(Circle((mx((dr[0] + dr[1]) / 2), my((dr[2] + dr[3]) / 2)), (dr[1] - dr[0]) / 2 / IN, fc="#90a4ae",
+                    ec="#455a64", zorder=3))
+for n in ("Shower_WallRear",):
+    r_xy(ax, n, fc="#b0bec5", zorder=3)
+r_xy(ax, "Shower_DripLedge", fc="#eceff1", ec="#78909c", hatch="//", zorder=3)
+rc = bx("Shower_Curtain")
+ac = arc(RP - 50.0)
+ax.plot([p[0] for p in ac] + [mx(rc[0])], [p[1] for p in ac] + [ac[-1][1]], color="#0288d1", lw=2.0, zorder=4)
+r_xy(ax, "Shower_CurtainLower", fc="#4fc3f7", zorder=4)
+ax.text(mx(XP0 + RP * 0.42), my(YPB - RP * 0.42), "ДУШ\nсектор 32″", ha="center", fontsize=10, weight="bold",
+        color="#37474f", zorder=5)
+ax.text(mx(XP0 + RP * 0.78) + 1.0, my(YPB - RP * 0.78) + 1.6, "шторка по дуге", fontsize=8, color="#0277bd", zorder=5)
+ax.text(mx(sx0) - 0.3, my(YPB - RP) + 0.4, "задняя стенка\n(сверху) + козырёк", ha="right", fontsize=7.5, zorder=5)
+if TOILET:
+    r_xy(ax, "Toilet_Camco", fc="#bdbdbd", ec="#424242", zorder=3)
+    tb = bx("Toilet_Camco")
+    ax.text(mx((tb[0] + tb[1]) / 2), my((tb[2] + tb[3]) / 2), "туалет", ha="center", va="center", fontsize=8, zorder=5)
+    ax.annotate("", xy=(mx(XP0) + 6.0, my((tb[2] + tb[3]) / 2)), xytext=(mx(tb[1]) + 0.3, my((tb[2] + tb[3]) / 2)),
+                arrowprops=dict(arrowstyle="->", lw=1.5, color="#2e7d32"), zorder=6)
 r_xy(ax, "Kitchen_Countertop", fc=C_TOP, alpha=0.85)
 sk = bx("Kitchen_Sink")
 r_xy(ax, "Kitchen_Sink", fc="#cfd8dc", ec="#546e7a")
@@ -195,12 +224,12 @@ ax.text(-3.5, my(bx("Water_Heater12V")[2]) + 1.0, "под кроватью:\nб�
 if TANK:
     r_xy(ax, TANK, fc="#4a90c2", alpha=0.25)
 ax.text(-11, 9, "бак", fontsize=8, color="#1f5f8b")
-a_sh = my(bx("Shower_Curtain")[2])
+a_sh = my(PB[2])
 a_k = my(bx("Kitchen_Countertop")[2])
-vdim(ax, mx(sx1) - 3, a_sh, yop, "проход %.1f″" % ((yop - a_sh)), fs=8.5)
+vdim(ax, mx(XP0) + 1.0, a_sh, yop, "проход %.1f″" % ((yop - a_sh)), fs=8.5)
 vdim(ax, mx(kx1) - 2, a_k, yop, "%.1f″" % (yop - a_k), fs=8.5)
 vdim(ax, mx(kx1) - 2, 0, a_k, "%.1f″" % a_k, fs=8.5)
-vdim(ax, mx(sx0) + 2, 0, a_sh, "%.1f″" % a_sh, fs=8.5)
+vdim(ax, mx(sx0) - 1.0, 0, a_sh, "%.1f″" % a_sh, fs=8.5, side=-1)
 ax.set_xlim(-14, 66)
 ax.set_ylim(yop + 3.5, -2.5)
 ax.set_aspect("equal")
@@ -227,11 +256,12 @@ def secpoly(ax, wires, **kw):
 S = d["galley"]["shower"]
 ax = axs
 profile(ax)
-secpoly(ax, S["Shower_WallFront"], fc=C_WALL, ec="#78909c", alpha=0.6)
+secpoly(ax, S.get("Shower_DripLedge", []), fc=C_WALL, ec="#78909c", alpha=0.6)
 secpoly(ax, S["Shower_WallBack"], fc="#b0bec5", ec="#78909c")
 secpoly(ax, S["Shower_Ceiling"], fc="#b0bec5", ec="#78909c")
 secpoly(ax, S["Shower_Pan"], fc=C_PAN, ec="#455a64", lw=1.3)
 secpoly(ax, S["Shower_Curtain"], fc="#4fc3f7", ec="#0277bd")
+secpoly(ax, S.get("Shower_Drain", []), fc="#455a64")
 secpoly(ax, S["Shower_CurtainRod"], fc=C_ST)
 secpoly(ax, S["Shower_ExhaustFan"], fc="#263238")
 # человек 70″ (178 см) на поддоне
@@ -245,7 +275,7 @@ ax.plot([hx - 6, hx, hx + 6], [zp + 0.64 * H, zp + 0.81 * H, zp + 0.64 * H], col
 ax.text(hx + 5.0, zp + H - 12, "рост %.0f″\n(%.0f см)\nстоит прямо" % (H, H * 2.54), fontsize=8, color="#d84315")
 vdim(ax, 31.5, mz(z_pan), mz(z_ceil), "%.1f″" % ((z_ceil - z_pan) / IN), side=1)
 wy = half[0][0]
-hdim(ax, mz(z_pan) + 2.2, (wy - bx("Shower_Pan")[3]) / IN, (wy - bx("Shower_Pan")[2]) / IN, "поддон 32″", fs=8)
+hdim(ax, mz(z_pan) + 2.2, (wy - bx("Shower_Pan")[3]) / IN, (wy - bx("Shower_Pan")[2]) / IN, "поддон 32″ (по задней стенке)", fs=8)
 ax.text(1.5, mz(crown) - 6, "борт заваливается\nк крыше", fontsize=7.5, color="#616161")
 ax.set_xlim(-2, 44)
 ax.set_ylim(-3, 80)
@@ -253,7 +283,7 @@ ax.set_aspect("equal")
 ax.grid(True, color="#f2f2f2", lw=0.6)
 ax.set_xlabel("от стены в салон, дюймы")
 ax.set_ylabel("от пола, дюймы")
-ax.set_title("Разрез по душу (взгляд к кабине, стена слева); поддон утоплен в пол", loc="left", fontsize=11)
+ax.set_title("Разрез по душу через слив (взгляд к кабине, стена слева); поддон утоплен в пол", loc="left", fontsize=11)
 
 Kk = d["galley"]["kitchen"]
 ax = axk
@@ -279,8 +309,9 @@ ax.grid(True, color="#f2f2f2", lw=0.6)
 ax.set_xlabel("от стены в салон, дюймы")
 ax.set_title("Разрез по кухне (через мойку)", loc="left", fontsize=11)
 
-fig.suptitle("Душ 32×32″ + мини-кухня «для чая» по водительскому борту — проект 2026-11-06 (из модели van_v0.py)\n"
-             "кровать не сужали; бак — под кроватью у арки, 12V-бойлер — под передним краем кровати",
+fig.suptitle("Душ (поддон-сектор 32″, шторка по дуге) + мини-кухня «для чая» по водительскому борту — 2026-11-07 (из модели)\n"
+             "задняя стенка — по краю щита кровати, только сверху; поддон — как можно ближе к ней (упирается в арку); "
+             "внизу проём — туалет выезжает в душ",
              fontsize=13)
 fig.tight_layout(rect=(0, 0, 1, 0.965))
 save(fig, "shower_kitchen_drawing.png")

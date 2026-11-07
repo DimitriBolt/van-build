@@ -71,13 +71,13 @@ for ax, tag, side, photos, what in ((axs[0], "nY", "Пассажирский б�
             ax.text((y0 + y1) / 2, (x0 + x1) / 2, "насос + фильтр\n(на полу%s)" % (
                     ", под\nполкой бака" if "TankShelf" in d["boxes"] else ""), ha="center",
                     va="center", fontsize=8.5, color="#283593", weight="bold")
-        tn = next(n for n in ("WaterTank_T4100", "WaterTank_T3500") if n in d["boxes"])
+        tn = next(n for n in sorted(d["boxes"]) if n.startswith("WaterTank_"))
         tb = box(d, tn)
         (y0, x0), (y1, x1) = to_ph(tb[0], tb[3]), to_ph(tb[1], tb[2])
         ax.add_patch(Rectangle((min(y0, y1), x0), abs(y1 - y0), x1 - x0, fill=False, ec="#1f5f8b", lw=1.6, ls=":",
                                zorder=2))
         ax.text(9.2, x0 + 0.35, "бак T-3500 — выше, на полке\n(задний торец у D-стойки)" if tn.endswith("3500") else
-                "бак T-4100 — на полу рядом\nс аркой (задний торец)", fontsize=8,
+                "бак %s — на полу рядом\nс аркой (задний торец)" % tn.split("_")[1].replace("T", "T-"), fontsize=8,
                 color="#1f5f8b", va="bottom")
     # точки с фото
     for k in photos:
