@@ -9,8 +9,8 @@ from _common import IN, load, save
 d = load()
 r = dict(d["tank"])
 r["boxes"] = d["boxes"]
-r["dpillar_plan"] = [d["tank"]["dpillar_plan"]]
-W, R, T, BED = d["WHEEL_ARCH"], d["BATTERY_RACK"], d["WATER_TANK"], d["BED"]
+W, R, T, BED, DP = d["WHEEL_ARCH"], d["BATTERY_RACK"], d["WATER_TANK"], d["BED"], d["DPILLAR"]
+XDP = d["geo"]["x_dp"]                         # передняя грань короба D-стойки у края фанеры
 FF = d["geo"]["floor_top"]
 YW = d["geo"]["arch_ywall"]                    # стена у пола
 X0 = d["boxes"]["BedPost_pY_rear"][0]          # задняя грань задней стойки кровати
@@ -19,7 +19,10 @@ mz = lambda Z: (Z - FF) / IN
 my = lambda Y: (YW - Y) / IN                  # от стены
 B = r["boxes"]
 tb = r["tank_bb"]
-SO = T["wall_standoff"] / IN
+SO = (YW - r["y_back"]) / IN
+import re
+_m = re.search(r"→ подставка (\d+) мм \(([\d.]+)″\): ([^\n]+)", d.get("summary", ""))
+RISER_TXT = _m.group(3) if _m else "доски на ребро"
 C_T, C_A, C_W, C_S, C_D = "#4a90c2", "#9e9e9e", "#a0703c", "#607d8b", "#78909c"
 
 fig = plt.figure(figsize=(16, 15.5), dpi=130)
@@ -73,7 +76,7 @@ poly(ax, r["elev_tank"], lambda p: mx(p[0]), lambda p: mz(p[2]), fc=C_T, alpha=0
 ax.text(mx(1250), mz(560), "бак TORVA 33 gal (125 л)", ha="center", fontsize=10, color="#1f5f8b", weight="bold")
 for w in r["elev_riser"]:
     ax.add_patch(Polygon([(mx(p[0]), mz(p[2])) for p in w], closed=True, fc=C_W, alpha=0.85, ec="#5d4037"))
-ax.text(mx(1000), mz(FF + 60), "подставка: 2×6 на ребро", ha="center", fontsize=8, color="white")
+ax.text(mx(1000), mz(FF + 60), "подставка: " + RISER_TXT.split(";")[0], ha="center", fontsize=8, color="white")
 # стойки кровати у стены (за баком) — пунктир; P3/P4 (перед баком) — сплошные
 for n in ("BedPost_pY_rear", "BedPost_pY_front"):
     box_xz(ax, B[n], fill=False, ec=C_S, ls="--", lw=1.1)
@@ -85,10 +88,17 @@ for n in ("BedCross_1", "BedCross_RackFront", "BedCross_2", "BedCross_Rack_fwd",
     box_xz(ax, B[n], fc="#263238")
 box_xz(ax, B["BedSideRail_pY"], fill=False, ec="#263238", ls=":", lw=1)
 ax.text(mx(B["BedCross_2"][0]), mz(B["BedCross_2"][5]) + 0.3, "поперечины кровати", ha="center", fontsize=7.5)
-# D-стойка в плоскости задней грани бака
-xdp = (X0 - R["dpillar_gap"]) - R["dpillar_slant"] * (YW - r["y_back"]) / R["dpillar_depth"]
-ax.add_patch(Rectangle((mx(xdp) - 1.2, -1.0), 1.2, 30, color=C_D, alpha=0.6))
-ax.text(mx(xdp) - 0.6, 15, "D-стойка (в %.1f″ от стены)" % SO, rotation=90, ha="center", va="center", fontsize=8, color="white")
+# D-стойка в плоскости задней грани бака: короб у пола + грань стойки выше него (фото сверху 2026-11-06)
+dd = YW - r["y_back"]
+xdp = XDP - DP["box_slant"] * (dd - DP["photo_wall"]) / DP["box_depth"]          # грань короба
+xbody = XDP - DP["body_slant"] * dd / DP["body_depth"]                             # грань стойки выше
+ax.add_patch(Rectangle((mx(XDP - DP["box_len"]), 0), (xdp - (XDP - DP["box_len"])) / IN, DP["box_h"] / IN,
+                       fc=C_D, alpha=0.55, ec="#455a64", hatch="//"))
+ax.add_patch(Rectangle((mx(xbody) - 1.6, DP["box_h"] / IN), 1.6, 30 - DP["box_h"] / IN, color=C_D, alpha=0.55))
+ax.text(mx(xbody) - 0.8, 17, "D-стойка (в %.1f″ от стены)" % SO, rotation=90, ha="center", va="center",
+        fontsize=8, color="white")
+ax.text(mx(XDP - DP["box_len"]) + 0.2, DP["box_h"] / IN + 0.3, "короб D-стойки\n~%.0f″ (оценка)" % (DP["box_h"] / IN),
+        fontsize=7, color="#37474f")
 ax.plot([mx(cl[0][0])], [mz(cl[0][2])], "o", ms=7, mfc="none", mec="#d32f2f", mew=1.6)
 ax.annotate("самое узкое место:\n%.0f мм (плечо арки ↔ скат тоннеля)" % cl[2],
             xy=(mx(cl[0][0]), mz(cl[0][2])), xytext=(mx(cl[0][0]) - 9, mz(cl[0][2]) + 3.6),
@@ -99,7 +109,12 @@ vdim(ax, xf_in + 4.2, top / IN, mz(B["BedCross_3"][4]), "%.1f″ (%.0f) до п�
     (B["BedCross_3"][4] - tb[5]) / IN, B["BedCross_3"][4] - tb[5]), fs=8)
 vdim(ax, mx(W["center_x"]) - 0.4, 0, W["height"] / IN, "арка %.0f″" % (W["height"] / IN), side=-1, color="#616161")
 hdim(ax, -2.2, xr_in, xf_in, "48″ (1220)")
-hdim(ax, -3.6, mx(xdp), xr_in, "%.0f мм" % (tb[0] - xdp), fs=8, dz=-0.9)
+if tb[0] < xdp:
+    ax.annotate("торец бака нависает над коробом\nна %.0f мм (дно выше короба)" % (xdp - tb[0]),
+                xy=(xr_in, lift / IN + 0.3), xytext=(xr_in - 10.5, lift / IN + 4.5), fontsize=7.5,
+                arrowprops=dict(arrowstyle="->", lw=0.8))
+else:
+    hdim(ax, -3.6, mx(xdp), xr_in, "%.0f мм" % (tb[0] - xdp), fs=8, dz=-0.9)
 ax.set_xlim(-14, 50)
 ax.set_ylim(-4.8, 31)
 ax.set_aspect("equal")
@@ -116,9 +131,9 @@ ax.text(-13.5, -0.85, "стена (у пола)", fontsize=7.5)
 poly(ax, r["plan_arch0"], lambda p: mx(p[0]), lambda p: my(p[1]), fill=False, ec=C_A, ls="--", lw=1.0)
 poly(ax, r["plan_arch"], lambda p: mx(p[0]), lambda p: my(p[1]), fc="#cfcfcf", ec="#757575")
 poly(ax, r["plan_tank"], lambda p: mx(p[0]), lambda p: my(p[1]), fc=C_T, alpha=0.28, ec=C_T, lw=1.5)
-dp = r["dpillar_plan"][0]
-ax.add_patch(Polygon([(mx(x), my(y)) for x, y in dp], closed=True, color=C_D, alpha=0.8))
-ax.text(mx(250), my(830) + 0.9, "D-стойка", fontsize=8, ha="right")
+for w in d["corners"]["pY"]["dpillar"]:
+    ax.add_patch(Polygon([(mx(x), my(y)) for x, y in w], closed=True, color=C_D, alpha=0.8))
+ax.text(mx(XDP) - 0.3, my(YW - DP["photo_wall"] - DP["box_depth"]) + 1.4, "короб\nD-стойки", fontsize=8, ha="right")
 for n in ("BedPost_pY_rear", "BedPost_pY_front"):
     box_xy(ax, B[n], fc=C_S, ec="#37474f")
 box_xy(ax, B["TankSpacer_RearBedPost"], fc="#212121", alpha=0.6)
@@ -177,7 +192,7 @@ ax.set_title("Разрез поперёк по центру колеса\n(ви�
 
 fig.suptitle("Бак TORVA 33 gal у водительской арки — утверждено 2026-11-06: подставка %.1f″, в %.1f″ от стены, "
              "P3/P4 до поперечин кровати (кровать поднята на %.0f″)\n"
-             "⚠ форма арки (её задний скат и верх) — оценка по фото 7; подъём и отступ уточнить замерами" % (
+             "арка у пола и D-стойка — по фото сверху 2026-11-06 (±0.2″); ⚠ верх арки и высота короба D-стойки — оценка" % (
                  r["lift"] / IN, SO, BED.get("rail_raise", 0.0) / IN), fontsize=12.5)
 fig.tight_layout()
 save(fig, "water_tank_drawing.png")

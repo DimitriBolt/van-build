@@ -58,16 +58,40 @@ WHEEL_ARCH = {
     "enable":     True,
     "center_x":   1000,   # центр колеса: по скану вырез колеса в обшивке X≈700..1300 (на Z=100).
                           # ⚠️ абсолютный X не промерен: по фото 5 задняя стойка ближе к двери → центр может быть ~800
-    "len_x":       757,   # длина по полу по ВНУТРЕННЕЙ грани: рулетка фото 2 — 29.8″
-    "len_x_wall":  879,   # длина у СТЕНЫ: 34.6″ — так зазор «D-стойка → арка» у стены = 7.4″ (фото 2);
-                          # Upfit Supply (ProMaster «Wheel Well 35″ W × 17″ H × 9″ D») — 35″
-    "protrusion":  270,   # выступ от стены внутрь, рулетка (фото 1): 10-5/8″ (Upfit: 9″ — от другой базы)
+    "len_x":       757,   # длина по полу по ВНУТРЕННЕЙ грани (до острых углов, без скруглений в плане):
+                          # рулетка фото 2 (2026-11-05) — 29.8″
+    "len_x_wall":  900,   # длина у СТЕНЫ у пола: 35.4″ (Upfit Supply «Wheel Well 35″ W × 17″ H × 9″ D» — 35″).
+                          # Фото сверху 2026-11-06: задняя грань арки к центру уходит ВПЕРЁД 0.30″ на 1″
+                          # (4 фото: 0.24–0.34) → (900 − 757)/2/239 = 0.30 ✓ (было 879 — от старого зазора 7.4″)
+    "protrusion":  239,   # выступ от стены (скан) у пола: фото сверху 2026-11-06 — 8.78″ (223 мм) от края
+                          # фанеры (пасс. 8.89″, вод. 8.66″) + 16 мм край фанеры ↔ стена. Upfit: «9″ D» ✓.
+                          # (было 270 — рулетка 2026-11-05, 10-5/8″, база не та)
+    "plan_round":   58,   # скругление углов арки в плане у пола: задний внутренний угол по фото — R≈2.3″
     "height":      432,   # верх над чистовым полом: 17″ — Upfit Supply (по фото 2 — 16–19″)
     # форма (2026-11-06, по фото 7 и 1): сбоку — суперэллипс |x/a|^n + (z/b)^n = 1 (n=2 — эллипс);
     # по силуэту на фото 7 на 84% высоты арка ещё 78% длины → n≈3.4 («квадратнее» эллипса).
     # Верхняя внутренняя кромка скруглена (купол, фото 1/7) — радиус оценочный, промерить.
     "profile_n":   3.4,
     "top_round":   100,
+}
+
+# ─────────────── D-СТОЙКИ у пола (оба борта) — по 4 фото сверху с рулеткой, 2026-11-06 ───────────────
+# Внизу D-стойки — штампованный короб (с овальными отверстиями), в него упирается фанера пола; позади
+# короба — уплотнитель задней двери. Привязка — к задней грани арки (абсолютный X от порога не промерен):
+# зазор «передняя грань короба ↔ задняя грань арки» по полу у края фанеры: пасс. 10.60″, вод. 10.54″
+# (±0.2″); в 1.1″ от стены — 11.0″, в 2.4″ — 11.6″, в 5″ — 12.9″ (арка к центру уходит вперёд, короб — назад).
+# Пиксельные точки и расчёт: tools/photo_corners_2026-11-06.py → docs/rear_corners_points.json.
+# Проверка: уплотнитель двери выходит на X≈144 — рядом с задней рамой по скану (X≈160).
+DPILLAR = {
+    "to_arch":     268.5,   # 10.57″: передняя грань короба ↔ задняя грань арки, по полу у края фанеры
+    "photo_wall":   16.0,   # край фанеры («стена» на фото) — на 16 мм внутрь от стены скана у пола
+    "box_depth":   132.0,   # короб выступает от края фанеры на 5.2″ (4 фото: 4.9–5.5″)
+    "box_slant":    26.0,   # его передняя грань к центру уходит НАЗАД 0.20″ на 1″ (−0.18…−0.22) → 26 мм
+    "box_len":     142.0,   # от передней грани назад до уплотнителя задней двери ~5.6″ (фото 1, 3)
+    "box_h":       100.0,   # ⚠️ высота короба над чистовым полом — ОЦЕНКА (~4″), промерить
+    "body_depth":  157.0,   # сама стойка выше короба: выступ ~6.2″ (проём 1562 при полу ~1880)
+    "body_slant":  125.0,   # её передняя грань к центру уходит назад ~5″ на 6.2″ (оценка по фото 2026-11-05)
+    "ref_top":     850.0,   # реф в модели — до уровня настила кровати (выше не мешает и закрывает виды)
 }
 
 # ──────────────────────────── PARAMS (мм) ────────────────────────────
@@ -156,13 +180,17 @@ BED = {
     # рулетки на стену, масштаб на стене — шаг прорезей стойки. Зазор по полу от внутренней
     # грани арки до грани стойки: сзади 7.7″, спереди 7.1″ (±0.5″). Шаг стоек выходит 1174 мм
     # = 1220 (лист настила) − 41 (ширина стойки): настил перекрывает обе стойки.
-    "post_rear_x":   None,   # None = от арки через arch_gap_rear (или задать число)
-    "post_front_x":  None,   # None = от арки через arch_gap_front
-    "arch_gap_rear":  196,   # 7.7″: грань задней стойки → задний край арки (по внутренней грани)
-    "arch_gap_front": 180,   # 7.1″: передний край арки (по внутр. грани) → грань передней стойки
+    # 2026-11-06 (фото сверху с рулеткой): центр задней стойки — в 3.24″ (пасс.) / 3.96″ (вод.) от передней
+    # грани короба D-стойки → берём среднее 91 мм (стойки по бортам в модели одинаковые; разница 18 мм).
+    # Старый замер «от арки» (7.7″/7.1″ по полу, ±0.5″) давал на 27 мм дальше вперёд — фото сверху точнее.
+    "post_rear_x":   None,   # None = от D-стойки через post_from_dpillar (или задать число)
+    "post_front_x":  None,   # None = post_rear_x + post_spacing
+    "post_from_dpillar": 91.0,
+    "post_spacing":  1174.3, # = 1220 (лист настила) − 41 (ширина стойки): настил перекрывает обе стойки
     "post_len":      1257,   # ≈49.5″ — грубо (фото 3, 9), уточнить
     "post_wall_gap":    8,   # зелёная проставка между стойкой и ребром кузова
-    "plate":   (102, 127, 1.6),  # оцинк. пластина под стойкой ~4×5″ (X×Y×толщ.), шурупы в фанеру пола
+    "plate":   (79.4, 127, 0.9),  # пластина под стойкой — Simpson TP35 3-1/8×5″, 20 ga (опознана и промерена
+                                  # на фото сверху 2026-11-06), длинной стороной поперёк, шурупы в фанеру
     "body_bolt_h":    762,   # болт стойки в заводское ребро: ~30″ над чистовым полом (фото 2, 3, 4)
     # рама настила
     "rail_top_h":     701,   # верх продольных реек и поперечин: ~27.6″ над чистовым полом (фото 2, 14)
@@ -194,16 +222,16 @@ BATTERY_RACK = {
     "enable": True,
     "upper":  True,                     # вторая батарея на полке
     "battery": (193.8, 255.8, 249.4),   # Buknuwo 12.8V 150Ah: 7.63″ вдоль X × 10.07″ поперёк × 9.82″, 18.8 кг
-    "dpillar_gap":    7.6,              # 0.3″: угол стены (передняя грань D-стойки) за задней гранью P1
-    "dpillar_depth":  157.0,            # D-стойка выступает от борта ~6.2″ (проём 1562 при полу ~1880)
-    "dpillar_slant":  125.0,            # «к центру уже» (фото Dimitri): грань от угла у борта уходит
-                                        # назад к уплотнителю двери ~5″ на выступе 6.2″ — оценка по фото 2/5/13
+    "dpillar_gap":    5.0,              # задняя грань батарей → передняя грань короба D-стойки (резина);
+                                        # форма D-стойки — DPILLAR (фото сверху 2026-11-06)
     "p2_front_inset":   6.0,            # грань P2 со стороны арки — на 6 мм внутрь от грани батареи
+    "p2_plate": (46.0, 127.0, 0.9),     # пластина под P2 — Simpson TP15 1-13/16×5″ (TP35 3-1/8″ не помещается:
+                                        # заходит на пластину P1 или под арку), уходит от арки
     # блоки: "rear" — D-стойка ↔ арка (утв. 2026-11-06); "front" — арка ↔ сдвижная дверь (2026-11-06):
     # то же самое зеркально, задом в передний край арки; P1 — передняя стойка кровати, новая P2 у арки
     "stacks":        ("rear", "front"),
     "arch_gap":         1.5,            # переднему блоку: зазор от батареи до переднего края арки
-    "lower_front_stop": (41.3, 60.0),   # переднему блоку: упор нижней батареи вперёд (высота, низ над полом)
+    "lower_front_stop": (41.3, 60.0),   # обоим блокам: упор нижней батареи вперёд (высота, низ над полом)
     "gap_above_b1":    38.0,            # 1.5″ над нижней батареей — клеммы и кабели
     "shelf_th":        12.0,            # фанера 1/2″ поверх реек
     "post_above_b2":   25.0,            # P3/P4 выше верхней батареи (если без стяжек)
@@ -240,17 +268,23 @@ WATER_TANK = {
     "tunnel_in":   [(-10, -10), (-10, 204), (618, 204), (680, 196), (725, 179), (760, 147), (794, 101),
                     (820, 60), (838, 27), (850, -10)],
     "foot_u":       985.0,              # «нога» (сплошная часть позади арки) — от u=985 до 1220 по дну
-    # зад бака от стены у пола, мм. Стойки кровати — между баком и бортом (нужно ≥45). Чем дальше от стены,
-    # тем дальше назад пускает скошенная D-стойка → скат тоннеля уходит от «плеча» арки. Нужный подъём
-    # (2026-11-06, n — форма арки сбоку): s=60: 115/185/211/260 мм при n=2/3/3.4/4.5; s=100: 115/133/141/187;
-    # s=120: —/127/135/156; s=140: —/120/129/146. Низ поперечин кровати ограничивает подъём ~145 мм.
-    "wall_standoff": 120.0,
-    "dpillar_gap":    5.0,              # задняя грань бака → передняя грань D-стойки (резиновая прокладка)
+    # зад бака от стены у пола, мм. Стойки кровати — между баком и бортом. None = вплотную к стойкам кровати
+    # (их внутренняя грань + post_gap). До фото сверху 2026-11-06 зазор D-стойка ↔ арка считался 7.2″, и бак
+    # отодвигали от стены на 120 мм ради скошенной D-стойки; по фото он 10.6″ — «нога» бака влезает и у стены.
+    "wall_standoff": None,
+    "dpillar_gap":    5.0,              # задний торец бака → передняя грань короба D-стойки (резиновая прокладка)
+    "over_box":      15.0,              # торец бака нависает над коробом D-стойки (дно бака выше короба; доски
+                                        # подставки — перед коробом). Нужный подъём (фото 2026-11-06): 0 → 142 мм,
+                                        # 10 → 136, 15 → ~134, 20 → 133, 30 → 129 (до стойки над коробом 4 мм).
+                                        # ⚠️ высота короба не промерена: если она > ~5″ — ставить 0 (+фанера 3/4″)
     "lift":          None,              # подъём дна над чистовым полом; None = подобрать из riser_stacks
     "arch_clear":     8.0,              # минимальный зазор бак ↔ арка при подборе подъёма
     # подставка: доски на ребро (+ фанера сверху); варианты (высота мм, что, толщина фанеры сверху) —
     # берётся первый ≥ нужного подъёма
-    "riser_stacks": ((108.0, "2×4 на ребро (3.5″) + фанера 3/4″", 19.0),
+    "riser_stacks": ((38.0, "доски 2×4 плашмя (1.5″), без фанеры", 0.0),
+                     (57.0, "доски 2×4 плашмя (1.5″) + фанера 3/4″", 19.0),
+                     (89.0, "2×4 на ребро (3.5″), без фанеры; под полосой — 2 доски рядом", 0.0),
+                     (108.0, "2×4 на ребро (3.5″) + фанера 3/4″", 19.0),
                      (120.0, "2×4 на ребро (3.5″) + фанера 3/4″ + 1/2″", 31.0),
                      (127.0, "2×4 на ребро (3.5″) + фанера 3/4″ × 2", 38.0),
                      (140.0, "2×6 на ребро (5.5″), без фанеры; под полосой — 2 доски рядом", 0.0),
@@ -701,6 +735,22 @@ def build():
     arch_x0 = W["center_x"] - W["len_x_wall"] / 2.0
     arch_x1 = W["center_x"] + W["len_x_wall"] / 2.0
 
+    def arch_a_lin(d):
+        """Полудлина арки у пола на расстоянии d от стены (грани скошены, без скругления углов)."""
+        return (W["len_x_wall"] - (W["len_x_wall"] - W["len_x"]) * d / W["protrusion"]) / 2.0
+
+    # D-стойки у пола: передняя грань короба (X) у края фанеры — от задней грани арки (фото сверху 2026-11-06)
+    DP = DPILLAR
+    x_dp = W["center_x"] - arch_a_lin(DP["photo_wall"]) - DP["to_arch"]
+
+    def dp_box_x(d):
+        """X передней грани короба D-стойки на расстоянии d от стены (у пола, до box_h)."""
+        return x_dp - DP["box_slant"] * (d - DP["photo_wall"]) / DP["box_depth"]
+
+    def dp_body_x(d):
+        """X передней грани самой D-стойки (выше короба) на расстоянии d от стены."""
+        return x_dp - DP["body_slant"] * d / DP["body_depth"]
+
     def _arch_footprint(sgn, zh):
         """Коробка-габарит арки на борту sgn (для вырезов в полу)."""
         y0 = arch_ywall - W["protrusion"] if sgn > 0 else -arch_ywall
@@ -749,40 +799,75 @@ def build():
                                       b * abs(s_) ** (2.0 / n_exp)))
             return Part.makePolygon(pts + [pts[0]])
 
-        # сечения от стены (d=0) к внутренней грани (d=prot): длина сужается линейно (len_x_wall → len_x),
-        # высота — постоянна до начала скругления верхней внутренней кромки, дальше — по дуге r_top
-        secs = [(0.0, b_top)]
-        if r_top > 0:
-            for ph in (0.0, 30.0, 55.0, 75.0, 90.0):
-                f = math.radians(ph)
-                secs.append((prot - r_top + r_top * math.sin(f), b_top - r_top + r_top * math.cos(f)))
-        else:
-            secs.append((prot, b_top))
+        # сечения от стены (d=0) к внутренней грани (d=prot): длина сужается линейно (len_x_wall → len_x,
+        # грани скошены), у внутренней грани углы в плане скруглены r_pl; высота — постоянна до начала
+        # скругления верхней внутренней кромки, дальше — по дуге r_top
+        r_pl = float(W.get("plan_round", 0.0))
+        ds = [0.0, prot]
+        for r_ in (r_top, r_pl):
+            if r_ > 0:
+                ds += [prot - r_ + r_ * math.sin(math.radians(ph)) for ph in (0.0, 30.0, 55.0, 75.0)]
+        ds = sorted(ds)
+        ds = [d for i, d in enumerate(ds) if i == 0 or d - ds[i - 1] > 1.5]
+
+        def _b_at(d):
+            if r_top > 0 and d > prot - r_top:
+                return b_top - r_top + math.sqrt(max(0.0, r_top ** 2 - (d - (prot - r_top)) ** 2))
+            return b_top
 
         def _a_at(d):
-            return (W["len_x_wall"] - (W["len_x_wall"] - W["len_x"]) * d / prot) / 2.0
+            a = arch_a_lin(d)
+            if r_pl > 0 and d > prot - r_pl:
+                a -= r_pl - math.sqrt(max(0.0, r_pl ** 2 - (d - (prot - r_pl)) ** 2))
+            return a
+
+        secs = [(d, _b_at(d)) for d in ds]
 
         for sgn, tag in ((+1, "pY"), (-1, "nY")):
             wires = [_half_super(_a_at(d), sgn * (arch_ywall - d), b) for d, b in secs]
             arch_shapes[sgn] = Part.makeLoft(wires, True, True)
             add_shape(doc, "WheelArch_%s" % tag,
                       "Колёсная арка %s: у стены %g, по внутр. грани %g, выступ %g, верх Z=%.0f; "
-                      "сбоку суперэллипс n=%g, скругление верхней внутр. кромки R%g (оценка по фото)" % (
-                          tag, W["len_x_wall"], W["len_x"], W["protrusion"], b_top, n_exp, r_top),
+                      "сбоку суперэллипс n=%g, скругление верхней внутр. кромки R%g, углов в плане R%g "
+                      "(фото сверху 2026-11-06)" % (
+                          tag, W["len_x_wall"], W["len_x"], W["protrusion"], b_top, n_exp, r_top, r_pl),
                       arch_shapes[sgn], color=COL_ARCH, transparency=15, group=arch_g)
+
+    # ═══════ D-СТОЙКИ у пола (реф): короб у основания + передняя грань стойки выше него ═══════
+    dp_shapes = {}
+    dp_g = doc.addObject("App::DocumentObjectGroup", "DPillars")
+    dp_g.Label = "D-стойки у пола (реф): короб + грань стойки — фото сверху 2026-11-06"
+    frame.addObject(dp_g)
+    z_box = floor_top + DP["box_h"]
+    d_box = DP["photo_wall"] + DP["box_depth"]
+    for sgn, tag in ((+1, "pY"), (-1, "nY")):
+        def _prism(pts_xd, z0, z1):
+            v = [App.Vector(x, sgn * (arch_ywall - d), z0) for x, d in pts_xd]
+            return Part.Face(Part.makePolygon(v + [v[0]])).extrude(App.Vector(0, 0, z1 - z0))
+        box_ = _prism([(dp_box_x(0.0), 0.0), (dp_box_x(d_box), d_box),
+                       (x_dp - DP["box_len"], d_box), (x_dp - DP["box_len"], 0.0)], 0.0, z_box)
+        body_ = _prism([(dp_body_x(0.0), 0.0), (dp_body_x(DP["body_depth"]), DP["body_depth"]),
+                        (dp_body_x(DP["body_depth"]) - 40.0, DP["body_depth"]), (dp_body_x(0.0) - 40.0, 0.0)],
+                       z_box, DP["ref_top"])
+        dp_shapes[sgn] = box_.fuse(body_).removeSplitter()
+        add_shape(doc, "DPillarFace_%s_ref" % tag,
+                  "D-стойка %s (реф): короб у пола %.1f″ от края фанеры, грань скошена назад 0.2″/1″, высота "
+                  "~%.0f″ (оценка); выше — грань стойки (уходит назад ~%.0f мм на выступе %.0f)" % (
+                      tag, DP["box_depth"] / 25.4, DP["box_h"] / 25.4, DP["body_slant"], DP["body_depth"]),
+                  dp_shapes[sgn], color=COL_DPILLAR, transparency=40, group=dp_g)
 
     # ═══════ КРОВАТЬ — как построена (strut SC14-10-EG), реконструкция по фото ═══════
     bed_summary = None
     B = BED
     if B.get("enable"):
         bed_g = doc.addObject("App::DocumentObjectGroup", "Bed_StrutFrame")
-        bed_g.Label = "Кровать (построена) — strut SC14-10-EG, реконструкция по фото 2026-11-05"
+        bed_g.Label = "Кровать (построена) — strut SC14-10-EG, реконструкция по фото 2026-11-05/06"
         sw, sd = B["strut_w"], B["strut_d"]
         xr, xf = B["post_rear_x"], B["post_front_x"]
         if xr is None:
-            xr = W["center_x"] - W["len_x"] / 2.0 - B["arch_gap_rear"] - sw / 2.0
+            xr = x_dp + B["post_from_dpillar"]
         if xf is None:
-            xf = W["center_x"] + W["len_x"] / 2.0 + B["arch_gap_front"] + sw / 2.0
+            xf = xr + B["post_spacing"]
         z_bolt = floor_top + B["body_bolt_h"]
         z_rail_top = floor_top + B["rail_top_h"] + B.get("rail_raise", 0.0)
         z_deck_top = z_rail_top + B["deck_th"]
@@ -904,8 +989,8 @@ def build():
         qx, qy, qt = R["p34_plate"]
 
         # передний край арки на расстоянии |Y|=post_in (кожух сужается от стены к центру)
-        a_at_post = (W["len_x_wall"] / 2.0
-                     - (W["len_x_wall"] - W["len_x"]) / 2.0 * (arch_ywall - post_in) / W["protrusion"])
+        a_at_post = arch_a_lin(arch_ywall - post_in)
+        p2px, p2py, p2pt = R.get("p2_plate", B["plate"])
 
         for stack in R.get("stacks", ("rear",)):
             front = (stack == "front")
@@ -928,25 +1013,15 @@ def build():
                 p2_plate_x0 = p2x0                         # пластина уходит от арки
                 p4x0 = X0
                 cross_x0 = X0 - sd                         # новая поперечина — со стороны арки от P4
-            else:          # батарея задом в D-стойку, передом в арку
-                X0 = xr - sw / 2.0 - R["dpillar_gap"]
+            else:          # батарея задом в короб D-стойки, передом к арке
+                # грань короба скошена назад к центру → ближе всего к батарее она у её грани к борту
+                X0 = dp_box_x(arch_ywall - post_in) + R["dpillar_gap"]
                 X1 = X0 + bx
                 p1x = xr
                 p2x1 = X1 - R["p2_front_inset"]; p2x0 = p2x1 - sw
-                p2_plate_x0 = p2x1 - ppx
+                p2_plate_x0 = p2x1 - p2px                  # пластина P2 — назад, от арки
                 p4x0 = X1 - sw
                 cross_x0 = X1
-                # передняя грань D-стойки (реф): от угла у борта уходит наискосок назад к уплотнителю двери
-                ywall0 = y_at_z(half, 0.0)
-                y_dp_in = ywall0 - R["dpillar_depth"]
-                dz = z_b2_top + 100.0
-                sl = R["dpillar_slant"]
-                pts = [App.Vector(X0, ps * ywall0, 0.0), App.Vector(X0 - sl, ps * y_dp_in, 0.0),
-                       App.Vector(X0 - sl - 12.0, ps * y_dp_in, 0.0), App.Vector(X0 - 12.0, ps * ywall0, 0.0)]
-                dp = Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(App.Vector(0, 0, dz))
-                add_shape(doc, "DPillarFace_nY_ref",
-                          "Передняя грань D-стойки (реф; скошена: к центру уходит назад ~%.0f мм — по фото 2/5/13)" % sl,
-                          dp, color=COL_DPILLAR, transparency=40, group=rk_g)
 
             # батареи
             bat1 = rk_box("Battery_Lower", "Батарея нижняя Buknuwo 12.8V 150Ah (7.63″ вдоль борта)",
@@ -956,8 +1031,8 @@ def build():
                        (bx, by, bz), (X0, ybase(ps, y_wall_side, by), z_b2), COL_BATTERY)
 
             # P2 — новая стойка у борта, как стойки кровати; со стороны арки
-            rk_box("RackPostPlate_P2", "Пластина под новой стойкой P2 (сдвинута от арки)",
-                   (ppx, ppy, pt), (p2_plate_x0, ybase(ps, post_out, ppy), floor_top), COL_STRUT)
+            rk_box("RackPostPlate_P2", "Пластина под новой стойкой P2 — Simpson TP15 1-13/16×5″ (сдвинута от арки)",
+                   (p2px, p2py, p2pt), (p2_plate_x0, ybase(ps, post_out, p2py), floor_top), COL_STRUT)
             rk_box("BedPost_nY_rackP2", "Стойка P2 (новая, как стойки кровати; L=%g) — болт к продольной рейке" % B["post_len"],
                    (sw, sd, B["post_len"]), (p2x0, ybase(ps, post_out, sd), floor_top + pt), COL_STRUT)
             add_sphere(doc, "RackP2_RailBolt" + sfx, "Болт P2 ↔ продольная рейка кровати", 9,
@@ -979,10 +1054,12 @@ def build():
                 st, sh = R["front_stop"]
                 rk_box("RackShelfFrontStop", "Упор-уголок по переднему краю полки (держит верхнюю батарею вперёд)",
                        (st, by, (z_b2 + sh) - z_rail0), (X1, ybase(ps, y_wall_side, by), z_rail0), COL_STRUT)
-            # у переднего блока спереди арки нет → упор и для нижней батареи
-            if front and R.get("lower_front_stop"):
+            # упор нижней батареи вперёд: у переднего блока спереди арки нет вовсе, у заднего — до арки 3″+
+            # (фото сверху 2026-11-06; раньше считали, что нижнюю держит арка)
+            if R.get("lower_front_stop"):
                 lh, lz = R["lower_front_stop"]
-                rk_box("RackLowerFrontStop", "Упор нижней батареи вперёд: strut поперёк, болты к P1/P3",
+                rk_box("RackLowerFrontStop", "Упор нижней батареи вперёд: strut поперёк, болты к %s" % (
+                           "P1/P3" if front else "P2/P4 (уголки)"),
                        (sd, by + sd, lh), (X1, ybase(ps, y_wall_side, by + sd), floor_top + lz), COL_STRUT)
             # резиновый брусок: нижняя батарея не подпрыгивает (ставить не над клеммами)
             if R.get("rubber_block"):
@@ -1020,9 +1097,13 @@ def build():
                 cutlist.append(("поперечина-стяжка", float(cross_len)))
 
             arch = arch_shapes.get(ps)
+            p1_plate = doc.getObject("BedPostPlate_%s_%s" % ("pY" if ps > 0 else "nY", "front" if front else "rear"))
             rack_summary.append(dict(
                 stack=stack, X=(X0, X1), p2=(p2x0, p2x1),
                 gap_arch=bat1.distToShape(arch)[0] if arch else None,
+                gap_dpillar=None if front else bat1.distToShape(dp_shapes[ps])[0],
+                plates_gap=shapes["RackPostPlate_P2"].distToShape(p1_plate.Shape)[0],
+                p2_plate_arch=shapes["RackPostPlate_P2"].distToShape(arch)[0] if arch else None,
                 p2_arch=shapes["BedPost_nY_rackP2"].distToShape(arch)[0] if arch else None,
                 to_slider=(slider_x0 - X1) if front else None,
                 to_deck_edge=(X1 - (xf + sw / 2.0)) if front else None,
@@ -1057,11 +1138,16 @@ def build():
         tunnel_loc = Part.makeLoft(secs_t, True, True)
         tank_loc = Part.makeBox(TL, TD, TH).cut(tunnel_loc)
 
-        # — положение: зад бака в T["wall_standoff"] от стены (у пола), задний торец — в D-стойку —
-        y_back = arch_ywall - T["wall_standoff"]                       # |Y| задней грани бака
-        x_dp_corner = xr - sw / 2.0 - R["dpillar_gap"]                 # угол D-стойки у борта (как у этажерки)
-        x_dp = x_dp_corner - R["dpillar_slant"] * T["wall_standoff"] / R["dpillar_depth"]
-        x_r = x_dp + T["dpillar_gap"]                                  # задний торец бака
+        # — положение: зад бака в standoff от стены (у пола), задний торец — в короб D-стойки —
+        standoff = T["wall_standoff"]
+        if standoff is None:                                           # вплотную к стойкам кровати у стены
+            standoff = (arch_ywall - post_in) + T["post_gap"]
+        y_back = arch_ywall - standoff                                 # |Y| задней грани бака
+        # грань короба скошена назад к центру → ближе всего к баку она у его задней (к стене) грани;
+        # торец бака может нависать над коробом на over_box (дно выше короба), подставка — перед коробом
+        x_dp_tank = dp_box_x(standoff)
+        x_riser_r = x_dp_tank + T["dpillar_gap"]                       # задний край подставки
+        x_r = x_riser_r - T.get("over_box", 0.0)                       # задний торец бака
         x_f = x_r + TL
 
         def _place(shape_loc, z_b):
@@ -1098,29 +1184,24 @@ def build():
         tank = _place(tank_loc, z_b)
         add_shape(doc, "WaterTank_TORVA33",
                   "Бак TORVA 33 gal 48×12.5×20″ (полный ≈136 кг), дно %.0f над полом, зад %.0f от стены" % (
-                      lift, T["wall_standoff"]),
+                      lift, standoff),
                   tank, color=(0.70, 0.86, 0.98), transparency=25, group=tg)
 
-        # — передняя грань D-стойки (реф) на этом борту —
-        ywall0 = arch_ywall
-        y_dp_in = ywall0 - R["dpillar_depth"]
-        sl = R["dpillar_slant"]
-        pts = [App.Vector(x_dp_corner, ts * ywall0, 0.0), App.Vector(x_dp_corner - sl, ts * y_dp_in, 0.0),
-               App.Vector(x_dp_corner - sl - 12.0, ts * y_dp_in, 0.0), App.Vector(x_dp_corner - 12.0, ts * ywall0, 0.0)]
-        dpf = Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(App.Vector(0, 0, z_b + TH + 50.0))
-        add_shape(doc, "DPillarFace_%s_ref" % ("pY" if ts > 0 else "nY"),
-                  "Передняя грань D-стойки (реф, зеркально пассажирской; на водительской — D-ring на торце проёма)",
-                  dpf, color=COL_DPILLAR, transparency=40, group=tg)
+        # — D-стойка этого борта (реф, общий с этажерками) —
+        dpf = dp_shapes[ts]
 
-        # — подставка: фанера сверху по «ноге» и по полосе под внутренней стенкой, брус 2×4 на ребро —
+        # — подставка: фанера сверху по «ноге» и по полосе под внутренней стенкой, доски на ребро/плашмя —
         tp = ply_top                                                  # фанера сверху (0 — без неё)
         fu = T["foot_u"]
         sk_v0 = tdep                                                  # полоса под внутренней стенкой: v 235..320
         riser_parts = []
+        riser_notes = []
 
-        def _riser(name, label, dims_loc, base_loc, color):
+        def _riser(name, label, dims_loc, base_loc, color, cut=None):
             b = Part.makeBox(dims_loc[0], dims_loc[1], dims_loc[2], App.Vector(*base_loc))
             s = _place(b, floor_top)
+            if cut is not None:
+                s = s.cut(cut)
             add_shape(doc, name, label, s, color=color, group=tg)
             riser_parts.append(s)
             return s
@@ -1129,16 +1210,39 @@ def build():
                    (TL - fu, TD, tp), (fu, 0.0, lift - tp), COL_PLY)
             _riser("TankRiser_TopStrip", "Подставка: фанера %.0f мм полосой под внутренней стенкой %.0f×%.0f" % (
                        tp, fu, TD - sk_v0), (fu, TD - sk_v0, tp), (0.0, sk_v0, lift - tp), COL_PLY)
-        slh = lift - tp                                               # высота досок на ребро
-        bw = 38.0
-        board = "2×6" if slh > 100 else "2×4"
-        for i, u0 in enumerate((TL - bw, (fu + TL - bw) / 2.0, fu)):
-            _riser("TankRiser_Sleeper_Foot%d" % (i + 1), "Доска %s на ребро под «ногой», L=%.0f" % (board, TD),
-                   (bw, TD, slh), (u0, 0.0, 0.0), COL_WOOD)
-        n_strip = 1 if tp > 0 else 2                                  # без фанеры — 2 доски рядом под полосой
+        slh = lift - tp                                               # высота досок
+        flat = slh <= 40.0
+        bw = 89.0 if flat else 38.0                                   # 2×4 плашмя — 3.5″ вдоль бака
+        board = "2×4 плашмя" if flat else ("2×6 на ребро" if slh > 100 else "2×4 на ребро")
+        # пластина задней стойки кровати у стены лежит под «ногой»: средняя доска — мимо неё, крайняя — с
+        # выборкой 1.5 мм снизу (x = x_f − u)
+        pl_bb = doc.getObject("BedPostPlate_%s_rear" % ("pY" if ts > 0 else "nY")).Shape.BoundBox
+        keep0, keep1 = pl_bb.XMin - 3.0, pl_bb.XMax + 3.0
+        notch = Part.makeBox(pl_bb.XLength + 4.0, pl_bb.YLength + 4.0, pl_bb.ZLength + 0.6 + (floor_top - pl_bb.ZMin),
+                             App.Vector(pl_bb.XMin - 2.0, pl_bb.YMin - 2.0, pl_bb.ZMin - 0.1))
+        u_rear, u_front = x_f - max(x_r, x_riser_r) - bw, fu          # задняя доска — перед коробом D-стойки
+        u_mid = (fu + TL - bw) / 2.0
+        x_mid0 = x_f - u_mid - bw
+        if x_mid0 < keep1 and x_mid0 + bw > keep0:                    # попала на пластину → вперёд от неё
+            x_new = keep1
+            if x_new + bw <= x_f - u_front - bw - 3.0:
+                u_mid = x_f - x_new - bw
+                riser_notes.append("средняя доска «ноги» — перед пластиной задней стойки кровати")
+            else:
+                u_mid = None
+                riser_notes.append("средняя доска «ноги» не нужна (между крайними < 4″)")
+        for i, u0 in enumerate(u for u in (u_rear, u_mid, u_front) if u is not None):
+            xs0 = x_f - u0 - bw
+            over = xs0 < keep1 and xs0 + bw > keep0
+            if over:
+                riser_notes.append("доска «ноги» #%d — выборка 1.5 мм снизу над пластиной стойки кровати" % (i + 1))
+            _riser("TankRiser_Sleeper_Foot%d" % (i + 1), "Доска %s под «ногой», L=%.0f%s" % (
+                       board, TD, " (выборка снизу под пластину стойки)" if over else ""),
+                   (bw, TD, slh), (u0, 0.0, 0.0), COL_WOOD, cut=notch if over else None)
+        n_strip = 1 if (tp > 0 or flat) else 2                        # на ребро без фанеры — 2 доски рядом
         for j in range(n_strip):
             v0 = (sk_v0 + (TD - sk_v0 - bw) / 2.0) if n_strip == 1 else (sk_v0 + 4.0 + j * (bw + 1.0))
-            _riser("TankRiser_Sleeper_Strip%d" % (j + 1), "Доска %s на ребро вдоль полосы под стенкой бака, L=%.0f" % (
+            _riser("TankRiser_Sleeper_Strip%d" % (j + 1), "Доска %s вдоль полосы под стенкой бака, L=%.0f" % (
                        board, fu), (fu, bw, slh), (0.0, v0, 0.0), COL_WOOD)
 
         # — P3/P4 со стороны салона: до верха поперечин кровати, болтами к ним (как у этажерок) —
@@ -1192,11 +1296,13 @@ def build():
                                         if o.Name.startswith("BedCross") and not o.isDerivedFrom("App::DocumentObjectGroup"))),
             ("подставка ↔ арка", min(_d(s, arch) for s in riser_parts)),
             ("подставка ↔ пластина задней стойки", min(_d(s, obj("BedPostPlate_%s_rear" % tag)) for s in riser_parts)),
+            ("подставка ↔ D-стойка", min(_d(s, dpf) for s in riser_parts)),
         ]
         # зазоры по сторонам (в X у дна «ноги» и в Y у внутренней стенки тоннеля)
         tank_summary = dict(lift=lift, lift_min=lift_min, stack=stack_txt, x=(x_r, x_f), y_back=y_back,
-                            y_cab=y_cab, standoff=T["wall_standoff"], top=z_b + TH, checks=checks,
-                            spacer=sp_t, p_len=p_len, x_dp=x_dp, floor_top=floor_top,
+                            y_cab=y_cab, standoff=standoff, top=z_b + TH, checks=checks, notes=riser_notes,
+                            over_box=x_dp_tank - x_r, z_box=z_box,
+                            spacer=sp_t, p_len=p_len, x_dp=x_dp_tank, floor_top=floor_top,
                             under_cross=(z_rail_top - sw) - (z_b + TH),
                             vol=tank.Volume / 1e6)
 
@@ -1463,6 +1569,20 @@ def build():
     print("  Заводские резьбовые точки: %d на рейках Z=%g, резьба %s" % (
         n_factory_threads, threaded_z, P["factory_threaded_thread"]))
     print("  Обшивка-скан: %s" % ("загружена" if mesh_obj else "НЕТ"))
+    print("-" * 70)
+    print("[Задние углы у пола: D-стойка ↔ арка — фото сверху 2026-11-06]")
+    print("  Передняя грань короба D-стойки у края фанеры: X=%.0f; уплотнитель задней двери X≈%.0f" % (
+        x_dp, x_dp - DP["box_len"]))
+    print("  Задняя грань арки у края фанеры: X=%.0f;  выступ арки от края фанеры %.0f мм (%.2f″)" % (
+        W["center_x"] - arch_a_lin(DP["photo_wall"]), W["protrusion"] - DP["photo_wall"],
+        (W["protrusion"] - DP["photo_wall"]) / 25.4))
+    print("  Зазор короб ↔ арка по полу (от края фанеры): " + ";  ".join(
+        "%.1f″ → %.2f″" % (yi, (W["center_x"] - arch_a_lin(DP["photo_wall"] + yi * 25.4)
+                               - dp_box_x(min(DP["photo_wall"] + yi * 25.4, DP["photo_wall"] + DP["box_depth"]))) / 25.4)
+        for yi in (0.0, 1.1, 2.4, 5.0)))
+    if bed_summary:
+        print("  Центр задней стойки кровати от грани короба: %.0f мм (%.2f″)" % (
+            bed_summary["posts"][0] - x_dp, (bed_summary["posts"][0] - x_dp) / 25.4))
     if bed_summary:
         bs = bed_summary
         print("-" * 70)
@@ -1492,8 +1612,10 @@ def build():
         mm = lambda v: ("%.1f мм" % v) if v is not None else "—"
         print("[Этажерка, 2 батареи Buknuwo 150Ah — пассажирский борт, %s]" % (
             "арка ↔ сдвижная дверь" if rs["stack"] == "front" else "D-стойка ↔ арка"))
-        print("  Батареи по X: %.0f..%.0f (7.63″ вдоль борта); нижняя до арки: %s" % (
-            rs["X"][0], rs["X"][1], mm(rs["gap_arch"])))
+        print("  Батареи по X: %.0f..%.0f (7.63″ вдоль борта); нижняя до арки: %s%s" % (
+            rs["X"][0], rs["X"][1], mm(rs["gap_arch"]),
+            ("; до короба D-стойки: %s" % mm(rs["gap_dpillar"])) if rs["gap_dpillar"] is not None else ""))
+        print("  Пластина P2 (TP15): до пластины P1 %s, до арки %s" % (mm(rs["plates_gap"]), mm(rs["p2_plate_arch"])))
         if rs["stack"] == "front":
             print("  До края сдвижной двери: %.0f мм (%.1f″); за передний край настила: %.0f мм" % (
                 rs["to_slider"], rs["to_slider"] / 25.4, rs["to_deck_edge"]))
@@ -1521,9 +1643,14 @@ def build():
         print("  X бака %.0f..%.0f; зад бака в %.0f мм от стены, грань в салон в %.0f мм от стены (у пола)" % (
             t["x"][0], t["x"][1], t["standoff"], t["standoff"] + WATER_TANK["size"][1]))
         print("  Верх бака %.0f мм над полом; до низа поперечин кровати %.0f мм" % (t["top"] - f0, t["under_cross"]))
+        if t["over_box"] > 0:
+            print("  Торец бака нависает над коробом D-стойки на %.0f мм: дно %.0f над полом, короб ~%.0f (оценка) → запас %.0f" % (
+                t["over_box"], t["lift"], t["z_box"] - f0, t["lift"] - (t["z_box"] - f0)))
         print("  Зазоры: " + "; ".join("%s %.1f" % (n, v) for n, v in t["checks"]))
         print("  Проставка задняя стойка кровати ↔ бак: %.0f мм;  P3/P4 L=%.0f;  объём тела в модели %.0f л" % (
             t["spacer"], t["p_len"], t["vol"]))
+        for note in t.get("notes", []):
+            print("  ⚠ " + note)
     if galley_summary:
         k = galley_summary
         f0 = k["floor_top"]

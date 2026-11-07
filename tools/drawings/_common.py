@@ -30,8 +30,8 @@ def arch_profile(d, which="wall", n_pts=120):
     n = float(W.get("profile_n", 2.0))
     if which == "wall":
         a, b = W["len_x_wall"] / 2.0, b_top
-    else:
-        a, b = W["len_x"] / 2.0, b_top - float(W.get("top_round", 0.0))
+    else:      # у внутренней грани углы в плане скруглены plan_round → короче на 2·R
+        a, b = W["len_x"] / 2.0 - float(W.get("plan_round", 0.0)), b_top - float(W.get("top_round", 0.0))
     pts = []
     for i in range(n_pts + 1):
         t = math.pi * i / n_pts

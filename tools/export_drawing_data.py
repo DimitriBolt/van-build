@@ -36,7 +36,7 @@ try:
     import FreeCAD as App
     doc = App.ActiveDocument
     res["summary"] = buf.getvalue()[buf.getvalue().find("[Кровать"):] if "[Кровать" in buf.getvalue() else ""
-    for k in ("WHEEL_ARCH", "BED", "BATTERY_RACK", "WATER_TANK", "SHOWER_KITCHEN", "FLOOR", "PARAMS"):
+    for k in ("WHEEL_ARCH", "DPILLAR", "BED", "BATTERY_RACK", "WATER_TANK", "SHOWER_KITCHEN", "FLOOR", "PARAMS"):
         res[k] = json.loads(json.dumps(g[k], default=lambda o: list(o) if isinstance(o, tuple) else str(o)))
     boxes = {}
     for o in doc.Objects:
@@ -54,6 +54,21 @@ try:
                       z_bolt=z_bolt, z_rail_top=floor_top + B["rail_top_h"] + B.get("rail_raise", 0.0))
 
     res["geo"]["half"] = [list(p) for p in half]
+    # передняя грань короба D-стойки у края фанеры (как в van_v0.py)
+    W_, DP_ = g["WHEEL_ARCH"], g["DPILLAR"]
+    a_pw = (W_["len_x_wall"] - (W_["len_x_wall"] - W_["len_x"]) * DP_["photo_wall"] / W_["protrusion"]) / 2.0
+    res["geo"]["x_dp"] = W_["center_x"] - a_pw - DP_["to_arch"]
+
+    # — задние углы: сечения арки и D-стойки у пола (план) —
+    corners = {}
+    for tag in ("pY", "nY"):
+        c = {}
+        for nm, obj in (("arch", "WheelArch_%s" % tag), ("dpillar", "DPillarFace_%s_ref" % tag)):
+            sh = doc.getObject(obj).Shape
+            c[nm] = [[(p.x, p.y) for p in w.discretize(Distance=2.0)]
+                     for w in sh.slice(App.Vector(0, 0, 1), floor_top + 2.0)]
+        corners[tag] = c
+    res["corners"] = corners
 
     def _slice(shape, normal, d):
         out = []
@@ -94,7 +109,8 @@ try:
                 out.append([(p.x, p.y, p.z) for p in w.discretize(Distance=4.0)])
             return out
 
-        yb = ywall - T["wall_standoff"]
+        tbb = tank.BoundBox
+        yb = tbb.YMax if sgn > 0 else -tbb.YMin                   # задняя (к стене) грань бака
         d, sol, _ = tank.distToShape(arch)
         tk = dict(y_back=yb, closest=[[sol[0][0].x, sol[0][0].y, sol[0][0].z],
                                       [sol[0][1].x, sol[0][1].y, sol[0][1].z], d])

@@ -8,7 +8,8 @@ tools/make_docs.sh
 FREECADCMD="$HOME/Applications/FreeCAD.AppImage --console" FREECAD="$HOME/Applications/FreeCAD.AppImage" tools/make_docs.sh
 ```
 
-Скрипт: `tools/export_drawing_data.py` (FreeCAD → `docs/drawing_data.json`) → `tools/drawings/*.py`
+Скрипт: `tools/photo_corners_2026-11-06.py` (точки с фото задних углов → `docs/rear_corners_points.json`) →
+`tools/export_drawing_data.py` (FreeCAD → `docs/drawing_data.json`) → `tools/drawings/*.py`
 (python3 + matplotlib → 2D-чертежи) → `tools/render_views.py` (FreeCAD GUI → `docs/renders/`,
 и `van_v0.FCStd` с цветами). Размеры на чертежах — в дюймах, от чистового пола (верх фанеры).
 
@@ -16,6 +17,7 @@ FREECADCMD="$HOME/Applications/FreeCAD.AppImage --console" FREECAD="$HOME/Applic
 
 | Файл | Что | Описание |
 |---|---|---|
+| `rear_corners_drawing.png` | задние углы у пола: арка ↔ D-стойка, оба борта — точки с 4 фото сверху + модель, таблица зазоров | §1f |
 | `battery_rack_drawing.png` | задний блок батарей (пассажирский борт, D-стойка ↔ арка) | `FURNITURE_MEMORY.md` §1b |
 | `battery_rack_front_drawing.png` | передний блок батарей (арка ↔ сдвижная дверь) | §1c |
 | `water_tank_drawing.png` | бак для воды TORVA 33 gal у водительской арки: вид на борт, сверху, разрез по колесу | §1d |

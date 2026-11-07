@@ -54,12 +54,13 @@ VIEWS = [
 # этажерки под батареи: кровать и всё дальнее скрыто. Элемент, оканчивающийся на "$", —
 # ТОЧНОЕ имя объекта (иначе подстрока).
 _RACK_HIDE = _NOT_BED + ("_pY", "BedSideRail", "BedDeck", "BedMattress", "BedWall",
-                         "BedPostBodyBolt", "RailBolt")
+                         "BedPostBodyBolt", "RailBolt", "WaterTank", "TankRiser", "TankPost", "TankSpacer",
+                         "Shower_", "Kitchen_", "Water_")
 _REAR_RACK = tuple(n + "$" for n in (
     "Battery_Lower", "Battery_Upper", "RackPostPlate_P2", "BedPost_nY_rackP2", "RackP2_BodyBolt",
     "RackShelfRail_Rear", "RackShelfRail_Front", "RackShelfPlate", "RackShelfFrontStop", "RackRubberBlock",
     "RackPostPlate_P3", "RackPost_P3", "RackPostPlate_P4", "RackPost_P4", "BedCross_RackFront",
-    "DPillarFace_nY_ref", "BedPost_nY_rear", "BedPostPlate_nY_rear", "BedCross_1"))
+    "RackLowerFrontStop", "DPillarFace_nY_ref", "BedPost_nY_rear", "BedPostPlate_nY_rear", "BedCross_1"))
 VIEWS += [
     # оба блока + поперечины-стяжки, из салона сверху-спереди (взгляд назад, к борту −Y, вниз)
     ("rack_with_cross.png", (-0.55, -1.0, -0.55), _RACK_HIDE + ("BedCross_2",)),
@@ -72,7 +73,8 @@ VIEWS += [
 ]
 # бак для воды у водительской арки: пассажирский борт и всё с него скрыто
 _TANK_HIDE = _NOT_BED + ("_nY", "Battery_", "RackShelf", "RackPost", "RackRubber", "RackLower", "RackP2",
-                         "BedDeck", "BedMattress", "BedWall", "BedPostBodyBolt")
+                         "BedDeck", "BedMattress", "BedWall", "BedPostBodyBolt",
+                         "Shower_", "Kitchen_", "Water_Pump12V", "Water_Heater12V")
 VIEWS += [
     # из салона на водительский борт, сверху-сзади (взгляд вперёд-влево-вниз)
     ("tank_3d.png", (0.45, 1.0, -0.6), _TANK_HIDE),

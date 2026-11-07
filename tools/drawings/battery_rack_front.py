@@ -65,9 +65,8 @@ fig, (axt, axe) = plt.subplots(2, 1, figsize=(11, 17.5), dpi=150, sharex=True,
 ax = axt
 ax.add_patch(Rectangle((XL, -1.2), XR - XL, 1.2, color="#cfcfcf"))
 ax.text(-9, -0.6, "борт", ha="center", va="center", fontsize=9)
-xw1 = mx(W["center_x"] + W["len_x_wall"] / 2.0)
-xi1 = mx(W["center_x"] + W["len_x"] / 2.0)
-ax.add_patch(Polygon([(XL, 0), (xw1, 0), (xi1, PROT), (XL, PROT)], color=C_ARCH))
+for w in d["corners"]["nY"]["arch"]:                     # сечение арки модели у пола (2″ над фанерой)
+    ax.add_patch(Polygon([(mx(x), (YW + y) / IN) for x, y in w], color=C_ARCH))
 ax.text(-9.5, 5, "колёсная\nарка (у пола)", ha="center", va="center", color="white", fontsize=10)
 ax.add_patch(Rectangle((DOOR, -1.2), 1.2, 17, color="#212121"))
 ax.text(DOOR + 0.6, 8, "край сдвижной двери (U-уплотнитель)", rotation=90, color="white",
@@ -77,8 +76,11 @@ ax.text(DECK_EDGE + 0.15, 15.4, "передний край\nнастила", fon
 for xs, lab in ((P1, "P1 (передняя\nстойка, есть)"), (P2, "P2\n(новая)")):
     ax.add_patch(Rectangle((xs[0], YW0), SW, SD, color=C_STRUT))
     ax.text((xs[0] + xs[1]) / 2, -2.35, lab, ha="center", fontsize=8, color="#37474f")
-ax.add_patch(Rectangle(((P1[0] + P1[1]) / 2 - 2.0, 0), 4.0, 5.0, fill=False, ec="#90a4ae", ls="--", lw=0.8))
-ax.add_patch(Rectangle((P2[0], 0), 4.0, 5.0, fill=False, ec="#90a4ae", ls="--", lw=0.8))
+for pn, plab in (("BedPostPlate_nY_front", "TP35"), ("RackPostPlate_P2_fwd", "TP15")):   # пластины на полу
+    pb = box(d, pn)
+    ax.add_patch(Rectangle((mx(pb[0]), yr(pb)[0]), (pb[1] - pb[0]) / IN, (pb[3] - pb[2]) / IN,
+                           fill=False, ec="#90a4ae", ls="--", lw=0.8))
+    ax.text(mx((pb[0] + pb[1]) / 2), yr(pb)[1] + 0.35, plab, ha="center", fontsize=6.5, color="#78909c")
 ax.add_patch(Rectangle((X0, YB0), BX, BY, fc=C_BAT, alpha=0.25, ec=C_BAT, lw=2))
 ax.text((X0 + X1) / 2, YB0 + 5.5, "2 батареи\n(одна над другой)\n7.63 × 10.07″", ha="center",
         fontsize=9, color="#e65100", weight="bold")
