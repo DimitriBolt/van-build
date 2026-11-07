@@ -547,13 +547,29 @@ SHOWER_KITCHEN = {
                    "side_gap": 60.0,                 # от стенки по борту
                    "flue_d": 76.0,                   # дымоход 3″ нержавейка, вертикально через потолок и крышу
                    "roof_out": 150.0},               # над крышей + колпак
-    # — пропан: стандартный баллон 30 lb (Flame King, фото: ⌀12.3″ × 23.7″, 24 lb пустой, 7 gal) в герметичном
-    #   локере под кроватью перед баком, справа (к проходу) от туалета; дверца — к проходу; вент через пол наружу —
-    "propane": {"cyl_d": 312.0, "cyl_h": 602.0,
-                "inner": 328.0, "inner_h": 650.0,    # внутри локера
+    # — пропан в герметичном локере под кроватью перед баком, справа (к проходу) от туалета; дверца — к проходу;
+    #   вент через пол наружу. 2026-11-07 (Dimitri): 30 lb (⌀12.3″ × 23.7″) — великоват → стандартный 20 lb
+    #   (Flame King: 12 × 12 × 17.8″, 17 lb пустой, ~4.7 gal) —
+    "propane": {"cyl_d": 312.0, "cyl_h": 452.0, "title": "20 lb (Flame King) ⌀12″ × 17.8″",
+                "inner": 328.0, "inner_h": 500.0,    # внутри локера (над вентилем ~48 мм — редуктор/шланг)
                 "wall": 12.0,                        # фанера 1/2″ + герметик, крышка/дверца на уплотнителе
                 "toilet_gap": 20.0, "pump_gap": 10.0,
                 "vent_d": 25.4},                     # вент-трубка 1″ через пол (вниз, наружу)
+}
+
+# ─────────── 2-й ЭТАЖ БАГАЖНИКА: перфолист на полку батарей и бак T-4320 — проект 2026-11-07 ───────────
+# Dimitri: «положить на бак / полку этажерки сквозную поверхность — Perforated Metal Sheet 48″×24″ 19 Gauge, 304
+# stainless, отверстия 0.32″ (8 мм), 40% — чтобы создать второй этаж в trunk». Лист 1 мм сам пролёт ~35″ не держит
+# (прогиб ~20 см) → под ним 3 поперечины strut (как у кровати): на батарейной стороне — на кромке полки над её
+# внутренней рейкой (+ уголок 90° к рейке), на другой — на верху бака через резину 3 мм. Лист 48″ — поперёк
+# (от батарей через багажник на бак), 24″ вдоль — подрезать по переднему торцу бака.
+TRUNK_SHELF = {
+    "enable": True,
+    "sheet": (609.6, 1219.2, 0.95),   # 24″ (вдоль X) × 48″ (поперёк) × 19 ga
+    "pad": 3.0,                       # резина под поперечинами (на полке и на баке)
+    "gap_batt": 3.0,                  # от граней батарей
+    "n_cross": 3,
+    "title": "Перфолист 304 48×24″ 19 ga, отв. 0.32″ (8 мм), 40%",
 }
 
 DOC_NAME    = "van_v0"
@@ -2587,7 +2603,7 @@ def build():
                 Part.makeCylinder(cd * 0.30, 62.0, V(ccx, ccy, cz0 + ch_ - 62.0)).cut(
                     Part.makeCylinder(cd * 0.27, 70.0, V(ccx, ccy, cz0 + ch_ - 64.0)))).fuse(
                 Part.makeCylinder(22.0, 70.0, V(ccx, ccy, cz0 + ch_ - 102.0 + 40.0)))
-            put("Propane_Cylinder", "Баллон пропана 30 lb (Flame King) ⌀12.3″ × 23.7″, вертикально, вентилем вверх",
+            put("Propane_Cylinder", "Баллон пропана %s, вертикально, вентилем вверх" % PR.get("title", ""),
                 cyl, (0.96, 0.96, 0.96))
             put("Propane_Strap", "Хомут баллона к стенке локера (не упадёт на кочке)",
                 Part.makeCylinder(cd / 2.0 + 4.0, 25.0, V(ccx, ccy, cz0 + 0.55 * ch_)).cut(
@@ -2703,6 +2719,80 @@ def build():
             headroom=(z_ceil - 12.0) - z_pan, kitchen_x=(kx0, kx1), kl=kl, y_kf=y_kf, counter=K["counter_h"],
             seat_gap=3190.0 - kx1, aisle_sh=aisle_sh, aisle_k=aisle_k, checks=checks,
             floor_top=floor_top, wall_y=y_at_z(half, 900.0), arch_ywall=arch_ywall)
+
+    # ═══════ 2-Й ЭТАЖ БАГАЖНИКА: перфолист на 3 поперечинах (полка батарей ↔ бак) ═══════
+    trunk_summary = None
+    TS = TRUNK_SHELF
+    rail_i = doc.getObject("BankRail_Inner")
+    tank_o = doc.getObject("WaterTank_T4320") if WATER_VARIANT == "T4320_floor" else None
+    if TS.get("enable") and rail_i is not None and tank_o is not None and B.get("enable"):
+        tg = doc.addObject("App::DocumentObjectGroup", "TrunkShelf")
+        tg.Label = "2-й этаж багажника — перфолист на полку батарей и бак (проект 2026-11-07)"
+        rb, tb = rail_i.Shape.BoundBox, tank_o.Shape.BoundBox
+        shelf_o = doc.getObject("BankShelf")
+        z_s = max(shelf_o.Shape.BoundBox.ZMax if shelf_o else rb.ZMax, tb.ZMax)   # верх полки / бака
+        z_c0 = z_s + TS["pad"]
+        z_c1 = z_c0 + sd                                             # поперечины strut плашмя (13/16″)
+        lx, ly, lt = TS["sheet"]
+        y_b = rb.YMin + TS["gap_batt"]                               # от граней батарей (|Y| рейки = батареи)
+        x0_ = max(rb.XMin, tb.XMin) + 4.0
+        x1_ = min(x0_ + lx, tb.XMax)                                 # подрезать по переднему торцу бака
+        straps = [o.Shape.BoundBox for o in doc.Objects if o.Name.startswith("TankFloor_Strap_")]
+        y_c1 = tb.YMin + 274.0                                       # поперечины заходят на бак на ~11″
+        n_ = TS["n_cross"]
+        xs_c = [x0_ + sw / 2.0 + i * (x1_ - x0_ - sw) / (n_ - 1) for i in range(n_)]
+        for i, xc in enumerate(xs_c):                                # не класть резину на ремни бака — сдвинуть вперёд
+            for sb_ in straps:
+                if xc + sw / 2.0 > sb_.XMin - 5.0 and xc - sw / 2.0 < sb_.XMax + 5.0:
+                    xc = sb_.XMax + 5.0 + sw / 2.0
+            xs_c[i] = min(xc, x1_ - sw / 2.0)
+        tparts = {}
+
+        def tput(name, label, shape, color, tr=0):
+            add_shape(doc, name, label, shape, color=color, transparency=tr, group=tg)
+            tparts[name] = shape
+            return shape
+        for i, xc in enumerate(xs_c):
+            tput("Trunk2_Cross_%d" % (i + 1), "Поперечина 2-го этажа strut 13/16″ L=%.0f: полка батарей ↔ верх бака" % (
+                y_c1 - y_b), Part.makeBox(sw, y_c1 - y_b, sd, App.Vector(xc - sw / 2.0, y_b, z_c0)), COL_STRUT)
+            tput("Trunk2_PadBatt_%d" % (i + 1), "Резина 3 мм под поперечиной (кромка полки над рейкой)",
+                 Part.makeBox(sw, rb.YMax - y_b, TS["pad"], App.Vector(xc - sw / 2.0, y_b, z_s)), (0.15, 0.15, 0.15))
+            tput("Trunk2_PadTank_%d" % (i + 1), "Резина 3 мм под поперечиной (на баке)",
+                 Part.makeBox(sw, 120.0, TS["pad"], App.Vector(xc - sw / 2.0, y_c1 - 120.0, z_s)), (0.15, 0.15, 0.15))
+            tput("Trunk2_Angle_%d" % (i + 1), "Уголок 90° поперечина → боковая грань рейки полки (strut-болт 1/4″)",
+                 Part.makeBox(sw, 4.0, z_c1 - (rb.ZMin + 10.0), App.Vector(xc - sw / 2.0, rb.YMax, rb.ZMin + 10.0)),
+                 COL_STRUT)
+        tput("Trunk2_Sheet", "%s, подрезан до %.0f×%.0f (%.1f×%.0f″) — 2-й этаж багажника" % (
+            TS["title"], x1_ - x0_, ly, (x1_ - x0_) / 25.4, ly / 25.4),
+            Part.makeBox(x1_ - x0_, ly, lt, App.Vector(x0_, y_b, z_c1)), (0.80, 0.82, 0.85), 35)
+        # проверки
+        cr = [o.Shape for o in doc.Objects if o.Name.startswith("BedCross_")]
+        bats = [o.Shape for o in doc.Objects if o.Name.startswith("Battery_") or o.Name.startswith("BankBattery")]
+        tsh = list(tparts.values())
+        tch = [("поперечины кровати", min(a.distToShape(b)[0] for a in tsh for b in cr)),
+               ("ремни бака", min(a.distToShape(o.Shape)[0] for a in tsh for o in doc.Objects
+                                   if o.Name.startswith("TankFloor_Strap_"))),
+               ("упоры полки", min(a.distToShape(o.Shape)[0] for a in tsh for o in doc.Objects
+                                    if o.Name.startswith("BankStop_")))]
+        if bats:
+            tch.append(("батареи", min(a.distToShape(b)[0] for a in tsh for b in bats)))
+        for nm_ in ("Toilet_Camco", "Water_Pump12V", "Propane_Locker"):
+            if doc.getObject(nm_) is not None:
+                tch.append((nm_, min(a.distToShape(doc.getObject(nm_).Shape)[0] for a in tsh)))
+        cl_ = doc.getObject("TankFloor_Cleat_Aisle")
+        y_tr1 = cl_.Shape.BoundBox.YMin if cl_ is not None else tb.YMin     # 1-й этаж: до бруска бака
+        lk_ = doc.getObject("Propane_Locker")
+        z_cr = min(b.BoundBox.ZMin for b in cr)
+        trunk_summary = dict(floor_top=floor_top, x=(x0_, x1_), y=(y_b, y_b + ly), z_sheet=z_c1 + lt, z_cross=(z_c0, z_c1),
+                             cross_len=y_c1 - y_b, xs=xs_c, checks=tch,
+                             w1=y_tr1 - rb.YMax, y1=(rb.YMax, y_tr1),
+                             h1_under=z_c0 - TS["pad"] - floor_top, h1_open=z_cr - floor_top,
+                             x_rear=dx0, x_lock=lk_.Shape.BoundBox.XMin if lk_ is not None else dx1,
+                             y_lock=lk_.Shape.BoundBox.YMin if lk_ is not None else None, x_deck=dx1,
+                             h2_cross=z_cr - (z_c1 + lt),
+                             h2_deck=(doc.getObject("BedDeck").Shape.BoundBox.ZMin - (z_c1 + lt)),
+                             over_tank=(y_b + ly) - tb.YMin, bat_top=None)
+        TRUNK_SHELF["_summary"] = {k: v for k, v in trunk_summary.items() if k != "checks"}
 
     # ═══════ НАСТИЛ: вырезы под новые стойки P2 и под головки болтов в кузов ═══════
     # (при подъёме кровати настил может оказаться на высоте болтов стоек — головки торчат из стоек в салон)
@@ -3024,6 +3114,23 @@ def build():
         print("  Проход: у душа %.0f мм (%.1f″), у кухни %.0f мм (%.1f″)" % (
             k["aisle_sh"], k["aisle_sh"] / 25.4, k["aisle_k"], k["aisle_k"] / 25.4))
         print("  Зазоры: " + "; ".join("%s %.1f" % (n, v) for n, v in k["checks"]))
+    if trunk_summary:
+        t = trunk_summary
+        f0 = t["floor_top"]
+        print("[2-й этаж багажника — перфолист на полку батарей и бак T-4320 — ПРОЕКТ 2026-11-07]")
+        print("  Лист X %.0f..%.0f (%.1f″ вдоль) × Y %.0f..%.0f (%.0f″ поперёк, на бак %.1f″); верх %.0f мм (%.2f″) над полом" % (
+            t["x"][0], t["x"][1], (t["x"][1] - t["x"][0]) / 25.4, t["y"][0], t["y"][1], (t["y"][1] - t["y"][0]) / 25.4,
+            t["over_tank"] / 25.4, t["z_sheet"] - f0, (t["z_sheet"] - f0) / 25.4))
+        print("  Поперечины strut 3×%.0f при X %s; низ %.0f мм (%.2f″) над полом" % (
+            t["cross_len"], ", ".join("%.0f" % x for x in t["xs"]), t["z_cross"][0] - f0, (t["z_cross"][0] - f0) / 25.4))
+        print("  1-й этаж: ширина %.0f мм (%.1f″) между рейкой батарей и бруском бака; под 2-м этажом %.0f мм (%.1f″), "
+              "впереди него до поперечин кровати %.0f мм (%.1f″); длина от двери до локера %.0f мм (%.1f″), до края щита %.0f (%.1f″)" % (
+            t["w1"], t["w1"] / 25.4, t["h1_under"], t["h1_under"] / 25.4, t["h1_open"], t["h1_open"] / 25.4,
+            t["x_lock"] - t["x_rear"], (t["x_lock"] - t["x_rear"]) / 25.4, t["x_deck"] - t["x_rear"],
+            (t["x_deck"] - t["x_rear"]) / 25.4))
+        print("  2-й этаж: до поперечины кровати %.0f мм (%.1f″), до низа щита %.0f мм (%.1f″)" % (
+            t["h2_cross"], t["h2_cross"] / 25.4, t["h2_deck"], t["h2_deck"] / 25.4))
+        print("  Зазоры: " + "; ".join("%s %.1f" % (n, v) for n, v in t["checks"]))
     print("-" * 70)
     if bb:
         print("Bounding box (вкл. обшивку): %.0f x %.0f x %.0f мм" % (

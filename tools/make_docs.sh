@@ -16,7 +16,7 @@ export LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONIOENCODING=utf-8
 python3 tools/photo_corners_2026-11-06.py >/dev/null   # точки с фото задних углов → docs/rear_corners_points.json
 $FREECADCMD tools/export_drawing_data.py
 for s in tools/drawings/battery_bank.py tools/drawings/water_tank.py tools/drawings/water_tank_floor.py \
-         tools/drawings/shower_kitchen.py tools/drawings/rear_corners.py; do
+         tools/drawings/shower_kitchen.py tools/drawings/rear_corners.py tools/drawings/trunk.py; do
     (cd tools/drawings && python3 "$(basename "$s")") || true     # чертёж неактивного варианта бака — пропуск
 done
 if [ -z "${DISPLAY:-}" ] && command -v xvfb-run >/dev/null; then

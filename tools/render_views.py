@@ -100,6 +100,15 @@ VIEWS += [
 ]
 
 
+# 2026-11-07: багажник с 2-м этажом (перфолист) — от задних дверей и сверху-сзади, щит/матрас сняты
+_TRUNK_HIDE = ("Scan_Skin", "Opening", "RearDoorLeaf", "Rib_x", "Rail_pY_z", "Rail_nY_z", "Pillar_", "Hole_",
+               "FactoryThread", "BedMattress", "Shower_", "Kitchen_", "Elec_", "Cable_")
+VIEWS += [
+    ("trunk_from_rear.png", "viewLeft", _TRUNK_HIDE),
+    ("trunk_3d.png", (0.75, 0.55, -0.6), _TRUNK_HIDE + ("BedDeck", "BedWall")),
+]
+
+
 def _maximize_view():
     """Окно 3D-вида на весь экран, иначе fitAll считает камеру под маленькое
     окно, и saveImage обрезает модель."""

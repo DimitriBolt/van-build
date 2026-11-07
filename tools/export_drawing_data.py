@@ -123,6 +123,21 @@ try:
         sec["gas_pts"] = g["SHOWER_KITCHEN"].get("_gas_pts")
         res["galley"] = sec
 
+    # — 2-й этаж багажника: поперечный разрез по середине листа между поперечинами (взгляд вперёд) —
+    if doc.getObject("Trunk2_Sheet") is not None:
+        TSS = g["TRUNK_SHELF"]["_summary"]
+        xs_ = (TSS["xs"][0] + TSS["xs"][1]) / 2.0
+        tr = {"x": xs_}
+        for o in doc.Objects:
+            if o.isDerivedFrom("Part::Feature") and o.Name.startswith(
+                    ("Battery_B", "BankShelf", "BankRail", "BankPost", "BankCross", "WaterTank_", "TankFloor_", "Trunk2_",
+                     "BedDeck", "BedMattress", "BedSideRail", "WheelArch_")):
+                sl = _slice(o.Shape, (1, 0, 0), xs_)
+                if sl:
+                    tr[o.Name] = sl
+        res["trunk"] = tr
+        res["TRUNK_SHELF"] = json.loads(json.dumps(g["TRUNK_SHELF"], default=lambda o: list(o) if isinstance(o, tuple) else str(o)))
+
     # — бак T-3500 на полке над аркой: поперечный разрез (YZ) по первому ремню —
     trk_o = doc.getObject("WaterTank_T3500")
     if trk_o is not None:
