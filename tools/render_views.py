@@ -142,7 +142,10 @@ def main():
             g = {"__file__": SCRIPT, "__name__": "__main__"}
             exec(compile(open(SCRIPT, encoding="utf-8").read(), SCRIPT, "exec"), g)
             _maximize_view()
+            var = str(g.get("WATER_VARIANT", "")).split("_")[0]          # T4100 / T3500 / TORVA
             for name, view, hide in VIEWS:
+                if name.startswith("tank_") and var:
+                    name = name.replace("tank_", "tank_%s_" % var, 1)
                 _shot(log, name, view, hide)
             log.write("OK\n")
         except Exception:

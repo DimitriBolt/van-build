@@ -1,4 +1,5 @@
-"""Бак для воды T-3500 (Class A Customs, 35 gal) на полке над водительской аркой — проект 2026-11-07.
+"""ВАРИАНТ «T3500_shelf» (van_v0.WATER_VARIANT): бак T-3500 (Class A Customs, 35 gal) на полке над водительской аркой.
+Рисуется, только когда этот вариант включён в модели; иначе docs/water_tank_T3500_drawing.png остаётся прежним.
 Этажерка как у батарей на другом борту, но без рейки у борта: полка лежит на ровном верху арки через резину.
 Дюймы. x — вдоль борта от передней грани короба D-стойки (вперёд — вправо); y — от стены у пола в салон;
 z — от чистового пола. Все числа — из модели (docs/drawing_data.json). Прежний вариант (TORVA 33 gal) —
@@ -10,6 +11,9 @@ from matplotlib.ticker import FuncFormatter
 from _common import IN, load, arch_profile, save
 
 d = load()
+if "trk" not in d:
+    raise SystemExit("water_tank.py: вариант T3500_shelf не включён (WATER_VARIANT=%s) — чертёж не меняю" %
+                     d.get("WATER_VARIANT"))
 G, W, TR, DP, BED = d["geo"], d["WHEEL_ARCH"], d["TANK_RACK"], d["DPILLAR"], d["BED"]
 S = TR["_summary"]
 FF, XDP, YW = G["floor_top"], G["x_dp"], G["arch_ywall"]
@@ -311,4 +315,4 @@ fig.suptitle("Бак для воды T-3500 (35 gal) на полке над во
              "бак сдвинут назад до D-стойки — целиком под щитом (до края щита %.1f″); как этажерка батарей, но без рейки "
              "у борта — кровать не поднимаем" % (S["in_deck"] / IN), fontsize=12)
 fig.subplots_adjust(left=0.05, right=0.99, top=0.93, bottom=0.10)
-save(fig, "water_tank_drawing.png")
+save(fig, "water_tank_T3500_drawing.png")

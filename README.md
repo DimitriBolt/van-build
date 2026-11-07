@@ -33,6 +33,7 @@
 | `tools/export_drawing_data.py`, `tools/drawings/*.py` | Данные модели → `docs/drawing_data.json` → чертежи (matplotlib) |
 | `docs/` | Последние версии всех чертежей и видов — индекс в `docs/README.md` |
 | `FURNITURE_MEMORY.md` | Память по мебели: кровать, блоки батарей, бак для воды |
+| `REQUIREMENTS.md` | Требования Dimitri (выполненные и открытые) и достигнутые результаты |
 | `van_v0.FCStd` | Собранный документ FreeCAD (каркас + меш-обшивка) |
 | `Ducato_L2H2_body_reference.stl` | Чистая наружная оболочка кузова (нужна скрипту) |
 | `Ducato+L2H2+lit+superpose2.stl` | Плотный скан целиком (с мебелью/человеком) |

@@ -85,9 +85,14 @@ r_xz(ax, "BedMattress", fc="#9fb4e0", alpha=0.45, ec="#5c6bc0")
 r_xz(ax, "BedSideRail_pY", fc="#90a4ae")
 r_xz(ax, "BedPost_pY_front", fc="#90a4ae", ec="#607d8b")
 ax.text(-7, mz(bx("BedMattress")[5]) + 0.6, "кровать (край)", ha="center", fontsize=9)
-r_xz(ax, "TankShelf", fc="#d7b98e", alpha=0.8, ec="#8d6e63")
-r_xz(ax, "WaterTank_T3500", fc="#4a90c2", alpha=0.25, ec="#4a90c2")
-ax.text(-12.5, mz(bx("WaterTank_T3500")[5]) - 3, "бак T-3500\n(на полке)", fontsize=8, color="#1f5f8b")
+TANK = next((n for n in ("WaterTank_T4100", "WaterTank_T3500") if n in d["boxes"]), None)
+for n in ("TankShelf", "TankFloor_BasePly"):
+    if n in d["boxes"]:
+        r_xz(ax, n, fc="#d7b98e", alpha=0.8, ec="#8d6e63")
+if TANK:
+    r_xz(ax, TANK, fc="#4a90c2", alpha=0.25, ec="#4a90c2")
+    ax.text(-12.5, mz(bx(TANK)[5]) - 3, "бак %s\n(%s)" % (TANK.split("_")[1].replace("T", "T-"),
+            "на полке" if TANK.endswith("3500") else "на полу"), fontsize=8, color="#1f5f8b")
 r_xz(ax, "Water_Heater12V", fc="#cfcfcf", ec="#424242", alpha=0.9)
 ax.text(mx(bx("Water_Heater12V")[0]) + 0.3, mz(bx("Water_Heater12V")[5]) + 0.6, "бойлер 12V", fontsize=7.5)
 # душ
@@ -187,7 +192,8 @@ ax.add_patch(Rectangle((mx(uc[0]), 0), (uc[1] - uc[0]) / IN, my(uc[2]), fill=Fal
 ax.text(mx(kx1) + 0.3, my(uc[2]) + 0.3, "← верхний\n   шкафчик", fontsize=7.5, color="#6d4c41", va="top")
 r_xy(ax, "Water_Heater12V", fc="#bdbdbd", ec="#424242", alpha=0.8)
 ax.text(-3.5, my(bx("Water_Heater12V")[2]) + 1.0, "под кроватью:\nбойлер", ha="right", fontsize=7.5)
-r_xy(ax, "WaterTank_T3500", fc="#4a90c2", alpha=0.25)
+if TANK:
+    r_xy(ax, TANK, fc="#4a90c2", alpha=0.25)
 ax.text(-11, 9, "бак", fontsize=8, color="#1f5f8b")
 a_sh = my(bx("Shower_Curtain")[2])
 a_k = my(bx("Kitchen_Countertop")[2])
@@ -274,7 +280,7 @@ ax.set_xlabel("от стены в салон, дюймы")
 ax.set_title("Разрез по кухне (через мойку)", loc="left", fontsize=11)
 
 fig.suptitle("Душ 32×32″ + мини-кухня «для чая» по водительскому борту — проект 2026-11-06 (из модели van_v0.py)\n"
-             "кровать не сужали; бак T-3500 — на полке над аркой под кроватью, 12V-бойлер — под передним краем кровати",
+             "кровать не сужали; бак — под кроватью у арки, 12V-бойлер — под передним краем кровати",
              fontsize=13)
 fig.tight_layout(rect=(0, 0, 1, 0.965))
 save(fig, "shower_kitchen_drawing.png")

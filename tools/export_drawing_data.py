@@ -36,7 +36,8 @@ try:
     import FreeCAD as App
     doc = App.ActiveDocument
     res["summary"] = buf.getvalue()[buf.getvalue().find("[Кровать"):] if "[Кровать" in buf.getvalue() else ""
-    for k in ("WHEEL_ARCH", "DPILLAR", "BED", "BATTERY_RACK", "ELECTRICAL", "WATER_TANK", "TANK_RACK", "SHOWER_KITCHEN",
+    for k in ("WHEEL_ARCH", "DPILLAR", "BED", "BATTERY_RACK", "ELECTRICAL", "WATER_TANK", "TANK_RACK", "TANK_FLOOR",
+              "WATER_VARIANT", "SHOWER_KITCHEN",
               "FLOOR", "PARAMS"):
         res[k] = json.loads(json.dumps(g[k], default=lambda o: list(o) if isinstance(o, tuple) else str(o)))
     boxes = {}
@@ -104,6 +105,19 @@ try:
         for nm in ("WaterTank_T3500", "TankStrap_1", "WheelArch_%s" % tag, "BedMattress", "BedDeck"):
             sec[nm] = _slice(doc.getObject(nm).Shape, (1, 0, 0), xs_)
         res["trk"] = sec
+
+    # — бак T-4100 на полу: поперечный разрез (YZ) по ремню ближе к центру арки —
+    tfl_o = doc.getObject("WaterTank_T4100")
+    if tfl_o is not None:
+        TF = g["TANK_FLOOR"]
+        tag = "pY" if TF["side"] > 0 else "nY"
+        xs_ = min(TF["_summary"]["straps"], key=lambda x_: abs(x_ - g["WHEEL_ARCH"]["center_x"]))
+        sec = {"x": xs_}
+        for key, nm in (("tank", "WaterTank_T4100"),
+                        ("strap", "TankFloor_Strap_%d" % (1 + TF["_summary"]["straps"].index(xs_))),
+                        ("arch", "WheelArch_%s" % tag), ("mattress", "BedMattress"), ("deck", "BedDeck")):
+            sec[key] = _slice(doc.getObject(nm).Shape, (1, 0, 0), xs_)
+        res["tfl"] = sec
 
     # — сечения бака (если он есть) —
     tank_o = doc.getObject("WaterTank_TORVA33")

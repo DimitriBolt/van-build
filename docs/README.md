@@ -15,11 +15,16 @@ FREECADCMD="$HOME/Applications/FreeCAD.AppImage --console" FREECAD="$HOME/Applic
 
 ## 2D-чертежи
 
+Варианты бака для воды — переключатель `WATER_VARIANT` в `van_v0.py`; чертёж и виды варианта обновляются,
+только когда он включён (остальные — последняя версия). Требования и результаты — `REQUIREMENTS.md`.
+
+
 | Файл | Что | Описание |
 |---|---|---|
 | `rear_corners_drawing.png` | задние углы у пола: арка ↔ D-стойка, оба борта — точки с 4 фото сверху + модель, таблица зазоров | §1f |
 | `battery_bank_drawing.png` | этажерка на 4 батареи (B1 на полу + полка над аркой на 3) и электрика рядом: MPPT, DC-DC, шины, трассы кабелей | `FURNITURE_MEMORY.md` §1h, §1i |
-| `water_tank_drawing.png` | бак для воды T-3500 (35 gal) на полке над водительской аркой: сверху, вид на борт, разрез по ремню | §1j |
+| `water_tank_T4100_drawing.png` | **вариант (активен):** бак T-4100 (41 gal) на полу рядом с водительской аркой, поддон, верх вровень с полкой батарей: сверху, вид на борт, разрез | §1k |
+| `water_tank_T3500_drawing.png` | **вариант:** бак T-3500 (35 gal) на полке над водительской аркой, сдвинут к D-стойке: сверху, вид на борт, разрез по ремню | §1j |
 | `shower_kitchen_drawing.png` | душ 32×32″ + мини-кухня по водительскому борту: вид на борт, план, разрезы (высота в душе) | §1e |
 
 ## 3D-виды (`renders/`)
@@ -30,7 +35,8 @@ FREECADCMD="$HOME/Applications/FreeCAD.AppImage --console" FREECAD="$HOME/Applic
 | `top_frame.png`, `from_rear_doors.png` | сверху; от задних дверей |
 | `bed_iso.png`, `bed_passenger_wall.png` | кровать крупно; пассажирский борт изнутри |
 | `bank_3d.png`, `bank_wall_view.png`, `bank_top.png` | этажерка на 4 батареи |
-| `tank_3d.png`, `tank_wall_view.png`, `tank_top.png` | бак T-3500 на полке над водительской аркой |
+| `tank_T4100_3d.png`, `…_wall_view.png`, `…_top.png` | бак T-4100 на полу (вариант) |
+| `tank_T3500_3d.png`, `…_wall_view.png`, `…_top.png` | бак T-3500 на полке (вариант) |
 | `galley_3d.png`, `galley_wall_view.png`, `galley_top.png` | душ + мини-кухня |
 
 ## Архив (`archive/`)
