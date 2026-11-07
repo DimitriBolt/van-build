@@ -98,8 +98,8 @@ for n in [k for k in B if k.startswith("TankPostPlate_")] + ["BedPostPlate_pY_re
     rect_xy(ax, n, fill=False, ec="#90a4ae", ls=":", lw=0.8)
 rect_xy(ax, "Water_Pump12V", fc="#3f51b5", alpha=0.15, ec="#3f51b5", ls="--", lw=1.2, zorder=2)
 (x0, x1), (y0, y1) = xr_("Water_Pump12V"), yr("Water_Pump12V")
-ax.text((x0 + x1) / 2 - 0.4, -y1 + 0.5, "насос + фильтр\n(на полу,\nпод полкой)", ha="center", fontsize=7,
-        color="#283593", zorder=7)
+ax.text((x0 + x1) / 2 - 0.6, -y0 - 0.5, "насос +\nфильтр\n(на полу,\nпод полкой)", ha="center", va="top",
+        fontsize=7, color="#283593", zorder=7)
 (x0, x1), (y0, y1) = xr_("WaterTank_T3500"), yr("WaterTank_T3500")
 ax.add_patch(FancyBboxPatch((x0, -y1), x1 - x0, y1 - y0, boxstyle="round,pad=0,rounding_size=%.3f" % R_T,
                             fc=C_T, alpha=0.35, ec="#1f5f8b", lw=2, zorder=4))
@@ -114,9 +114,16 @@ for n in ("TankStop_Rear", "TankStop_Front"):
 for n in FITS:
     (x0, x1), (y0, y1) = xr_(n), yr(n)
     ax.add_patch(Rectangle((x0, -y1), x1 - x0, y1 - y0, fc="#fafafa", ec="#424242", lw=0.9, zorder=7))
+FR = S.get("fittings_end") == "front"
 for f_ in S["fittings"]:
-    ax.text(mx(f_["x"]) - 0.9, -yd(f_["y"]), "%s″ %s" % (("%.1f" % f_["d"]).rstrip("0").rstrip("."), f_["what"]),
-            ha="right", va="center", fontsize=7, color="#212121", zorder=8)
+    ax.text(mx(f_["x"]) + (0.9 if FR else -0.9), -yd(f_["y"]), "%s″ %s" % (("%.1f" % f_["d"]).rstrip("0").rstrip("."),
+            f_["what"]), ha="left" if FR else "right", va="center", fontsize=7, color="#212121", zorder=8,
+            bbox=dict(fc="white", ec="none", alpha=0.75, pad=0.5))
+# грань D-стойки выше короба (в модели — оценка по фото): от стены назад к центру
+x_b0, x_b1 = mx(XDP), mx(XDP - DP["body_slant"])
+ax.plot([x_b0, x_b1], [0, -DP["body_depth"] / IN], color="#6d4c41", lw=1.6, ls="--", zorder=6)
+ax.text(XL + 0.2, -6.6, "- - грань D-стойки\nвыше короба\n(оценка)", ha="left", va="top", fontsize=7,
+        color="#6d4c41")
 for n in POSTS_W + POSTS_I:
     rect_xy(ax, n, color="#37474f", zorder=6)
 for n, lab in (("BedPost_pY_rear", "P1"), ("BedPost_pY_front", "Pf")):
@@ -136,10 +143,11 @@ for xx, lab, col in ((DECK1, "передний край\nщита кровати
     ax.plot([xx, xx], [-23.0, 1.2], color=col, ls="--", lw=1.1)
     ax.text(xx + 0.25, -21.0, lab, fontsize=7.5, color=col)
 (x0, x1), (y0, y1) = xr_("WaterTank_T3500"), yr("WaterTank_T3500")
-ax.annotate("", xy=(x1 + 3.6, -y0), xytext=(x1 + 3.6, -y1), arrowprops=dict(arrowstyle="<->", lw=0.9))
-ax.text(x1 + 3.85, -(y0 + y1) / 2, "17.25″", va="center", fontsize=8)
-ax.annotate("", xy=(x1 + 1.8, 0), xytext=(x1 + 1.8, -y0), arrowprops=dict(arrowstyle="<->", lw=0.8, color="#616161"))
-ax.text(x1 + 2.0, -y0 / 2 + 0.25, "%.1f″" % y0, fontsize=7.5, color="#616161")
+xd_ = DECK1 + 3.6
+ax.annotate("", xy=(xd_, -y0), xytext=(xd_, -y1), arrowprops=dict(arrowstyle="<->", lw=0.9))
+ax.text(xd_ + 0.25, -(y0 + y1) / 2, "17.25″", va="center", fontsize=8)
+ax.annotate("", xy=(xd_ - 1.2, 0), xytext=(xd_ - 1.2, -y0), arrowprops=dict(arrowstyle="<->", lw=0.8, color="#616161"))
+ax.text(xd_ - 1.0, -y0 / 2 + 0.25, "%.1f″" % y0, fontsize=7.5, color="#616161")
 ax.plot([XL, XR], [-y1, -y1], color="#1f5f8b", ls=":", lw=0.8)
 ax.text(24.0, -y1 - 2.3, "грань бака к проходу — %.1f″ от стены у пола (арка — %.1f″)" % (y1, W["protrusion"] / IN),
         fontsize=8, color="#1f5f8b")
@@ -192,9 +200,14 @@ for n in ("TankStop_Rear", "TankStop_Front"):
 for n in FITS:
     rect_xz(ax, n, fc="#fafafa", ec="#424242", lw=0.9, zorder=7)
 for f_ in S["fittings"]:
-    ax.text(mx(f_["x"]) - 0.85, mz(f_["z"]), "%s″ %s" % (("%.1f" % f_["d"]).rstrip("0").rstrip("."), f_["what"]),
-            ha="right", va="center", fontsize=7, zorder=8,
+    ax.text(mx(f_["x"]) + (0.85 if FR else -0.85), mz(f_["z"]), "%s″ %s" % (("%.1f" % f_["d"]).rstrip("0").rstrip("."),
+            f_["what"]), ha="left" if FR else "right", va="center", fontsize=7, zorder=8,
             bbox=dict(fc="white", ec="none", alpha=0.75, pad=0.5))
+# D-стойка выше короба — в плоскости грани бака у борта (оценка)
+x_bt = mx(XDP - DP["body_slant"] * (YW - S["y"][1]) / DP["body_depth"])
+ax.add_patch(Rectangle((XL, DP["box_h"] / IN), x_bt - XL, 36.0 - DP["box_h"] / IN, fc="#efebe9", ec="#8d6e63",
+                       hatch="//", zorder=0))
+ax.text(XL + 0.2, 21.0, "D-стойка\n(оценка)", fontsize=7.5, color="#6d4c41", zorder=1)
 for n, lab in (("BedPost_pY_rear", "P1"), ("BedPost_pY_front", "Pf")):
     (x0, x1), (z0, z1) = xr_(n), zr(n)
     ax.text((x0 + x1) / 2, min(z1, 35.0) + 0.3, lab, ha="center", fontsize=8.5, weight="bold")
@@ -213,8 +226,17 @@ hdim(ax, zt_top + 0.9, mx(S["x"][0]), mx(S["x"][1]), "38.5″", fs=8)
 hdim(ax, zr("TankRail_Inner")[0] - 1.0, *xr_("TankRail_Inner"),
      "рейка со стороны прохода %.1f″ (%.0f) на P3 и P3f; поперечины — у стоек кровати P1 и Pf; полка — фанера 3/4″ "
      "на них и на верху арки через резину %.0f мм" % (S["rail"] / IN, S["rail"], TR["pad"]), fs=7.5, dz=-0.95)
-ax.annotate("упор на передней\nпоперечине", xy=(mx(B["TankStop_Front"][0]), zr("TankStop_Front")[1]),
-            xytext=(mx(B["TankStop_Front"][0]) + 1.0, 21.5), fontsize=7.5, arrowprops=dict(arrowstyle="-", lw=0.7))
+ax.annotate("упор спереди\n(болты через полку)" if S.get("tank_pos") == "rear" else "упор на передней\nпоперечине", xy=(mx(B["TankStop_Front"][0]), zr("TankStop_Front")[1]),
+            xytext=(mx(B["TankStop_Front"][0]) + 5.2, 17.0), fontsize=7.5, arrowprops=dict(arrowstyle="-", lw=0.7))
+# бак целиком под щитом: до края щита и до D-стойки
+zq = zr("WaterTank_T3500")[0] + 6.4
+hdim(ax, zq, mx(S["x"][1]), DECK1, "", fs=7.5)
+ax.text(DECK1 + 0.3, zq - 0.25, "%.1f″ до края щита" % (S["in_deck"] / IN), fontsize=7.5, color="#6d4c41", zorder=9,
+        bbox=dict(fc="white", ec="none", alpha=0.8, pad=0.5))
+ax.plot([DECK1, DECK1], [zq - 1.0, zr("BedDeck")[1]], color="#6d4c41", ls="--", lw=1.0, zorder=8)
+ax.annotate("%.0f мм до D-стойки" % S["to_dpillar"], xy=(mx(S["x"][0]), zr("WaterTank_T3500")[0] + 6.0),
+            xytext=(mx(S["x"][0]) + 1.2, zr("WaterTank_T3500")[0] + 9.6), fontsize=7.5, color="#6d4c41", zorder=9,
+            arrowprops=dict(arrowstyle="-", lw=0.7, color="#6d4c41"))
 ax.text(mx(B["TankPost_P3f"][1]) + 0.3, 6.5, "P3, P3f —\nпунктир (со\nстороны\nпрохода)", fontsize=7.5)
 ax.set_xlim(XL, XR)
 ax.set_ylim(zs - 0.2, 36.0)
@@ -277,15 +299,16 @@ ax.set_title("Разрез по ремню (X=%.1f″), вид вперёд" % m
 ax.grid(True, color="#f0f0f0", lw=0.6)
 
 spec = ("T-3500 (Class A Customs; Amazon «T3500-TO»): 38.5 × 17.25 × 12″ (±0.25″), стенка 7/32″, без давления —\n"
-        "нужен «дыхательный» штуцер. Штуцеры на заднем торце (к задним дверям): 1.5″ — залив и слив, 0.5″ — вентиль и к насосу.\n"
+        "нужен «дыхательный» штуцер. Штуцеры на %s: 1.5″ — залив и слив, 0.5″ — вентиль и к насосу.\n"
         "Полка — фанера 3/4″ %.1f × %.1f″;  рейка %.1f″, поперечины 2 × %.1f″, стойки P3/P3f 2 × %.1f″ (strut).\n"
         "Рейка в салон: %.0f%% веса бака → σ ≈ %.0f МПа (при толчке 3g — %.0f) при текучести %.0f; прогиб ≈ %.1f мм." % (
+            "переднем торце (к кухне; сзади — D-стойка)" if FR else "заднем торце (к задним дверям)",
             S["shelf"][0] / IN, S["shelf"][1] / IN, S["rail"] / IN, S["cross"] / IN, S["post"] / IN, 100 * S["share"],
             S["sigma"], S["sigma3"], TR["yield_MPa"], S["defl"]))
 fig.text(0.012, 0.012, spec, fontsize=9, va="bottom", family="DejaVu Sans",
          bbox=dict(fc="#e3f2fd", ec="#90caf9", alpha=0.95))
 fig.suptitle("Бак для воды T-3500 (35 gal) на полке над водительской аркой, проект 2026-11-07\n"
-             "как этажерка батарей, но без рейки у борта: полка лежит на верху арки через резину — бак (12″) влезает "
-             "под кровать без её подъёма", fontsize=12)
+             "бак сдвинут назад до D-стойки — целиком под щитом (до края щита %.1f″); как этажерка батарей, но без рейки "
+             "у борта — кровать не поднимаем" % (S["in_deck"] / IN), fontsize=12)
 fig.subplots_adjust(left=0.05, right=0.99, top=0.93, bottom=0.10)
 save(fig, "water_tank_drawing.png")

@@ -99,7 +99,7 @@ try:
     if trk_o is not None:
         TR = g["TANK_RACK"]
         tag = "pY" if TR["side"] > 0 else "nY"
-        xs_ = TR["_summary"]["straps"][0]
+        xs_ = min(TR["_summary"]["straps"], key=lambda x_: abs(x_ - g["WHEEL_ARCH"]["center_x"]))   # ремень над аркой
         sec = {"x": xs_}
         for nm in ("WaterTank_T3500", "TankStrap_1", "WheelArch_%s" % tag, "BedMattress", "BedDeck"):
             sec[nm] = _slice(doc.getObject(nm).Shape, (1, 0, 0), xs_)
