@@ -472,7 +472,13 @@ TANK_FLOOR_T4320 = {
     "strap_w": 25.0, "strap_th": 2.0,   # 2 ремня 1″ поверх бака к 4 анкерам в железном полу
     "anchor": (60.0, 30.0, 12.0),       # проушина/кусок L-track на болтах в пол (X × Y × Z)
     "pump": (130.0, 190.0, 110.0),
-    "pump_at": "front",                 # на полу перед баком, у нижнего штуцера «к насосу»
+    "pump_at": "front",                 # на полу перед баком, у нижнего штуцера «к насосу» (сбоку от туалета)
+    # туалет перед баком (Dimitri 2026-11-07): «за баком, если смотреть сзади, — к кабине — поставь этот туалет; он
+    # поместится под щит (16.25 < 21.1); впоследствии будет выезжать на платформе на колёсиках вперёд в душевую».
+    # Camco, портативный: 16.25 (вдоль борта, направление выезда) × 14 (поперёк) × 17″ (выс.) — по картинке продавца.
+    # По Y — по линии грани бака к борту (вдоль арки): так он выезжает вперёд мимо арки и не заходит в проход.
+    "toilet": {"dims": (412.75, 355.6, 431.8), "gap_rear": 76.0,   # 3″ за ним — штуцеры бака с переходниками
+               "title": "Туалет Camco портативный 16.25×14×17″"},
 }
 
 # Какой бак в модели (остальные варианты — отключены, код сохранён):
@@ -2186,6 +2192,20 @@ def build():
             pl_bb = doc.getObject("BedPostPlate_%s_rear" % ttag).Shape.BoundBox
             tf_box("Water_Pump12V", "Насос 12V + фильтр (заглушка) — на полу в углу за аркой, у заднего торца бака",
                    (pX, pY_, pZ), (pl_bb.XMax + 5.0, ybase(ts, arch_ywall - 45.0, pY_), floor_top), (0.20, 0.35, 0.75))
+        # туалет перед баком (по линии грани бака к борту), выезжает потом вперёд в душ
+        toilet = None
+        if TF.get("toilet"):
+            TT = TF["toilet"]
+            tlx, tly, tlz = TT["dims"]
+            tx0 = x_t1 + TT["gap_rear"]
+            tsh_ = Part.makeBox(tlx, tly, tlz, App.Vector(tx0, ybase(ts, y_w, tly), floor_top))
+            try:
+                tsh_ = tsh_.makeFillet(25.0, [e for e in tsh_.Edges if abs(e.tangentAt(0).z) > 0.9])
+            except Exception:
+                pass
+            toilet = tf_shape("Toilet_Camco", "%s — под щитом перед баком; позже — на платформе с колёсиками, выезжает "
+                              "вперёд в душ" % TT["title"], tsh_, (0.78, 0.78, 0.76))
+            fsh["Toilet_Camco"] = toilet
         # проверки
         obj = lambda n: doc.getObject(n).Shape
         arch = arch_shapes[ts]
@@ -2203,6 +2223,14 @@ def build():
                   ("насос ↔ арка", fsh["Water_Pump12V"].distToShape(arch)[0]),
                   ("насос ↔ бак/бруски", min(fsh["Water_Pump12V"].distToShape(s_)[0] for s_ in base_parts + [tank])),
                   ("насос ↔ пластина стойки", fsh["Water_Pump12V"].distToShape(obj("BedPostPlate_%s_rear" % ttag))[0])]
+        if toilet is not None:
+            fits_ = [fsh[n] for n in fsh if n.startswith("TankFloor_Fitting")]
+            checks += [("туалет ↔ бак", toilet.distToShape(tank)[0]),
+                       ("туалет ↔ бобышки штуцеров", min(toilet.distToShape(f_)[0] for f_ in fits_)),
+                       ("туалет ↔ арка", toilet.distToShape(arch)[0]),
+                       ("туалет ↔ насос", toilet.distToShape(fsh["Water_Pump12V"])[0]),
+                       ("туалет ↔ бруски", min(toilet.distToShape(s_)[0] for s_ in base_parts)),
+                       ("туалет ↔ поперечины кровати", min(toilet.distToShape(c)[0] for c in crosses_bed))]
         bank_rail_in = None
         bank_top = None
         if bank_summary:
@@ -2217,7 +2245,11 @@ def build():
                            trunk=(bank_rail_in + py_i) if bank_rail_in else None,
                            under_cross=(z_rail_top - sw) - z_t1, fittings=fit_pts, straps=strap_x, checks=checks,
                            runner_len=rlen, n_runner=n_r, fittings_end=TF["fittings_end"], tank_name=tank_name,
-                           base_mode=TF.get("base"), title=TF["title"], name=TF["name"], anchors=anchors)
+                           base_mode=TF.get("base"), title=TF["title"], name=TF["name"], anchors=anchors,
+                           toilet=None if toilet is None else dict(
+                               x=(toilet.BoundBox.XMin, toilet.BoundBox.XMax), y=(y_w - TF["toilet"]["dims"][1], y_w),
+                               z=(toilet.BoundBox.ZMin, toilet.BoundBox.ZMax), in_deck=dx1 - toilet.BoundBox.XMax,
+                               from_wall=(arch_ywall - y_w, arch_ywall - y_w + TF["toilet"]["dims"][1])))
         TF["_summary"] = {k: v for k, v in tfl_summary.items() if k != "checks"}
 
     # ═══════ ДУШ + МИНИ-КУХНЯ (водительский борт, между кроватью и кабиной) ═══════
@@ -2374,12 +2406,22 @@ def build():
         for lab, ss in (("кровать (стойки/рейки/настил/матрас)", no_plate("Bed")), ("бак", objs("WaterTank")),
                         ("подставка бака", objs("TankRiser")), ("стойки бака", objs("TankPost")),
                         ("этажерка бака", objs("TankRail") + objs("TankCross") + objs("TankShelf") + objs("TankStop")),
-                        ("поддон бака", objs("TankFloor"))):
+                        ("поддон бака", objs("TankFloor")), ("туалет", objs("Toilet"))):
             if ss:
                 checks.append((lab, min(_dd(p, s_) for p in pall for s_ in ss)))
         pl = doc.getObject("BedPostPlate_pY_front")
         if pl is not None and min(_dd(p, pl.Shape) for p in pall) < 0.5:
             checks.append(("пластина передней стойки кровати (1.6 мм) — душ заходит на её край: подложить", 0.0))
+        if tfl_summary and tfl_summary.get("toilet") and doc.getObject("Toilet_Camco") is not None:
+            tb_ = doc.getObject("Toilet_Camco").Shape.BoundBox     # путь туалета вперёд до задней стенки душа
+            sweep = Part.makeBox(sx0 - tb_.XMax, tb_.YLength, tb_.ZLength, App.Vector(tb_.XMax, tb_.YMin, tb_.ZMin))
+            path_ = [("бойлер", sweep.distToShape(parts["Water_Heater12V"])[0]) if "Water_Heater12V" in parts else None,
+                     ("передняя стойка кровати", sweep.distToShape(doc.getObject("BedPost_pY_front").Shape)[0]),
+                     ("пластина передней стойки", sweep.distToShape(doc.getObject("BedPostPlate_pY_front").Shape)[0]),
+                     ("арка", sweep.distToShape(arch_shapes[ks])[0]),
+                     ("до задней стенки душа, мм", sx0 - tb_.XMax)]
+            tfl_summary["toilet"]["path"] = [p_ for p_ in path_ if p_]
+            TANK_FLOOR["_summary"]["toilet"] = tfl_summary["toilet"]
         aisle_sh = y_sf + y_at_z(half, 900.0)                       # от шторки до противоположной стены
         aisle_k = (y_kf - 20.0) + y_at_z(half, 900.0)
         galley_summary = dict(
@@ -2662,6 +2704,12 @@ def build():
             print("  Прямо на пол (коврик 1/8″), бруски 2×2 в пол, 2 ремня к 4 анкерам; штуцеры на %s торце; с фитингами "
                   "(~2″) до края щита %.0f мм (%.1f″)" % ("заднем" if t["fittings_end"] == "rear" else "переднем",
                                                        t["in_deck_fit"], t["in_deck_fit"] / 25.4))
+        if t.get("toilet"):
+            q = t["toilet"]
+            print("  Туалет X %.0f..%.0f, от стены %.1f″…%.1f″, верх %.1f″; до края щита %.0f мм (%.1f″)%s" % (
+                q["x"][0], q["x"][1], q["from_wall"][0] / 25.4, q["from_wall"][1] / 25.4, (q["z"][1] - f0) / 25.4,
+                q["in_deck"], q["in_deck"] / 25.4, ("; путь в душ: " + "; ".join("%s %.0f" % (n_, v_) for n_, v_ in
+                                                     q.get("path", []))) if q.get("path") else ""))
         print("  Зазоры: " + "; ".join("%s %.1f" % (n, v) for n, v in t["checks"]))
     if galley_summary:
         k = galley_summary

@@ -135,6 +135,17 @@ for n in FITS:
 for f_ in S["fittings"]:
     fit_label(ax, f_, -yd(f_["y"]))
 rect_xy(ax, "Water_Pump12V", fc="#3f51b5", alpha=0.5, ec="#283593", zorder=3)
+if "Toilet_Camco" in B:
+    rect_xy(ax, "Toilet_Camco", fc="#bdbdbd", ec="#424242", lw=1.5, zorder=5)
+    (ux0, ux1), (uy0, uy1) = xr_("Toilet_Camco"), yr("Toilet_Camco")
+    ax.text((ux0 + ux1) / 2, -(uy0 + uy1) / 2, "туалет\nCamco\n16.25×14×17″", ha="center", va="center", fontsize=8.5,
+            weight="bold", color="#212121", zorder=6)
+    if SHOWER is not None:
+        ax.annotate("", xy=(SHOWER - 0.3, -(uy0 + uy1) / 2), xytext=(ux1 + 0.2, -(uy0 + uy1) / 2),
+                    arrowprops=dict(arrowstyle="->", lw=1.6, color="#2e7d32", ls="--"), zorder=7)
+        ax.text((ux1 + SHOWER) / 2 + 0.8, -(uy0 + uy1) / 2 - 2.6, "позже — выезжает\nна платформе в душ", ha="center",
+                fontsize=7.5, color="#2e7d32", zorder=7)
+    hdim(ax, -uy0 + 1.6, ux1, DECK1, "%.1f″" % (S["toilet"]["in_deck"] / IN), fs=7.5)
 (qx0, qx1), (qy0, qy1) = xr_("Water_Pump12V"), yr("Water_Pump12V")
 ax.text(qx1 + 0.3, -(qy0 + qy1) / 2, "насос +\nфильтр", va="center", fontsize=7.5, color="#283593", zorder=7)
 for n in POSTS_W:
@@ -207,18 +218,37 @@ for n, lab in (("BedPost_pY_rear", "P1"), ("BedPost_pY_front", "Pf")):
 if ZBANK is not None:
     ax.plot([XL, XR], [ZBANK, ZBANK], color="#e65100", ls="--", lw=1.0, zorder=8)
     ax.text(XR - 0.3, ZBANK + 0.4, "уровень полки батарей %.2f″" % ZBANK, ha="right", fontsize=8, color="#e65100")
-xm = mx(W["center_x"]) + 4.0
-if PAL:
-    vdim(ax, xm, 0, z0, "поддон %.1f″" % z0)
-vdim(ax, xm, z0, z1, "%s″" % fmt(th_))
-vdim(ax, xm + 7.0, 0, z1, "верх бака %.2f″" % z1)
+if "Toilet_Camco" in B:                                  # справа от бака — туалет: размеры внутри бака
+    vdim(ax, x1 - 3.0, z0, z1, "%s″" % fmt(th_), side=-1)
+    vdim(ax, x1 - 1.2, 0, z1, "")
+    ax.text(x1 - 1.5, z1 - 1.0, "верх %.2f″" % z1, ha="right", fontsize=8, zorder=9)
+else:
+    xm = mx(W["center_x"]) + 4.0
+    if PAL:
+        vdim(ax, xm, 0, z0, "поддон %.1f″" % z0)
+    vdim(ax, xm, z0, z1, "%s″" % fmt(th_))
+    vdim(ax, xm + 7.0, 0, z1, "верх бака %.2f″" % z1)
 vdim(ax, x1 - 2.0, z1, zr("BedCross_2")[0], "%.1f″ до поперечин кровати" % (zr("BedCross_2")[0] - z1), fs=7.5,
      color="#1565c0", side=-1)
 hdim(ax, z1 + 0.8, x0, x1, "%s″" % fmt(tl_), fs=8)
-hdim(ax, z0 + 3.0, x1, DECK1, "", fs=7.5)
-ax.text(DECK1 + 0.3, z0 + 2.75, "%.1f″ до края щита" % (S["in_deck"] / IN), fontsize=7.5, color="#6d4c41", zorder=9,
+zq_ = z1 + 2.4 if "Toilet_Camco" in B else z0 + 3.0
+hdim(ax, zq_, x1, DECK1, "", fs=7.5)
+ax.text(DECK1 + 0.3, zq_ - 0.25, "%.1f″ от бака до края щита" % (S["in_deck"] / IN), fontsize=7.5, color="#6d4c41", zorder=9,
         bbox=dict(fc="white", ec="none", alpha=0.8, pad=0.5))
-ax.plot([DECK1, DECK1], [z0 + 2.0, zr("BedDeck")[1]], color="#6d4c41", ls="--", lw=1.0, zorder=8)
+ax.plot([DECK1, DECK1], [0.0, zr("BedDeck")[1]], color="#6d4c41", ls="--", lw=1.0, zorder=8)
+if "Toilet_Camco" in B:
+    rect_xz(ax, "Toilet_Camco", fc="#bdbdbd", ec="#424242", lw=1.5, zorder=6)
+    (ux0, ux1), (uz0, uz1) = xr_("Toilet_Camco"), zr("Toilet_Camco")
+    ax.text((ux0 + ux1) / 2, (uz0 + uz1) / 2 + 2.0, "туалет\nCamco\n17″", ha="center", va="center", fontsize=8.5,
+            weight="bold", zorder=7)
+    hdim(ax, 9.0, ux1, DECK1, "", fs=7.5)
+    ax.text(DECK1 + 0.3, 8.75, "%.1f″ от туалета" % (S["toilet"]["in_deck"] / IN), fontsize=7.5, color="#6d4c41",
+            zorder=9, bbox=dict(fc="white", ec="none", alpha=0.8, pad=0.5))
+    if SHOWER is not None:
+        ax.annotate("в душ (позже)", xy=(SHOWER - 0.2, 5.0), xytext=(ux1 + 0.6, 5.0), fontsize=7.5, color="#2e7d32",
+                    va="center", arrowprops=dict(arrowstyle="->", lw=1.4, color="#2e7d32"), zorder=8)
+        ax.plot([SHOWER, SHOWER], [zs, 33.0], color="#1565c0", ls="--", lw=1.0)
+        ax.text(SHOWER + 0.2, 33.3, "задняя стенка душа", fontsize=7.5, color="#1565c0")
 ax.plot([DECK0, DECK0], [0, zr("BedDeck")[1]], color="#6d4c41", ls="--", lw=1.0, zorder=8)
 hdim(ax, z0 + 8.0, DECK0, x0, "", fs=7.5)
 ax.text(DECK0 - 0.3, z0 + 9.0, ("%.1f″ под\nштуцеры" if not FR else "%.2f″ до\nдвери") % (S["behind"] / IN),
@@ -256,6 +286,10 @@ rect_yz(ax, "TankFloor_Cleat_Aisle", fc=C_WOOD, ec="#5d4037", zorder=5)
 rect_yz(ax, SPACERS[0], fill=False, ec="#212121", ls="--", lw=0.9, zorder=5)
 for w in SEC["tank"]:
     ax.add_patch(Polygon([(yd(p[1]), mz(p[2])) for p in w], fc=C_T, alpha=0.6, ec="#1f5f8b", lw=1.5, zorder=5))
+if "Toilet_Camco" in B:
+    rect_yz(ax, "Toilet_Camco", fill=False, ec="#424242", ls="--", lw=1.2, zorder=6)
+    ax.text(sum(yr("Toilet_Camco")) / 2, zr("Toilet_Camco")[1] - 1.2, "туалет (впереди)", ha="center", fontsize=7.5,
+            color="#424242", zorder=7)
 for w in SEC.get("strap", []):
     ax.plot([yd(p[1]) for p in w] + [yd(w[0][1])], [mz(p[2]) for p in w] + [mz(w[0][2])], color=C_STRAP, lw=1.6,
             zorder=6)
@@ -300,7 +334,7 @@ else:
             "залив сзади — доп. штуцер Uniseal 1.5″ сверху у заднего края (до поперечин кровати %.1f″). Багажник до бака — %.1f″; с фитингами до края щита %.1f″." % (
                 TN.split("_")[1].replace("T", "T-"), DIMS, "переднем торце (к кабине)" if FR else "заднем торце",
                 (zr("BedCross_2")[0] - z1), (S["trunk"] or 0) / IN, S["in_deck_fit"] / IN))
-    sub = "прямо на пол (коврик), вплотную к задней двери"
+    sub = "прямо на пол (коврик), вплотную к задней двери" + (", перед ним — туалет" if "Toilet_Camco" in B else "")
 fig.text(0.012, 0.010, spec, fontsize=9, va="bottom", bbox=dict(fc="#e3f2fd", ec="#90caf9", alpha=0.95))
 fig.suptitle("Бак для воды %s (%s) на полу рядом с водительской аркой — вариант 2026-11-07\n"
              "%s; верх бака %.2f″ — вровень с полкой батарей (%+.0f мм); целиком под щитом (до края %.1f″)" % (

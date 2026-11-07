@@ -54,7 +54,7 @@ VIEWS = [
 # этажерки под батареи: кровать и всё дальнее скрыто. Элемент, оканчивающийся на "$", —
 # ТОЧНОЕ имя объекта (иначе подстрока).
 _RACK_HIDE = _NOT_BED + ("_pY", "BedSideRail", "BedDeck", "BedMattress", "BedWall",
-                         "BedPostBodyBolt", "RailBolt", "Tank", "Shower_", "Kitchen_", "Water_")
+                         "BedPostBodyBolt", "RailBolt", "Tank", "Shower_", "Kitchen_", "Water_", "Toilet")
 _REAR_RACK = tuple(n + "$" for n in (
     "Battery_Lower", "Battery_Upper", "RackPostPlate_P2", "BedPost_nY_rackP2", "RackP2_BodyBolt",
     "RackShelfRail_Rear", "RackShelfRail_Front", "RackShelfPlate", "RackShelfFrontStop", "RackRubberBlock",
