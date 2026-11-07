@@ -43,6 +43,6 @@ FREECADCMD="$HOME/Applications/FreeCAD.AppImage --console" FREECAD="$HOME/Applic
 | `2026-11-05_battery_option1.png` | выбранный вариант 1 — батарея внутрь от стойки кровати, задом в D-стойку |
 | `2026-11-06_battery_rack_front_drawing.png` | передний блок у сдвижной двери (заменён 2026-11-07) |
 | `2026-11-07_battery_rack_drawing.png` | задний блок «2 батареи одна над другой» (заменён единой этажеркой 2026-11-07) |
-| `2026-11-07_water_tank_torva_drawing.png`, `2026-11-07_tank_torva_*.png` | бак TORVA 33 gal у водительской арки на подставке (заменён T-3500 2026-11-07; модель — git-тег `variant/torva-wheel-well-tank`) |
+| `2026-11-07_water_tank_torva_drawing.png`, `2026-11-07_tank_torva_*.png` | бак TORVA 33 gal у водительской арки на подставке (заменён T-3500 2026-11-07; модель — git-коммит `a2906da`) |
 
 Скрипты архива — `tools/drawings/archive/`.
