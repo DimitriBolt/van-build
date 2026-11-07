@@ -62,18 +62,14 @@ _REAR_RACK = tuple(n + "$" for n in (
     "RackPostPlate_P3", "RackPost_P3", "RackPostPlate_P4", "RackPost_P4", "BedCross_RackFront",
     "RackLowerFrontStop", "DPillarFace_nY_ref", "BedPost_nY_rear", "BedPostPlate_nY_rear", "BedCross_1"))
 VIEWS += [
-    # оба блока + поперечины-стяжки, из салона сверху-спереди (взгляд назад, к борту −Y, вниз)
-    ("rack_with_cross.png", (-0.55, -1.0, -0.55), _RACK_HIDE + ("BedCross_2",)),
-    ("rack_from_inside.png", "viewRear", _RACK_HIDE + ("BedCross",)),
-    ("rack_top.png", "viewTop", _RACK_HIDE + ("BedCross",)),
-    # задний блок крупно (без поперечин)
-    ("rack_3d.png", (-0.55, -1.0, -0.55), _RACK_HIDE + ("_fwd", "BedPost_nY_front", "BedCross", "OverArch",
-                                                        "P3f")),
-    # передний блок крупно, взгляд вперёд-к борту (сдвижная дверь — дальше)
-    ("battery_bank_3d.png", (0.55, -1.0, -0.55), _RACK_HIDE + ("BedCross_2",)),
+    # этажерка на 4 батареи (пассажирский борт): из салона спереди-сверху, сзади-сверху, на борт, сверху
+    ("bank_3d.png", (0.55, -1.0, -0.55), _RACK_HIDE + ("BedCross",)),
+    ("bank_from_rear.png", (-0.55, -1.0, -0.55), _RACK_HIDE + ("BedCross",)),
+    ("bank_wall_view.png", "viewRear", _RACK_HIDE + ("BedCross",)),
+    ("bank_top.png", "viewTop", _RACK_HIDE + ("BedCross",)),
 ]
 # бак для воды у водительской арки: пассажирский борт и всё с него скрыто
-_TANK_HIDE = _NOT_BED + ("_nY", "Battery_", "RackShelf", "RackPost", "RackRubber", "RackLower", "RackP2",
+_TANK_HIDE = _NOT_BED + ("_nY", "Battery_", "Bank", "RackShelf", "RackPost", "RackRubber", "RackLower", "RackP2",
                          "BedDeck", "BedMattress", "BedWall", "BedPostBodyBolt",
                          "Shower_", "Kitchen_", "Water_Pump12V", "Water_Heater12V")
 VIEWS += [
@@ -84,7 +80,7 @@ VIEWS += [
     ("tank_top.png", "viewTop", _TANK_HIDE + ("BedCross", "BedSideRail")),
 ]
 # душ + мини-кухня (водительский борт, перед кроватью)
-_GALLEY_HIDE = _NOT_BED + ("_nY", "Battery_", "RackShelf", "RackPost", "RackRubber", "RackLower", "RackP2",
+_GALLEY_HIDE = _NOT_BED + ("_nY", "Battery_", "Bank", "RackShelf", "RackPost", "RackRubber", "RackLower", "RackP2",
                            "BedWall", "BedPostBodyBolt", "DPillar")
 VIEWS += [
     # из прохода у сдвижной двери на водительский борт, сверху-сзади

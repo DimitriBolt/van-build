@@ -56,7 +56,7 @@ for ax, tag, side, photos, what in ((axs[0], "nY", "Пассажирский б�
         (y0, x0), (y1, x1) = to_ph(b[0], b[3] if tag == "pY" else b[2]), to_ph(b[1], b[2] if tag == "pY" else b[3])
         ax.add_patch(Rectangle((min(y0, y1), x0), abs(y1 - y0), x1 - x0, zorder=3, **kw))
     if what == "batt":
-        bb = box(d, "Battery_Lower")
+        bb = box(d, "Battery_B1")
         (y0, x0), (y1, x1) = to_ph(bb[0], bb[2]), to_ph(bb[1], bb[3])
         ax.add_patch(Rectangle((min(y0, y1), x0), abs(y1 - y0), x1 - x0, fc="#ef6c00", alpha=0.12, ec="#ef6c00",
                                lw=1.8, ls="--", zorder=2))
