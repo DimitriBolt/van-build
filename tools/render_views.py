@@ -67,9 +67,10 @@ VIEWS += [
     ("rack_from_inside.png", "viewRear", _RACK_HIDE + ("BedCross",)),
     ("rack_top.png", "viewTop", _RACK_HIDE + ("BedCross",)),
     # задний блок крупно (без поперечин)
-    ("rack_3d.png", (-0.55, -1.0, -0.55), _RACK_HIDE + ("_fwd", "BedPost_nY_front", "BedCross")),
+    ("rack_3d.png", (-0.55, -1.0, -0.55), _RACK_HIDE + ("_fwd", "BedPost_nY_front", "BedCross", "OverArch",
+                                                        "P3f")),
     # передний блок крупно, взгляд вперёд-к борту (сдвижная дверь — дальше)
-    ("rack_front_3d.png", (0.55, -1.0, -0.55), _RACK_HIDE + _REAR_RACK + ("BedCross_2",)),
+    ("battery_bank_3d.png", (0.55, -1.0, -0.55), _RACK_HIDE + ("BedCross_2",)),
 ]
 # бак для воды у водительской арки: пассажирский борт и всё с него скрыто
 _TANK_HIDE = _NOT_BED + ("_nY", "Battery_", "RackShelf", "RackPost", "RackRubber", "RackLower", "RackP2",

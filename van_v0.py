@@ -198,10 +198,16 @@ BED = {
                              # прорезей strut) — над баком для воды ~62 мм вместо 12 (ремни, штуцеры, запас
                              # на форму арки). Dimitri: «кровать можно поднимать на любую высоту — это не сложно».
                              # P3/P4 этажерок и бака доходят до поперечин → удлиняются на ту же величину.
-    "cross_n":          3,   # поперечины strut: у задней стойки, посередине, у передней (съёмные)
+    "cross_n":          3,   # поперечины strut (съёмные, передвижные): у задней стойки, посередине и под
+                             # ПЕРЕДНИМ КРАЕМ ЩИТА (Dimitri: ставится куда угодно, но не впереди края щита)
     "deck_th":         19,   # плита «MR TIPO/TYPE II … 1220 mm» (влагостойкая MDF/ДСП) ~3/4″
-    "deck_len":      1220,   # = ширина листа (маркировка «1220 mm»), от задней грани задней стойки;
-                             # None = до передней грани передней стойки (уточнить)
+    "deck_len":      None,   # (было 1220 от задней грани задней стойки — не так, см. ниже)
+    # 2026-11-07 (2 фото с рулеткой и меткой duct tape на продольной рейке; Dimitri подтвердил): передний край
+    # щита — в 7.8″ (±0.3″) ПОЗАДИ задней грани передних стоек: до передних стоек щит не доходит
+    "deck_front_gap": 198.0,
+    # задний край — до самых задних дверей, фигурный по их форме (Dimitri); в модели — по линии уплотнителя
+    # двери (за коробом D-стойки) с вырезами под D-стойки. Длина по центру ≈1188 мм — лист «1220 mm» ✓
+    "deck_rear":    "doors",
     "mattress_th":    100,   # ~10 см (со слов Dimitri)
     # над настилом, только пассажирский борт: стеновая фанера + брус 2×4 по её верху (фото 3, 4, 15)
     "wall_panel":    True,
@@ -225,7 +231,7 @@ BATTERY_RACK = {
     # блоки, где батареи стоят ДЛИННОЙ стороной (10.07″) вдоль борта; в остальных — узкой (7.63″).
     # Задний — развёрнут 2026-11-07 (Dimitri): по фото сверху D-стойка ↔ арка 11.1″ → 10.07″ + 5 мм влезают,
     # проход шире на 2.4″
-    "long_along_wall": ("rear",),
+    "long_along_wall": ("rear", "front"),   # передний — тоже развёрнут 2026-11-07 (Dimitri)
     "dpillar_gap":    5.0,              # задняя грань батарей → передняя грань короба D-стойки (резина);
                                         # форма D-стойки — DPILLAR (фото сверху 2026-11-06)
     "p2_front_inset":   6.0,            # грань P2 со стороны арки — на 6 мм внутрь от грани батареи
@@ -233,7 +239,9 @@ BATTERY_RACK = {
                                         # заходит на пластину P1 или под арку), уходит от арки
     # блоки: "rear" — D-стойка ↔ арка (утв. 2026-11-06); "front" — арка ↔ сдвижная дверь (2026-11-06):
     # то же самое зеркально, задом в передний край арки; P1 — передняя стойка кровати, новая P2 у арки
-    "stacks":        ("rear", "front"),
+    # 2026-11-07: «front» (у сдвижной двери, на полу) ЗАМЕНЁН полкой НАД аркой (идея Dimitri) — over_arch;
+    # код блока «front» оставлен (вариант с короткими стяжками и крышкой)
+    "stacks":        ("rear",),
     "arch_gap":         1.5,            # переднему блоку: зазор от батареи до переднего края арки
     "lower_front_stop": (41.3, 60.0),   # обоим блокам: упор нижней батареи вперёд (высота, низ над полом)
     "gap_above_b1":    38.0,            # 1.5″ над нижней батареей — клеммы и кабели
@@ -242,7 +250,24 @@ BATTERY_RACK = {
     # верхние стяжки: "bed" — это поперечины кровати (задняя — существующая BedCross_1, передняя —
     # новая), P3/P4 доходят до них (решение Dimitri 2026-11-06); "short" — отдельные короткие
     # стяжки над верхней батареей (нужен подъём кровати на 1″); None — без стяжек
-    "top_ties":       "bed",
+    # 2026-11-07: щит кровати кончается в 7.8″ ПОЗАДИ передних стоек → передний блок целиком впереди щита,
+    # поперечины кровати ему не стяжки → «short» + крышка из фанеры (решение Dimitri)
+    "top_ties":       {"rear": "bed", "front": "short"},
+    "top_lid":         19.0,            # крышка поверх коротких стяжек — фанера 3/4″ (полочка у кровати)
+    # ПОЛКА НАД АРКОЙ (идея Dimitri 2026-11-07): ещё 2 батареи длинной стороной вдоль борта — над аркой, примерно
+    # на уровне верхней батареи заднего блока; все 4 батареи и арка — в одной полосе вдоль борта (9.3″ от стены).
+    # Две продольные рейки strut (1-5/8″ по вертикали) по линиям стоек: у борта (P2 заднего блока → передняя
+    # стойка кровати) и в салон (P4 → новая P3f); полка — фанера 1/2″ на уголках по низу реек; рейка у борта
+    # опирается на верх арки через резину. Поперечина #2 кровати — в промежутке между батареями.
+    "over_arch": {
+        "n":            2,
+        "pad":       10.0,              # резина между верхом арки и низом рейки у борта
+        "ledger": (38.1, 3.2),          # стальной уголок 1-1/2″ × 1/8″ по низу реек — под края фанеры
+        "shelf_th":  12.0,              # фанера 1/2″
+        "gap_rear":  10.0,              # от поперечины-стяжки заднего блока до 1-й батареи
+        "gap_between": 63.0,            # между батареями: брусок-распорка, над ним поперечина #2 кровати
+        "stop":    (3.2, 38.1),         # упоры-уголки по торцам пары батарей: толщина, высота над полкой
+    },
     "front_cross_full": True,           # передняя стяжка-поперечина на всю ширину (до противоп. рейки)
     "gap_above_b2":    38.0,            # 1.5″ над верхней батареей — клеммы (для "short")
     "p2_body_bolt":    True,            # P2 ↔ силовая рама кузова на высоте болта P1: новая резьба M6
@@ -919,28 +944,44 @@ def build():
                   "Продольная рейка %s X %.0f..%.0f, верх Z=%.0f" % (tag, rx0, rx1, z_rail_top),
                   (rx1 - rx0, sd, sw), (rx0, ybase(sgn, post_in, sd), z_rail_top - sw), "продольная")
 
-        # 3 съёмные поперечины между рейками
+        # продольный размер щита: перед — в deck_front_gap позади передних стоек, зад — до задних дверей
+        dx0 = (x_dp - DP["box_len"]) if B.get("deck_rear") == "doors" else xr - sw / 2.0
+        if B.get("deck_front_gap") is not None:
+            dx1 = xf - sw / 2.0 - B["deck_front_gap"]
+        else:
+            dx1 = xf + sw / 2.0 if not B.get("deck_len") else dx0 + B["deck_len"]
+
+        # 3 съёмные поперечины между рейками: #1 у задних стоек, последняя — под передним краем щита
         nC = max(2, int(B["cross_n"]))
-        cx0, cx1 = xr + sw / 2.0 + sd / 2.0, xf - sw / 2.0 - sd / 2.0
+        cx0, cx1 = xr + sw / 2.0 + sd / 2.0, min(xf - sw / 2.0, dx1) - sd / 2.0
         for i in range(nC):
             cx = cx0 + (cx1 - cx0) * i / (nC - 1)
             strut("BedCross_%d" % (i + 1),
                   "Поперечина #%d X=%.0f (съёмная), L=%.0f" % (i + 1, cx, 2 * rail_in),
                   (sd, 2 * rail_in, sw), (cx - sd / 2.0, -rail_in, z_rail_top - sw), "поперечина")
 
-        # настил (MR-плита) с вырезами под стойки + матрас
-        dx0 = xr - sw / 2.0
-        dx1 = xf + sw / 2.0 if not B.get("deck_len") else dx0 + B["deck_len"]
+        # настил (MR-плита) с вырезами под стойки и D-стойки + матрас
         dhw = y_at_z(half, z_rail_top) - 5.0
         deck = Part.makeBox(dx1 - dx0, 2 * dhw, B["deck_th"], App.Vector(dx0, -dhw, z_rail_top))
+        mat = Part.makeBox(dx1 - dx0, 2 * post_in, B["mattress_th"], App.Vector(dx0, -post_in, z_deck_top))
+        if B.get("deck_rear") == "doors":         # вырезы под D-стойки (грань стойки скошена назад к центру)
+            y_dp_in = arch_ywall - DP["body_depth"]
+            for sgn in (+1, -1):
+                ya = dhw + 30.0
+                pts = [(dx0 - 10.0, y_dp_in), (dp_body_x(DP["body_depth"]), y_dp_in),
+                       (dp_body_x(arch_ywall - ya), ya), (dx0 - 10.0, ya)]
+                v = [App.Vector(x, sgn * y, z_rail_top - 5.0) for x, y in pts]
+                nt = Part.Face(Part.makePolygon(v + [v[0]])).extrude(
+                    App.Vector(0, 0, B["deck_th"] + B["mattress_th"] + 10.0))
+                deck = deck.cut(nt)
+                mat = mat.cut(nt)
         for s in post_solids:
             deck = deck.cut(s)
         add_shape(doc, "BedDeck", "Настил — плита MR Type II %g мм, %.0f×%.0f (вырезы под стойки)" % (
                       B["deck_th"], dx1 - dx0, 2 * dhw),
                   deck, color=COL_DECK, transparency=10, group=bed_g)
-        add_box(doc, "BedMattress", "Матрас ~%g мм" % B["mattress_th"],
-                (dx1 - dx0, 2 * post_in, B["mattress_th"]), (dx0, -post_in, z_deck_top),
-                color=COL_MATTRESS, transparency=55, group=bed_g)
+        add_shape(doc, "BedMattress", "Матрас ~%g мм" % B["mattress_th"], mat,
+                  color=COL_MATTRESS, transparency=55, group=bed_g)
 
         # над настилом, пассажирский борт (= борт сдвижной двери): стеновая фанера + 2×4
         if B.get("wall_panel"):
@@ -964,11 +1005,13 @@ def build():
         bed_summary = dict(
             floor_top=floor_top, z_rail_top=z_rail_top, z_deck_top=z_deck_top, z_bolt=z_bolt,
             posts=(xr, xf), post_y=post_out - sd / 2.0, deck=(dx0, dx1), deck_w=2 * dhw,
+            cross_x=[cx0 + (cx1 - cx0) * i / (nC - 1) for i in range(nC)],
             garage=z_rail_top - sw - floor_top, arch_top=floor_top + W["height"],
             cutlist=cutlist)
 
     # ═══════ ЭТАЖЕРКИ ПОД БАТАРЕИ (борт −Y): «rear» — D-стойка ↔ арка, «front» — арка ↔ сдвижная ═══════
     rack_summary = []
+    rack_geo = {}
     R = BATTERY_RACK
     if B.get("enable") and R.get("enable"):
         ps = P["slider_side"]                          # пассажирский борт (−Y)
@@ -981,13 +1024,6 @@ def build():
         z_rail1 = z_rail0 + sw                         # рейки полки 1-5/8″ по вертикали
         z_b2 = z_rail1 + R["shelf_th"]
         z_b2_top = z_b2 + bz
-        ties = R.get("top_ties")
-        if ties == "bed":                              # стяжки = поперечины кровати (под настилом)
-            z_tie0, z_tie1 = z_rail_top - sw, z_rail_top
-        else:                                          # отдельные стяжки над верхней батареей
-            z_tie0 = z_b2_top + R["gap_above_b2"]
-            z_tie1 = z_tie0 + sw
-        z_p34_top = z_tie1 if ties else z_b2_top + R["post_above_b2"]
         ppx, ppy, _ = B["plate"]
         qx, qy, qt = R["p34_plate"]
 
@@ -1001,9 +1037,18 @@ def build():
             along = stack in R.get("long_along_wall", ())
             bx, by = (b_long, b_short) if along else (b_short, b_long)   # bx — вдоль борта (X)
             y_in_side = post_in - by                   # грань батарей к центру фургона
+            ties = R.get("top_ties")
+            if isinstance(ties, dict):
+                ties = ties.get(stack)
+            if ties == "bed":                          # стяжки = поперечины кровати (под настилом)
+                z_tie0, z_tie1 = z_rail_top - sw, z_rail_top
+            else:                                      # отдельные стяжки над верхней батареей
+                z_tie0 = z_b2_top + R["gap_above_b2"]
+                z_tie1 = z_tie0 + sw
+            z_p34_top = z_tie1 if ties else z_b2_top + R["post_above_b2"]
             rk_g = doc.addObject("App::DocumentObjectGroup", "BatteryRack" + sfx)
-            rk_g.Label = ("Этажерка: 2 батареи Buknuwo 150Ah, %s (пассажирский борт) — УТВЕРЖДЕНО 2026-11-06"
-                          % ("арка ↔ сдвижная дверь" if front else "D-стойка ↔ арка"))
+            rk_g.Label = ("Этажерка: 2 батареи Buknuwo 150Ah, %s (пассажирский борт), %.2f″ вдоль борта"
+                          % ("арка ↔ сдвижная дверь" if front else "D-стойка ↔ арка", bx / 25.4))
             shapes = {}
 
             def rk_box(name, label, dims, base, color, tr=0):
@@ -1011,23 +1056,26 @@ def build():
                 shapes[name] = Part.makeBox(dims[0], dims[1], dims[2], App.Vector(*base))
                 return shapes[name]
 
-            if front:      # батарея задом в передний край арки, к сдвижной двери
+            # батареи: задний блок — задом в короб D-стойки (грань короба скошена назад к центру → ближе всего
+            # она у грани батарей к борту), передний — задом в передний край арки
+            if front:
                 X0 = W["center_x"] + a_at_post + R["arch_gap"]
-                X1 = X0 + bx
                 p1x = xf                                   # существующая передняя стойка кровати
-                p2x0 = X0 + R["p2_front_inset"]; p2x1 = p2x0 + sw
-                p2_plate_x0 = p2x0                         # пластина уходит от арки
-                p4x0 = X0
-                cross_x0 = X0 - sd                         # новая поперечина — со стороны арки от P4
-            else:          # батарея задом в короб D-стойки, передом к арке
-                # грань короба скошена назад к центру → ближе всего к батарее она у её грани к борту
+            else:
                 X0 = dp_box_x(arch_ywall - post_in) + R["dpillar_gap"]
-                X1 = X0 + bx
-                p1x = xr
+                p1x = xr                                   # существующая задняя стойка кровати
+            X1 = X0 + bx
+            # P2 — новая стойка у борта на том конце батарей, что дальше от P1 (центр батарей — между
+            # P1 и P2); P3/P4 — со стороны салона напротив P1/P2: две поперечные рамы «стойка у борта —
+            # рейка полки — стойка в салон — стяжка»
+            if p1x <= (X0 + X1) / 2.0:
                 p2x1 = X1 - R["p2_front_inset"]; p2x0 = p2x1 - sw
-                p2_plate_x0 = p2x1 - p2px                  # пластина P2 — назад, от арки
-                p4x0 = X1 - sw
-                cross_x0 = X1
+                p2_plate_x0 = p2x0 if front else p2x1 - p2px          # пластина P2 — от пластины P1 / от арки
+            else:
+                p2x0 = X0 + R["p2_front_inset"]; p2x1 = p2x0 + sw
+                p2_plate_x0 = p2x0
+            p3x0, p4x0 = p1x - sw / 2.0, p2x0
+            frames = (("P1", p1x), ("P2", (p2x0 + p2x1) / 2.0))     # X центров рам
 
             # батареи
             bat1 = rk_box("Battery_Lower", "Батарея нижняя Buknuwo 12.8V 150Ah (%.2f″ вдоль борта)" % (bx / 25.4),
@@ -1036,23 +1084,28 @@ def build():
                 rk_box("Battery_Upper", "Батарея верхняя Buknuwo 12.8V 150Ah (на полке)",
                        (bx, by, bz), (X0, ybase(ps, y_wall_side, by), z_b2), COL_BATTERY)
 
-            # P2 — новая стойка у борта, как стойки кровати; со стороны арки
-            rk_box("RackPostPlate_P2", "Пластина под новой стойкой P2 — Simpson TP15 1-13/16×5″ (сдвинута от арки)",
+            # P2 — новая стойка у борта, как стойки кровати
+            on_rail = p2x1 > xr - sw / 2.0 and p2x0 < xf + sw / 2.0         # в пределах продольной рейки
+            p2_len = B["post_len"] if on_rail else (z_bolt + 50.0) - (floor_top + pt)
+            rk_box("RackPostPlate_P2", "Пластина под новой стойкой P2 — Simpson TP15 1-13/16×5″",
                    (p2px, p2py, p2pt), (p2_plate_x0, ybase(ps, post_out, p2py), floor_top), COL_STRUT)
-            rk_box("BedPost_nY_rackP2", "Стойка P2 (новая, как стойки кровати; L=%g) — болт к продольной рейке" % B["post_len"],
-                   (sw, sd, B["post_len"]), (p2x0, ybase(ps, post_out, sd), floor_top + pt), COL_STRUT)
-            add_sphere(doc, "RackP2_RailBolt" + sfx, "Болт P2 ↔ продольная рейка кровати", 9,
-                       ((p2x0 + p2x1) / 2.0, ps * post_in, z_rail_top - sw / 2.0), color=COL_BOLT, group=rk_g)
+            rk_box("BedPost_nY_rackP2", "Стойка P2 (новая, как стойки кровати; L=%.0f) — %s" % (
+                       p2_len, "болт к продольной рейке" if on_rail else "впереди рейки кровати: только в кузов"),
+                   (sw, sd, p2_len), (p2x0, ybase(ps, post_out, sd), floor_top + pt), COL_STRUT)
+            if on_rail:
+                add_sphere(doc, "RackP2_RailBolt" + sfx, "Болт P2 ↔ продольная рейка кровати", 9,
+                           ((p2x0 + p2x1) / 2.0, ps * post_in, z_rail_top - sw / 2.0), color=COL_BOLT, group=rk_g)
             if R.get("p2_body_bolt"):
                 add_sphere(doc, "RackP2_BodyBolt" + sfx,
                            "Болт P2 в раму кузова M6 (новая резьба) на высоте болтов стоек кровати, Z=%.0f" % z_bolt,
                            9, ((p2x0 + p2x1) / 2.0, ps * (post_out + B["post_wall_gap"] / 2.0), z_bolt),
                            color=COL_BOLT, group=rk_g)
 
-            # полка: 2 рейки поперёк фургона под краями батареи + фанера
-            for nm, x0 in (("Rear", X0), ("Front", X1 - sd)):
-                rk_box("RackShelfRail_%s" % nm, "Рейка полки %s strut, L=%.0f" % (nm, by + sd),
-                       (sd, by + sd, sw), (x0, ybase(ps, y_wall_side, by + sd), z_rail0), COL_STRUT)
+            # полка: 2 рейки поперёк фургона — по X стоек P1/P3 и P2/P4 (на болтах к ним) + фанера
+            for nm, xc in (("Rear", min(f[1] for f in frames)), ("Front", max(f[1] for f in frames))):
+                rk_box("RackShelfRail_%s" % nm, "Рейка полки %s strut, L=%.0f (между стойками у борта и в салон)" % (
+                           nm, by + sd),
+                       (sd, by + sd, sw), (xc - sd / 2.0, ybase(ps, y_wall_side, by + sd), z_rail0), COL_STRUT)
             rk_box("RackShelfPlate", "Полка — фанера 1/2″ %.0f×%.0f" % (bx, by),
                    (bx, by, R["shelf_th"]), (X0, ybase(ps, y_wall_side, by), z_rail1), COL_PLY, tr=10)
             # упор верхней батареи вперёд (по ходу машины, +X)
@@ -1060,14 +1113,12 @@ def build():
                 st, sh = R["front_stop"]
                 rk_box("RackShelfFrontStop", "Упор-уголок по переднему краю полки (держит верхнюю батарею вперёд)",
                        (st, by, (z_b2 + sh) - z_rail0), (X1, ybase(ps, y_wall_side, by), z_rail0), COL_STRUT)
-            # упор нижней батареи вперёд: у переднего блока спереди арки нет вовсе, у заднего — до арки 3″+
-            # (фото сверху 2026-11-06; раньше считали, что нижнюю держит арка)
+            # упор нижней батареи вперёд
             if R.get("lower_front_stop"):
                 lh, lz = R["lower_front_stop"]
-                gap_a = W["center_x"] - arch_a_lin(arch_ywall - post_in) - X1 if not front else 1e9
+                gap_a = W["center_x"] - arch_a_lin(arch_ywall - post_in) - X1 if not front else slider_x0 - X1
                 if gap_a >= sd + 5.0:          # strut поперёк
-                    rk_box("RackLowerFrontStop", "Упор нижней батареи вперёд: strut поперёк, болты к %s" % (
-                               "P1/P3" if front else "P2/P4 (уголки)"),
+                    rk_box("RackLowerFrontStop", "Упор нижней батареи вперёд: strut поперёк, уголками к P2/P4",
                            (sd, by + sd, lh), (X1, ybase(ps, y_wall_side, by + sd), floor_top + lz), COL_STRUT)
                 else:                          # до арки меньше strut → уголок, как у верхней
                     st, sh = R["front_stop"]
@@ -1082,27 +1133,34 @@ def build():
                        ((X0 + X1 - rbx) / 2.0, ybase(ps, y_wall_side - (by - rby) / 2.0, rby), z_b1_top),
                        (0.15, 0.15, 0.15))
 
-            # P3/P4 — стойки со стороны салона: P3 по X как стойка кровати P1, P4 — у арки
-            p3x0 = p1x - sw / 2.0 if ties == "bed" else (X0 if not front else X1 - sw)
+            # P3/P4 — стойки со стороны салона напротив P1/P2
             for nm, x0 in (("P3", p3x0), ("P4", p4x0)):
                 rk_box("RackPostPlate_%s" % nm, "Пластина под %s" % nm,
                        (qx, qy, qt), (x0 + sw / 2.0 - qx / 2.0, ybase(ps, y_in_side, qy), floor_top), COL_STRUT)
-                rk_box("RackPost_%s" % nm, "Стойка %s (со стороны салона), L=%.0f" % (nm, z_p34_top - floor_top - qt),
+                rk_box("RackPost_%s" % nm, "Стойка %s (со стороны салона, напротив %s), L=%.0f" % (
+                           nm, "P1" if nm == "P3" else "P2", z_p34_top - floor_top - qt),
                        (sw, sd, z_p34_top - floor_top - qt), (x0, ybase(ps, y_in_side, sd), floor_top + qt), COL_STRUT)
 
             # верхние стяжки
             cross_len = None
-            if ties == "short":
-                for nm, x0 in (("Rear", X0), ("Front", X1 - sd)):
-                    rk_box("RackTopTie_%s" % nm, "Верхняя стяжка %s strut, L=%.0f" % (nm, by + sd),
-                           (sd, by + sd, sw), (x0, ybase(ps, y_wall_side, by + sd), z_tie0), COL_STRUT)
+            if ties == "short":            # короткие стяжки поперёк над верхней батареей — по рамам P1/P3, P2/P4
+                for nm, xc in (("Rear", min(f[1] for f in frames)), ("Front", max(f[1] for f in frames))):
+                    rk_box("RackTopTie_%s" % nm, "Верхняя стяжка %s strut поперёк, L=%.0f (стойка у борта ↔ в салон)" % (
+                               nm, by + sd),
+                           (sd, by + sd, sw), (xc - sd / 2.0, ybase(ps, y_wall_side, by + sd), z_tie0), COL_STRUT)
+                if R.get("top_lid"):       # крышка — фанера по стяжкам: полочка у кровати
+                    lt = R["top_lid"]
+                    rk_box("RackTopLid", "Крышка этажерки — фанера %.0f мм %.0f×%.0f по верхним стяжкам (полочка)" % (
+                               lt, bx, by + sd),
+                           (bx, by + sd, lt), (X0, ybase(ps, y_wall_side, by + sd), z_tie1), COL_PLY, tr=10)
             elif ties == "bed":
-                # одна стяжка — существующая поперечина кровати у P1/P3, вторая — новая, у P4 со стороны арки
+                # одна стяжка — существующая поперечина кровати у P1/P3, вторая — новая, у P2/P4
                 if R.get("front_cross_full"):
                     cross_len, fy0 = 2 * rail_in, -rail_in
                 else:
                     cross_len = rail_in - (y_in_side - sd)
                     fy0 = ybase(ps, rail_in, cross_len)
+                cross_x0 = (p4x0 + sw) if p2x0 > p1x else (p4x0 - sd)
                 add_box(doc, ("BedCross_RackFront" if not front else "BedCross_Rack_fwd"),
                         "Поперечина-стяжка у P4 (под настилом), L=%.0f%s" % (
                             cross_len, " — на всю ширину" if R.get("front_cross_full") else ""),
@@ -1119,12 +1177,115 @@ def build():
                 p2_plate_arch=shapes["RackPostPlate_P2"].distToShape(arch)[0] if arch else None,
                 p2_arch=shapes["BedPost_nY_rackP2"].distToShape(arch)[0] if arch else None,
                 to_slider=(slider_x0 - X1) if front else None,
-                to_deck_edge=(X1 - (xf + sw / 2.0)) if front else None,
+                ahead_of_deck=(X0 - dx1) if front else None,
+                p2_len=p2_len, p2_on_rail=on_rail, lid=bool(ties == "short" and R.get("top_lid")),
                 z_b1=(z_b1, z_b1_top), z_rail=(z_rail0, z_rail1), z_b2=(z_b2, z_b2_top),
                 above_b2=(z_rail_top - sw) - z_b2_top, p34_len=z_p34_top - floor_top - qt,
                 rail_len=by + sd, floor_top=floor_top, ties=ties, cross_len=cross_len,
                 tie=(z_tie0, z_tie1) if ties else None,
                 tie_to_bed=(z_rail_top - sw) - z_tie1 if ties == "short" else None))
+            rack_geo[stack] = dict(X0=X0, X1=X1, p2=(p2x0, p2x1), p4x0=p4x0, y_in=y_in_side, by=by, bx=bx,
+                                   cross_x1=(cross_x0 + sd) if ties == "bed" else None)
+
+    # ═══════ ПОЛКА НАД АРКОЙ (борт −Y): ещё 2 батареи над колёсной аркой — ПРОЕКТ 2026-11-07 ═══════
+    overarch_summary = None
+    OA = R.get("over_arch") if (B.get("enable") and R.get("enable")) else None
+    rg = rack_geo.get("rear")
+    if OA and rg and W.get("enable"):
+        ps = P["slider_side"]
+        og = doc.addObject("App::DocumentObjectGroup", "BatteryRack_overArch")
+        og.Label = "Полка НАД аркой: 2 батареи Buknuwo 150Ah (пассажирский борт) — ПРОЕКТ 2026-11-07"
+        oshapes = {}
+
+        def oa_box(name, label, dims, base, color, tr=0):
+            add_box(doc, name, label, dims, base, color=color, transparency=tr, group=og)
+            oshapes[name] = Part.makeBox(dims[0], dims[1], dims[2], App.Vector(*base))
+            return oshapes[name]
+
+        bxo, byo = b_long, b_short                       # длинной стороной вдоль борта
+        y_i = post_in - byo                              # линия стоек P3/P4 со стороны салона
+        z_arch = floor_top + W["height"]                 # верх арки (⚠️ 17″ по Upfit — промерить)
+        zr0 = z_arch + OA["pad"]                         # низ продольных реек
+        zr1 = zr0 + sw
+        lw, lt = OA["ledger"]
+        zs0 = zr0 + lt
+        zs1 = zs0 + OA["shelf_th"]                       # верх фанеры полки = низ батарей
+        zb1 = zs1 + bz
+        xa = rg["p2"][1]                                 # передняя грань P2 заднего блока
+        xa_in = rg["p4x0"] + sw                          # передняя грань P4
+        xb = xf - sw / 2.0                               # задняя грань передней стойки кровати (и новой P3f)
+        L_w, L_i = xb - xa, xb - xa_in
+        oa_box("OverArchRail_Wall", "Продольная рейка над аркой у борта strut, L=%.0f: P2 ↔ передняя стойка "
+               "кровати (уголки), на верх арки — через резину" % L_w,
+               (L_w, sd, sw), (xa, ybase(ps, post_out, sd), zr0), COL_STRUT)
+        oa_box("OverArchRail_Inner", "Продольная рейка над аркой со стороны салона strut, L=%.0f: P4 ↔ P3f" % L_i,
+               (L_i, sd, sw), (xa_in, ybase(ps, y_i, sd), zr0), COL_STRUT)
+        oa_box("OverArchLedger_Wall", "Уголок 1-1/2×1/8″ по низу рейки у борта — под фанеру полки, L=%.0f" % L_w,
+               (L_w, lw, lt), (xa, ybase(ps, post_in, lw), zr0), COL_STRUT)
+        oa_box("OverArchLedger_Inner", "Уголок 1-1/2×1/8″ по низу рейки в салон — под фанеру полки, L=%.0f" % L_i,
+               (L_i, lw, lt), (xa_in, ybase(ps, y_i + lw, lw), zr0), COL_STRUT)
+        oa_box("OverArchShelf", "Полка над аркой — фанера 1/2″ %.0f×%.0f на уголках" % (L_i, byo),
+               (L_i, byo, OA["shelf_th"]), (xa_in, ybase(ps, post_in, byo), zs0), COL_PLY, tr=10)
+        # батареи: первая — сразу за поперечиной-стяжкой заднего блока, между ними — промежуток под поперечину #2
+        xb0 = (rg["cross_x1"] if rg.get("cross_x1") else xa) + OA["gap_rear"]
+        xs_b = [xb0 + i * (bxo + OA["gap_between"]) for i in range(int(OA["n"]))]
+        bats = []
+        for i, x0 in enumerate(xs_b):
+            bats.append(oa_box("Battery_OverArch_%d" % (i + 1),
+                               "Батарея над аркой #%d Buknuwo 12.8V 150Ah (10.07″ вдоль борта)" % (i + 1),
+                               (bxo, byo, bz), (x0, ybase(ps, post_in, byo), zs1), COL_BATTERY))
+        st, sh = OA["stop"]
+        oa_box("OverArchStop_Rear", "Упор-уголок за батареями (поперёк полки)",
+               (st, byo, sh), (xs_b[0] - st, ybase(ps, post_in, byo), zs1), COL_STRUT)
+        oa_box("OverArchStop_Front", "Упор-уголок перед батареями (поперёк полки)",
+               (st, byo, sh), (xs_b[-1] + bxo, ybase(ps, post_in, byo), zs1), COL_STRUT)
+        for i in range(len(xs_b) - 1):
+            g0 = xs_b[i] + bxo
+            oa_box("OverArchSpacer_%d" % (i + 1), "Брусок-распорка между батареями над аркой (%.0f мм)" % OA["gap_between"],
+                   (OA["gap_between"], 120.0, 100.0), (g0, ybase(ps, post_in - (byo - 120.0) / 2.0, 120.0), zs1),
+                   COL_WOOD)
+        # опора рейки у борта на верх арки (резина) — над вершиной арки
+        oa_box("OverArchPad", "Резина %.0f мм: рейка у борта ↔ верх арки" % OA["pad"],
+               (120.0, sd, OA["pad"]), (W["center_x"] - 60.0, ybase(ps, post_out, sd), z_arch), (0.15, 0.15, 0.15))
+        # передняя рама: передняя стойка кровати (у борта, есть) + новая P3f со стороны салона + поперечина
+        qx, qy, qt = R["p34_plate"]
+        p3f_len = zr1 - floor_top - qt
+        oa_box("RackPostPlate_P3f", "Пластина под P3f", (qx, qy, qt),
+               (xf - qx / 2.0, ybase(ps, y_i, qy), floor_top), COL_STRUT)
+        oa_box("RackPost_P3f", "Стойка P3f (новая, со стороны салона напротив передней стойки кровати), L=%.0f" % p3f_len,
+               (sw, sd, p3f_len), (xb, ybase(ps, y_i, sd), floor_top + qt), COL_STRUT)
+        oa_box("OverArchCross_Front", "Поперечина strut у передней стойки кровати ↔ P3f, L=%.0f (концы реек — в неё)" % (
+                   byo + sd), (sd, byo + sd, sw), (xb, ybase(ps, post_in, byo + sd), zr0), COL_STRUT)
+        cutlist += [("рейка над аркой", float(L_w)), ("рейка над аркой", float(L_i)), ("стойка P3f", float(p3f_len)),
+                    ("поперечина над аркой", float(byo + sd))]
+        # поперечина #2 кровати — в промежуток между батареями (Dimitri: поперечины передвижные)
+        cxs = bed_summary["cross_x"] if bed_summary else []
+        c2 = doc.getObject("BedCross_2")
+        if c2 is not None and len(xs_b) >= 2:
+            cx_new = xs_b[0] + bxo + OA["gap_between"] / 2.0
+            dxm = cx_new - c2.Shape.BoundBox.Center.x
+            c2.Shape = c2.Shape.translated(App.Vector(dxm, 0, 0))
+            c2.Label = "Поперечина #2 X=%.0f (съёмная) — между батареями над аркой, L=%.0f" % (
+                cx_new, c2.Shape.BoundBox.YLength)
+            if len(cxs) >= 2:
+                cxs[1] = cx_new
+        # проверки
+        obj = lambda n: doc.getObject(n).Shape
+        arch = arch_shapes.get(ps)
+        bb_up = min(b.BoundBox.ZMax for b in bats)
+        checks = [("батареи ↔ арка", min(b.distToShape(arch)[0] for b in bats)),
+                  ("рейки ↔ арка (у борта — через резину)", min(oshapes[n].distToShape(arch)[0]
+                                                               for n in ("OverArchRail_Wall", "OverArchRail_Inner"))),
+                  ("батареи ↔ низ настила", min(b.distToShape(obj("BedDeck"))[0] for b in bats)),
+                  ("батареи ↔ продольная рейка кровати", min(b.distToShape(obj("BedSideRail_nY"))[0] for b in bats)),
+                  ("батареи ↔ поперечины кровати", min(b.distToShape(obj(n))[0] for b in bats
+                                                     for n in ("BedCross_1", "BedCross_2", "BedCross_3",
+                                                               "BedCross_RackFront") if doc.getObject(n))),
+                  ("батареи ↔ задний блок", min(b.distToShape(obj("Battery_Upper"))[0] for b in bats))]
+        overarch_summary = dict(z_arch=z_arch, zr=(zr0, zr1), zs=(zs0, zs1), zb=(zs1, zb1), xs=xs_b, bx=bxo,
+                                rails=(L_w, L_i), xa=xa, xb=xb, p3f=p3f_len, checks=checks, floor_top=floor_top,
+                                free_front=xb - (xs_b[-1] + bxo + st), cross2=cxs[1] if len(cxs) >= 2 else None,
+                                deck_bottom=z_rail_top, rail_bottom=z_rail_top - sw)
 
     # ═══════ БАК ДЛЯ ВОДЫ у водительской арки (D-стойка ↔ арка), на подставке ═══════
     tank_summary = None
@@ -1269,10 +1430,12 @@ def build():
         # P4 — позади поперечины-стяжки переднего блока батарей (она на всю ширину), передней гранью в неё;
         # если её нет — позади BedCross_3. Обе — в пределах длины бака.
         x4_tie = doc.getObject("BedCross_Rack_fwd")
+        c_last = doc.getObject("BedCross_%d" % max(2, int(B["cross_n"])))
         if x4_tie is not None and x4_tie.Shape.BoundBox.XMin - sw > x_r + 200.0:
             p4x0, p4note = x4_tie.Shape.BoundBox.XMin - sw, "позади поперечины BedCross_Rack_fwd, болт к ней"
         else:
-            p4x0, p4note = xf - sw / 2.0 - sd - sw, "позади поперечины BedCross_3, болт к ней"
+            p4x0 = c_last.Shape.BoundBox.XMin - sw
+            p4note = "позади поперечины %s (под передним краем щита), болт к ней" % c_last.Name
         if p4x0 + sw > x_f - 20.0:
             p4x0 = x_f - 20.0 - sw
         for nm, x0, note in (("P3", xr - sw / 2.0, "по X как задняя стойка кровати, болт к BedCross_1"),
@@ -1360,7 +1523,7 @@ def build():
             return shape
 
         # — душ —
-        sx0 = (dx1 if B.get("deck_len") else xf + sw / 2.0) + K["gap_bed"]   # задняя (к кровати) стенка
+        sx0 = max(dx1, xf + sw / 2.0) + K["gap_bed"]       # от рамы кровати (передние стойки/рейки)   # задняя (к кровати) стенка
         six, siy = K["shower_in"]
         sx1 = sx0 + pt_ + six + pt_
         z_pan0 = P["floor_corrugation_height"] if K.get("pan_recess") else floor_top
@@ -1496,6 +1659,8 @@ def build():
         for o in doc.Objects:
             if o.Name.startswith("BedPost_nY_rackP2"):                      # P2 обоих блоков
                 bb = o.Shape.BoundBox
+                if bb.XMax < dsh.BoundBox.XMin or bb.XMin > dsh.BoundBox.XMax or bb.ZMax < dz0:
+                    continue
                 cut.append(Part.makeBox(bb.XLength + 6, bb.YLength + 6, bb.ZLength,
                                         App.Vector(bb.XMin - 3, bb.YMin - 3, bb.ZMin)))
         n_bolt = 0
@@ -1503,7 +1668,8 @@ def build():
         for o in doc.Objects:
             if o.Name.startswith("BedPostBodyBolt_") or o.Name.startswith("RackP2_BodyBolt"):
                 c = o.Placement.Base                                 # Part::Sphere: центр (Shape — после recompute)
-                if c.z + bh / 2.0 > dz0 and c.z - bh / 2.0 < dz1:
+                if (c.z + bh / 2.0 > dz0 and c.z - bh / 2.0 < dz1
+                        and dsh.BoundBox.XMin < c.x < dsh.BoundBox.XMax):
                     # вырез: от внутренней грани стойки (|Y|=post_in) на bd+3 в салон
                     y0 = (post_in - bd - 3.0) if c.y > 0 else -post_in
                     cut.append(Part.makeBox(bw_, bd + 3.0, dz1 - dz0 + 2.0,
@@ -1608,8 +1774,11 @@ def build():
         print("  Стойки: 4, X=%s, |Y|=%.0f; болт в кузов %s" % (
             [int(v) for v in bs["posts"]], bs["post_y"], _h(bs["z_bolt"])))
         print("  Верх реек/поперечин: %s;  верх настила: %s" % (_h(bs["z_rail_top"]), _h(bs["z_deck_top"])))
-        print("  Настил X=%.0f..%.0f (%.0f мм), поперёк %.0f мм" % (
-            bs["deck"][0], bs["deck"][1], bs["deck"][1] - bs["deck"][0], bs["deck_w"]))
+        print("  Настил X=%.0f..%.0f (%.0f мм = %.1f″ по центру), поперёк %.0f мм; перед — в %.0f мм (%.1f″) позади "
+              "передних стоек, зад — до задних дверей (вырезы под D-стойки)" % (
+            bs["deck"][0], bs["deck"][1], bs["deck"][1] - bs["deck"][0], (bs["deck"][1] - bs["deck"][0]) / 25.4,
+            bs["deck_w"], bs["posts"][1] - 20.65 - bs["deck"][1], (bs["posts"][1] - 20.65 - bs["deck"][1]) / 25.4))
+        print("  Поперечины: " + ", ".join("#%d X=%.0f" % (i + 1, x) for i, x in enumerate(bs["cross_x"])))
         print("  «Гараж» под кроватью: %.0f мм (%.1f″);  над аркой: %.0f мм" % (
             bs["garage"], bs["garage"] / 25.4, bs["z_rail_top"] - 41.3 - bs["arch_top"]))
         kinds = {}
@@ -1631,8 +1800,8 @@ def build():
             ("; до короба D-стойки: %s" % mm(rs["gap_dpillar"])) if rs["gap_dpillar"] is not None else ""))
         print("  Пластина P2 (TP15): до пластины P1 %s, до арки %s" % (mm(rs["plates_gap"]), mm(rs["p2_plate_arch"])))
         if rs["stack"] == "front":
-            print("  До края сдвижной двери: %.0f мм (%.1f″); за передний край настила: %.0f мм" % (
-                rs["to_slider"], rs["to_slider"] / 25.4, rs["to_deck_edge"]))
+            print("  До края сдвижной двери: %.0f мм (%.1f″); впереди края щита кровати на %.0f мм" % (
+                rs["to_slider"], rs["to_slider"] / 25.4, rs["ahead_of_deck"]))
         print("  Нижняя: %.0f..%.0f мм над полом;  рейки полки: %.0f..%.0f;  верхняя: %.0f..%.0f" % (
             rs["z_b1"][0] - f0, rs["z_b1"][1] - f0, rs["z_rail"][0] - f0, rs["z_rail"][1] - f0,
             rs["z_b2"][0] - f0, rs["z_b2"][1] - f0))
@@ -1643,8 +1812,25 @@ def build():
                 rs["tie"][0] - f0, rs["tie"][1] - f0, rs["tie_to_bed"]))
         elif rs["ties"] == "bed":
             print("  Стяжки = поперечины кровати: существующая + новая L=%.0f" % rs["cross_len"])
-        print("  Новая стойка P2 X=%.0f..%.0f, до арки %s;  P3/P4 L=%.0f;  рейки полки 2×%.0f" % (
-            rs["p2"][0], rs["p2"][1], mm(rs["p2_arch"]), rs["p34_len"], rs["rail_len"]))
+        print("  Новая стойка P2 X=%.0f..%.0f, L=%.0f%s, до арки %s;  P3/P4 L=%.0f;  рейки полки 2×%.0f%s" % (
+            rs["p2"][0], rs["p2"][1], rs["p2_len"], "" if rs["p2_on_rail"] else " (впереди рейки кровати)",
+            mm(rs["p2_arch"]), rs["p34_len"], rs["rail_len"], ";  крышка — фанера 3/4″" if rs["lid"] else ""))
+    if overarch_summary:
+        o = overarch_summary
+        f0 = o["floor_top"]
+        print("[Полка НАД аркой — ещё 2 батареи Buknuwo 150Ah, пассажирский борт — ПРОЕКТ]")
+        print("  Верх арки %.0f мм (%.1f″) над полом (⚠️ оценка Upfit — промерить); рейки %.0f..%.0f; полка (верх фанеры) "
+              "%.0f мм (%.1f″)" % (o["z_arch"] - f0, (o["z_arch"] - f0) / 25.4, o["zr"][0] - f0, o["zr"][1] - f0,
+                                  o["zs"][1] - f0, (o["zs"][1] - f0) / 25.4))
+        print("  Батареи над аркой: X " + ", ".join("%.0f..%.0f" % (x, x + o["bx"]) for x in o["xs"]) +
+              ";  верх %.0f мм (%.1f″) над полом" % (o["zb"][1] - f0, (o["zb"][1] - f0) / 25.4))
+        print("  До низа настила %.0f мм (%.1f″), до низа продольной рейки кровати %.0f мм" % (
+            o["deck_bottom"] - o["zb"][1], (o["deck_bottom"] - o["zb"][1]) / 25.4, o["rail_bottom"] - o["zb"][1]))
+        print("  Рейки над аркой L=%.0f / %.0f (X %.0f..%.0f);  P3f L=%.0f;  свободно на полке перед батареями %.0f мм "
+              "(%.1f″)" % (o["rails"][0], o["rails"][1], o["xa"], o["xb"], o["p3f"], o["free_front"], o["free_front"] / 25.4))
+        if o["cross2"]:
+            print("  Поперечина #2 кровати перенесена в промежуток между батареями: X=%.0f" % o["cross2"])
+        print("  Зазоры: " + "; ".join("%s %.1f" % (k, v) for k, v in o["checks"]))
     if tank_summary:
         t = tank_summary
         f0 = t["floor_top"]

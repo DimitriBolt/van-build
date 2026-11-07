@@ -85,7 +85,11 @@ for n, lab in (("TankPost_P3", "P3"), ("TankPost_P4", "P4")):
     box_xz(ax, B[n], fc=C_S, alpha=0.85, ec="#37474f")
     ax.text(mx((B[n][0] + B[n][1]) / 2), mz(B[n][5]) + 0.35, lab, ha="center", fontsize=9, weight="bold")
 for n in ("BedCross_1", "BedCross_RackFront", "BedCross_2", "BedCross_Rack_fwd", "BedCross_3"):
-    box_xz(ax, B[n], fc="#263238")
+    if n in B:
+        box_xz(ax, B[n], fc="#263238")
+# передний край щита кровати (щит не доходит до передних стоек — фото 2026-11-07)
+ax.plot([mx(B["BedDeck"][1])] * 2, [mz(B["BedDeck"][4]) - 2.5, mz(B["BedDeck"][5]) + 1.0], color="#8d6e63", lw=1.4)
+ax.text(mx(B["BedDeck"][1]) - 0.3, mz(B["BedDeck"][5]) + 1.3, "край щита", ha="right", fontsize=7.5, color="#6d4c41")
 box_xz(ax, B["BedSideRail_pY"], fill=False, ec="#263238", ls=":", lw=1)
 ax.text(mx(B["BedCross_2"][0]), mz(B["BedCross_2"][5]) + 0.3, "поперечины кровати", ha="center", fontsize=7.5)
 # D-стойка в плоскости задней грани бака: короб у пола + грань стойки выше него (фото сверху 2026-11-06)

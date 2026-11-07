@@ -10,7 +10,7 @@ d = load()
 B, G, K = d["boxes"], d["geo"], d["SHOWER_KITCHEN"]
 FF = G["floor_top"]
 half = G["half"]
-X0 = B["BedDeck"][1]                                  # передний край настила
+X0 = max(B["BedDeck"][1], B["BedSideRail_pY"][1])    # перед рамы кровати (щит кончается раньше — 2026-11-07)
 mx = lambda X: (X - X0) / IN
 mz = lambda Z: (Z - FF) / IN
 
