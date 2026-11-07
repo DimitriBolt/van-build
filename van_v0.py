@@ -321,6 +321,9 @@ ELECTRICAL = {
 }
 
 # ─────────── БАК ДЛЯ ВОДЫ у водительской арки (между D-стойкой и аркой) — УТВЕРЖДЕНО 2026-11-06 ───────────
+# 2026-11-07 (Dimitri): ЗАМЕНЁН баком T-3500 на полке над аркой (TANK_RACK ниже); TORVA и подставка из досок убраны.
+# Вариант сохранён: git-тег variant/torva-wheel-well-tank, чертёж и виды — docs/archive/2026-11-07_*torva*.
+# Код ниже оставлен (enable=False) — включить, если вернёмся к wheel-well баку.
 # (схема утверждена; подъём и отступ уточнить замерами арки — FURNITURE_MEMORY.md §1d)
 # TORVA 33 gal (125 л), Amazon B0FBLCF2DN — по форме клон NW Conversions SP-L-33 (водительская версия:
 # «нога» бака позади арки). 48 × 12.5 × 20″, пустой 11 кг, полный ≈136 кг. Продавец: «для ProMaster
@@ -329,7 +332,7 @@ ELECTRICAL = {
 # Локальные координаты бака: u — от ПЕРЕДНЕГО (открытого) торца назад, v — от задней (к стене) грани
 # в салон, h — от дна вверх. Стойки кровати у стены оказываются между баком и бортом.
 WATER_TANK = {
-    "enable": True,
+    "enable": False,                    # 2026-11-07: заменён TANK_RACK (бак T-3500 на полке над аркой)
     "side":   +1,                       # +1 = водительский борт (+Y)
     "size":   (1220.0, 320.0, 508.0),   # u × v × h
     "tunnel_depth": 235.0,              # от задней грани (стены) — внутренняя стенка тоннеля
@@ -363,6 +366,46 @@ WATER_TANK = {
                      (159.0, "2×6 на ребро (5.5″) + фанера 3/4″", 19.0)),
     "post_gap":       3.0,              # P3/P4 → грань бака со стороны салона (резина)
     "p34_plate":  (76, 102, 1.6),
+}
+
+# ─────────── БАК ДЛЯ ВОДЫ НА ПОЛКЕ НАД ВОДИТЕЛЬСКОЙ АРКОЙ — ПРОЕКТ 2026-11-07 ───────────
+# Dimitri: «сделай с левой стороны этажерку, похожую на ту, что справа, и помести на неё бак T-3500»
+# (Class A Customs, Elkhart IN; на Amazon — «T3500-TO RV Fresh Water Tank»). 38.5 × 17.25 × 12″ (±0.25″),
+# стенка 7/32″, без давления (нужен вентиль-«дыхание»), все 4 штуцера на одном торце 17.25 × 12″:
+# 2 × 1.5″ FNPT (запаяны — срезать мембрану) и 2 × 0.5″ FNPT. Полный ≈ 35 gal → ~140 кг с баком.
+# Отличие от батарейной этажерки: бак на 2.2″ выше батареи, поэтому НЕТ рейки у борта под полкой — полка
+# лежит прямо на ровном верху арки через резину (на 1-5/8″ ниже), иначе кровать пришлось бы поднять ещё на 2″.
+#  опоры полки: 2 поперечины strut (у задней P1 и передней Pf стоек кровати: уголок к стойке ↔ рейка в салон),
+#               рейка со стороны прохода на коротких P3 и P3f, резина на верху арки;
+#  бак: вплотную к стойкам кровати у борта (3 мм), передним торцом — в упор на передней поперечине,
+#       штуцерами — НАЗАД (к задним дверям): насос и слив — в мёртвом углу за аркой (как B1 на другом борту),
+#       залив — со стороны задних дверей; 2 ремня с кулачковой пряжкой вокруг бака и полки.
+TANK_RACK = {
+    "enable": True,
+    "side":  +1,                        # водительский борт (+Y)
+    "tank":  (977.9, 438.15, 304.8),    # T-3500: 38.5 (вдоль борта) × 17.25 (поперёк) × 12″ (выс.)
+    "tank_r":  20.0,                    # скругление рёбер (ротоформовка) — оценка
+    "tank_tol": 6.35,                   # ±0.25″ по каждому размеру (продавец)
+    "full_kg": 140.0,                   # 35 gal воды (~132 кг) + бак (~9 кг)
+    "fittings_end": "rear",             # торец со штуцерами: "rear" (к задним дверям) или "front"
+    # штуцеры на торце (по картинке продавца, положение уточнить на баке): (⌀ резьбы ″, сторона, верх/низ,
+    # от края мм, назначение). Сторона — если смотреть на торец снаружи: «left»/«right»
+    "fittings": ((1.5, "left", "top", 75.0, "залив"), (0.5, "right", "top", 40.0, "вентиль-«дыхание»"),
+                 (0.5, "left", "bottom", 40.0, "к насосу"), (1.5, "right", "bottom", 75.0, "слив")),
+    "pad":      10.0,                   # резина: ровный верх арки ↔ низ полки (подогнать по месту)
+    "shelf_th": 18.3,                   # фанера 3/4″ (23/32″) — пролёт поперёк ~0.35 м под ~140 кг
+    "post_gap":  3.0,                   # бак ↔ внутренняя грань стоек кровати у борта (резина)
+    "stop":    (3.2, 38.1),             # упоры-уголки 1-1/2″ × 1/8″ по торцам бака
+    "stop_gap":  3.0,                   # резина между упором и баком
+    "arch_pads_dx": (-100.0, 100.0),    # резиновые опоры полки на ровном верху арки (от центра арки), 100 мм длиной
+    "strap_w":  25.0,                   # ремни 1″ с кулачковой пряжкой — на 1/4 и 3/4 длины бака
+    "strap_th":  2.0,
+    "pump":    (130.0, 230.0, 110.0),   # насос 12V с фильтром — габарит-заглушка (X × Y × Z), на полу за аркой
+    "p_plate": (76.0, 102.0, 1.6),      # пластины под P3/P3f (как у батарейной этажерки), уходят к центру
+    # прочность рейки в салон (strut SC14 1-5/8 × 13/16″ 14 ga, стенка 1-5/8″ вертикально) — оценка по сечению
+    "rail_I_cm4": 4.9,
+    "rail_S_cm3": 2.35,
+    "yield_MPa":  230.0,
 }
 
 # ─────────── ДУШ + МИНИ-КУХНЯ по водительскому борту: от кровати к кабине — проект 2026-11-06 ───────────
@@ -1713,6 +1756,167 @@ def build():
                             under_cross=(z_rail_top - sw) - (z_b + TH),
                             vol=tank.Volume / 1e6)
 
+    # ═══════ БАК T-3500 НА ПОЛКЕ НАД ВОДИТЕЛЬСКОЙ АРКОЙ (этажерка как у батарей, но без рейки у борта) ═══════
+    trk_summary = None
+    TR = TANK_RACK
+    if B.get("enable") and TR.get("enable") and W.get("enable"):
+        ts = TR["side"]
+        ttag = "pY" if ts > 0 else "nY"
+        rg = doc.addObject("App::DocumentObjectGroup", "TankRack")
+        rg.Label = "Бак для воды T-3500 35 gal на полке над водительской аркой — ПРОЕКТ 2026-11-07"
+        tsh = {}
+
+        def tr_shape(name, label, shape, color, tr=0):
+            add_shape(doc, name, label, shape, color=color, transparency=tr, group=rg)
+            tsh[name] = shape
+            return shape
+
+        def tr_box(name, label, dims, base, color, tr=0):
+            return tr_shape(name, label, Part.makeBox(dims[0], dims[1], dims[2], App.Vector(*base)), color, tr)
+
+        TLx, TWy, THz = TR["tank"]
+        qx, qy, qt = TR["p_plate"]
+        st, sh_ = TR["stop"]
+        # по Y (|Y|): бак — вплотную к внутренним граням стоек кровати у борта; рейка в салон — под гранью бака
+        y_w = post_in - TR["post_gap"]                   # грань бака к борту
+        y_i = y_w - TWy                                  # грань бака к проходу = наружная грань рейки
+        # по Z: полка лежит на ровном верху арки через резину; поперечины и рейка — под полкой, верх вровень
+        z_arch = floor_top + W["height"]
+        z_sh0 = z_arch + TR["pad"]                       # низ полки
+        z_c0 = z_sh0 - sw                                # низ поперечин и рейки
+        z_sh1 = z_sh0 + TR["shelf_th"]                   # верх полки = дно бака
+        z_t1 = z_sh1 + THz
+        # стойки со стороны прохода: P3 (напротив задней стойки кровати), P3f (напротив передней)
+        L_tp = z_c0 - floor_top - qt
+        for nm, x0, note in (("P3", xr - sw / 2.0, "напротив задней стойки кровати"),
+                             ("P3f", xf - sw / 2.0, "напротив передней стойки кровати")):
+            tr_box("TankPostPlate_%s" % nm, "Пластина под %s бака" % nm, (qx, qy, qt),
+                   (x0 + sw / 2.0 - qx / 2.0, ybase(ts, y_i, qy), floor_top), COL_STRUT)
+            tr_box("TankPost_%s" % nm, "Стойка %s бака (короткая, со стороны прохода, %s), L=%.0f — под рейку" % (
+                       nm, note, L_tp), (sw, sd, L_tp), (x0, ybase(ts, y_i, sd), floor_top + qt), COL_STRUT)
+        xi0, xi1 = xr - sw / 2.0, xf + sw / 2.0
+        tr_box("TankRail_Inner", "Продольная рейка бака со стороны прохода strut, L=%.0f: по верху P3 и P3f" % (xi1 - xi0),
+               (xi1 - xi0, sd, sw), (xi0, ybase(ts, y_i, sd), z_c0), COL_STRUT)
+        L_tc = post_in - y_i
+        for nm, xc in (("Rear", xr), ("Front", xf)):
+            tr_box("TankCross_%s" % nm, "Поперечина бака %s strut, L=%.0f: уголок к стойке кровати ↔ уголок к рейке" % (
+                       nm, L_tc), (sd, L_tc, sw), (xc - sd / 2.0, ybase(ts, post_in, L_tc), z_c0), COL_STRUT)
+        sw_sh = post_in - (y_i - sd)
+        tr_box("TankShelf", "Полка бака — фанера 3/4″ %.0f×%.0f: на поперечинах, рейке и (через резину) на верху арки" % (
+                   xi1 - xi0, sw_sh), (xi1 - xi0, sw_sh, TR["shelf_th"]), (xi0, ybase(ts, post_in, sw_sh), z_sh0),
+               COL_PLY, 10)
+        for i, dx in enumerate(TR["arch_pads_dx"]):
+            tr_box("TankArchPad_%d" % (i + 1), "Резина %.0f мм: верх арки ↔ полка (подогнать по месту)" % TR["pad"],
+                   (100.0, 90.0, TR["pad"]), (W["center_x"] + dx - 50.0, ybase(ts, arch_ywall - 45.0, 90.0), z_arch),
+                   (0.15, 0.15, 0.15))
+        # бак: передним торцом в упор на передней поперечине, штуцеры — на заднем торце
+        xs_f = xf - sd / 2.0 - st                        # вертикальная полка переднего упора
+        x_t1 = xs_f - TR["stop_gap"]
+        x_t0 = x_t1 - TLx
+        xs_r = x_t0 - TR["stop_gap"] - st
+        tank = Part.makeBox(TLx, TWy, THz, App.Vector(x_t0, ybase(ts, y_w, TWy), z_sh1))
+        try:
+            tank = tank.makeFillet(TR["tank_r"], tank.Edges)
+        except Exception:
+            pass
+        tr_shape("WaterTank_T3500", "Бак T-3500 (Class A Customs) 38.5×17.25×12″, 35 gal, полный ≈%.0f кг — штуцеры на "
+                 "%s торце" % (TR["full_kg"], "заднем" if TR["fittings_end"] == "rear" else "переднем"),
+                 tank, (0.70, 0.86, 0.98), 25)
+        # штуцеры (бобышки) на торце: «left/right» — если смотреть на торец снаружи
+        nrm = -1.0 if TR["fittings_end"] == "rear" else 1.0
+        x_e = x_t0 if nrm < 0 else x_t1
+        s_left = -nrm                                    # «лево» наблюдателя = знак Y
+        ya, yb = sorted((ts * y_i, ts * y_w))
+        fit_pts = []
+        for k, (dia, lr, tb, off, what) in enumerate(TR["fittings"]):
+            sY = s_left if lr == "left" else -s_left
+            yc = (yb - off) if sY > 0 else (ya + off)
+            zc_ = (z_t1 - off) if tb == "top" else (z_sh1 + off)
+            r_b = (31.0 if dia >= 1.0 else 16.0)
+            cyl = Part.makeCylinder(r_b, 16.0, App.Vector(x_e - nrm * 1.0, yc, zc_), App.Vector(nrm, 0, 0))
+            tr_shape("TankFitting_%d" % (k + 1), "Штуцер %.1f″ FNPT — %s (%s, %s)" % (dia, what,
+                     "у борта" if (yc * ts) > (y_i + y_w) / 2.0 else "к проходу", "верх" if tb == "top" else "низ"),
+                     cyl, (0.95, 0.95, 0.95) if dia >= 1.0 else (0.20, 0.20, 0.20))
+            fit_pts.append(dict(d=dia, what=what, x=x_e, y=yc, z=zc_, r=r_b, lr=lr, tb=tb))
+        # упоры по торцам; на торце со штуцерами — в обход нижних штуцеров (самый длинный свободный участок)
+        for nm, xs0, note in (("Front", xs_f, "на передней поперечине (болты через полку в неё)"),
+                              ("Rear", xs_r, "болты через полку: в рейку и с шайбой под полкой")):
+            segs = [(ya, yb)]
+            if (nm == "Rear") == (nrm < 0):
+                for f_ in fit_pts:
+                    if f_["z"] - f_["r"] < z_sh1 + sh_ + 5.0:
+                        c0, c1 = f_["y"] - f_["r"] - 10.0, f_["y"] + f_["r"] + 10.0
+                        segs = [s_ for a_, b_ in segs for s_ in ((a_, min(b_, c0)), (max(a_, c1), b_)) if s_[1] - s_[0] > 1.0]
+            s0, s1 = max(segs, key=lambda s_: s_[1] - s_[0])
+            tr_box("TankStop_%s" % nm, "Упор-уголок 1-1/2″ у %s торца бака, L=%.0f, %s" % (
+                       "переднего" if nm == "Front" else "заднего", s1 - s0, note), (st, s1 - s0, sh_), (xs0, s0, z_sh1),
+                   COL_STRUT)
+        # ремни: вокруг бака, полки и рейки (под полкой — в зазоре над аркой)
+        th_s = TR["strap_th"]
+        strap_x = (x_t0 + TLx / 4.0, x_t1 - TLx / 4.0)
+        for k, xc in enumerate(strap_x):
+            def _loop(pts):
+                v = [App.Vector(xc - TR["strap_w"] / 2.0, ts * yy, zz) for yy, zz in pts]
+                return Part.Face(Part.makePolygon(v + [v[0]])).extrude(App.Vector(TR["strap_w"], 0, 0))
+            outer = _loop([(y_i - th_s, z_t1 + th_s), (post_in + th_s, z_t1 + th_s), (post_in + th_s, z_sh0 - th_s),
+                           (y_i + th_s, z_sh0 - th_s), (y_i + th_s, z_c0 - th_s), (y_i - sd - th_s, z_c0 - th_s),
+                           (y_i - sd - th_s, z_sh1 + th_s), (y_i - th_s, z_sh1 + th_s)])
+            inner = _loop([(y_i, z_t1), (post_in, z_t1), (post_in, z_sh0), (y_i, z_sh0), (y_i, z_c0),
+                           (y_i - sd, z_c0), (y_i - sd, z_sh1), (y_i, z_sh1)])
+            tr_shape("TankStrap_%d" % (k + 1), "Ремень 1″ с кулачковой пряжкой вокруг бака и полки (пряжка — сбоку, "
+                     "со стороны прохода)", outer.cut(inner), (0.85, 0.35, 0.10))
+        # насос с фильтром — на полу в углу за аркой (под полкой), ниже штуцера «к насосу»
+        pX, pY_, pZ = TR["pump"]
+        pl_bb = doc.getObject("BedPostPlate_%s_rear" % ttag).Shape.BoundBox
+        px0 = pl_bb.XMax + 5.0
+        tr_box("Water_Pump12V", "Насос 12V + фильтр (габарит-заглушка) — на полу за аркой, ниже штуцера бака",
+               (pX, pY_, pZ), (px0, ybase(ts, arch_ywall - 45.0, pY_), floor_top), (0.20, 0.35, 0.75))
+        cutlist += [("рейка бака", float(xi1 - xi0)), ("поперечина бака", float(L_tc)), ("поперечина бака", float(L_tc)),
+                    ("стойка бака", float(L_tp)), ("стойка бака", float(L_tp))]
+        # проверки
+        obj = lambda n: doc.getObject(n).Shape
+        arch = arch_shapes[ts]
+        dpf = dp_shapes[ts]
+        frame_parts = [tsh[n] for n in tsh if n.startswith(("TankRail", "TankCross", "TankPost_"))]
+        crosses_bed = [o.Shape for o in doc.Objects if o.Name.startswith("BedCross_") and o.isDerivedFrom("Part::Feature")]
+        checks = [("бак ↔ арка", tank.distToShape(arch)[0]), ("бак ↔ D-стойка", tank.distToShape(dpf)[0]),
+                  ("бак ↔ стойки кровати", min(tank.distToShape(obj("BedPost_%s_%s" % (ttag, w)))[0]
+                                              for w in ("rear", "front"))),
+                  ("бак ↔ поперечины кровати", min(tank.distToShape(c)[0] for c in crosses_bed)),
+                  ("бак ↔ продольная рейка кровати", tank.distToShape(obj("BedSideRail_%s" % ttag))[0]),
+                  ("бак ↔ щит", tank.distToShape(obj("BedDeck"))[0]),
+                  ("полка ↔ арка", tsh["TankShelf"].distToShape(arch)[0]),
+                  ("полка ↔ D-стойка", tsh["TankShelf"].distToShape(dpf)[0]),
+                  ("поперечины/рейка/стойки ↔ арка", min(s_.distToShape(arch)[0] for s_ in frame_parts)),
+                  ("насос ↔ арка", tsh["Water_Pump12V"].distToShape(arch)[0]),
+                  ("насос ↔ D-стойка", tsh["Water_Pump12V"].distToShape(dpf)[0]),
+                  ("насос ↔ пластина стойки", tsh["Water_Pump12V"].distToShape(obj("BedPostPlate_%s_rear" % ttag))[0]),
+                  ("ремни ↔ арка", min(tsh["TankStrap_%d" % (k + 1)].distToShape(arch)[0] for k in range(2))),
+                  ("ремни ↔ поперечины кровати", min(tsh["TankStrap_%d" % (k + 1)].distToShape(c)[0]
+                                                     for k in range(2) for c in crosses_bed))]
+        # прочность рейки в салон: доля бака на рейку (опоры полки — рейка и резина на арке), пролёт P3 ↔ P3f
+        g_ = 9.81
+        y_cg = y_i + TWy / 2.0
+        y_rail = y_i - sd / 2.0
+        y_pad = arch_ywall - 90.0
+        share = (y_pad - y_cg) / (y_pad - y_rail)
+        P_r = TR["full_kg"] * g_ * share
+        Ls = xf - xr
+        a0, a1 = x_t0 - xr, x_t1 - xr
+        w_ = P_r / (a1 - a0)
+        R1 = P_r * (Ls - (a0 + a1) / 2.0) / Ls
+        M = max(R1 * x - (w_ * (x - a0) ** 2 / 2.0 if x > a0 else 0.0) + (w_ * (x - a1) ** 2 / 2.0 if x > a1 else 0.0)
+                for x in [Ls * i / 400.0 for i in range(401)])          # Н·мм
+        sig = M / (TR["rail_S_cm3"] * 1000.0)
+        defl = 5.0 * P_r * Ls ** 3 / (384.0 * 200000.0 * TR["rail_I_cm4"] * 1e4)
+        trk_summary = dict(floor_top=floor_top, x=(x_t0, x_t1), y=(y_i, y_w), z=(z_sh1, z_t1), z_arch=z_arch,
+                           z_c=(z_c0, z_sh0), shelf=(xi1 - xi0, sw_sh), rail=xi1 - xi0, cross=L_tc, post=L_tp,
+                           under_cross=(z_rail_top - sw) - z_t1, tol=TR["tank_tol"], checks=checks,
+                           from_wall=(arch_ywall - y_w, arch_ywall - y_i), fittings=fit_pts, straps=strap_x,
+                           stops=(xs_r, xs_f), free_rear=x_t0 - xi0, share=share, P_rail=P_r, sigma=sig,
+                           sigma3=3 * sig, defl=defl, pump=(px0, px0 + pX))
+        TR["_summary"] = {k: v for k, v in trk_summary.items() if k != "checks"}
+
     # ═══════ ДУШ + МИНИ-КУХНЯ (водительский борт, между кроватью и кабиной) ═══════
     galley_summary = None
     K = SHOWER_KITCHEN
@@ -1847,10 +2051,10 @@ def build():
         put("Kitchen_UpperCabinet", "Верхний шкафчик (чашки/чай), по завалу борта",
             env_solid(kx0, kl, y_uf, zu0, zu1), COL_CAB)
 
-        # — техотсек под передним краем кровати: насос, бойлер (рядом с баком) —
-        tb_x0 = 1440.0
-        put("Water_Pump12V", "Насос 12V + фильтр + гидроаккумулятор (под кроватью, у переднего торца бака)",
-            Part.makeBox(150.0, 120.0, 130.0, App.Vector(tb_x0, 400.0, floor_top)), (0.20, 0.35, 0.75))
+        # — техотсек под передним краем кровати: бойлер (насос с 2026-11-07 — за аркой, у штуцеров бака T-3500) —
+        if not TANK_RACK.get("enable"):
+            put("Water_Pump12V", "Насос 12V + фильтр + гидроаккумулятор (под кроватью, у переднего торца бака)",
+                Part.makeBox(150.0, 120.0, 130.0, App.Vector(1440.0, 400.0, floor_top)), (0.20, 0.35, 0.75))
         put("Water_Heater12V", "Место под бойлер 12V ~6–10 л (под кроватью)",
             Part.makeCylinder(130.0, 380.0, App.Vector(1465.0, 230.0, floor_top)), (0.85, 0.85, 0.85))
 
@@ -1865,7 +2069,8 @@ def build():
                                                 if o.Name.startswith(pfx) and "Plate" not in o.Name
                                                 and o.isDerivedFrom("Part::Feature") and not o.Shape.isNull())]
         for lab, ss in (("кровать (стойки/рейки/настил/матрас)", no_plate("Bed")), ("бак", objs("WaterTank")),
-                        ("подставка бака", objs("TankRiser")), ("стойки бака", objs("TankPost"))):
+                        ("подставка бака", objs("TankRiser")), ("стойки бака", objs("TankPost")),
+                        ("этажерка бака", objs("TankRail") + objs("TankCross") + objs("TankShelf") + objs("TankStop"))):
             if ss:
                 checks.append((lab, min(_dd(p, s_) for p in pall for s_ in ss)))
         pl = doc.getObject("BedPostPlate_pY_front")
@@ -2102,6 +2307,26 @@ def build():
             t["spacer"], t["p_len"], t["vol"]))
         for note in t.get("notes", []):
             print("  ⚠ " + note)
+    if trk_summary:
+        t = trk_summary
+        f0 = t["floor_top"]
+        print("[Бак T-3500 35 gal на полке над водительской аркой — ПРОЕКТ 2026-11-07]")
+        print("  Верх арки %.0f мм (%.2f″); поперечины и рейка %.0f..%.0f над полом; полка (верх фанеры 3/4″) %.0f мм "
+              "(%.1f″)" % (t["z_arch"] - f0, (t["z_arch"] - f0) / 25.4, t["z_c"][0] - f0, t["z_c"][1] - f0,
+                          t["z"][0] - f0, (t["z"][0] - f0) / 25.4))
+        print("  Бак X %.0f..%.0f, от стены (у пола) %.0f..%.0f мм (%.1f..%.1f″); верх %.0f мм (%.1f″); до низа поперечин "
+              "кровати %.0f мм (%.1f″), с допуском +0.25″ — %.0f" % (
+                  t["x"][0], t["x"][1], t["from_wall"][0], t["from_wall"][1], t["from_wall"][0] / 25.4,
+                  t["from_wall"][1] / 25.4, t["z"][1] - f0, (t["z"][1] - f0) / 25.4, t["under_cross"],
+                  t["under_cross"] / 25.4, t["under_cross"] - t["tol"]))
+        print("  Полка %.0f×%.0f;  рейка L=%.0f;  поперечины 2×%.0f;  стойки P3/P3f 2×%.0f;  за баком на полке %.0f мм "
+              "(%.1f″) — под штуцеры" % (t["shelf"][0], t["shelf"][1], t["rail"], t["cross"], t["post"], t["free_rear"],
+                                        t["free_rear"] / 25.4))
+        print("  Рейка в салон: доля бака %.0f%% → %.0f Н; σ ≈ %.0f МПа (×3g — %.0f) при текучести %.0f; прогиб ≈ %.1f мм" % (
+            100 * t["share"], t["P_rail"], t["sigma"], t["sigma3"], TANK_RACK["yield_MPa"], t["defl"]))
+        print("  Штуцеры: " + "; ".join("%.1f″ %s Z=%.0f" % (f_["d"], f_["what"], f_["z"] - f0) for f_ in t["fittings"]) +
+              ";  насос X %.0f..%.0f на полу" % t["pump"])
+        print("  Зазоры: " + "; ".join("%s %.1f" % (n, v) for n, v in t["checks"]))
     if galley_summary:
         k = galley_summary
         f0 = k["floor_top"]

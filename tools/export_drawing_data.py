@@ -36,8 +36,8 @@ try:
     import FreeCAD as App
     doc = App.ActiveDocument
     res["summary"] = buf.getvalue()[buf.getvalue().find("[Кровать"):] if "[Кровать" in buf.getvalue() else ""
-    for k in ("WHEEL_ARCH", "DPILLAR", "BED", "BATTERY_RACK", "ELECTRICAL", "WATER_TANK", "SHOWER_KITCHEN", "FLOOR",
-          "PARAMS"):
+    for k in ("WHEEL_ARCH", "DPILLAR", "BED", "BATTERY_RACK", "ELECTRICAL", "WATER_TANK", "TANK_RACK", "SHOWER_KITCHEN",
+              "FLOOR", "PARAMS"):
         res[k] = json.loads(json.dumps(g[k], default=lambda o: list(o) if isinstance(o, tuple) else str(o)))
     boxes = {}
     for o in doc.Objects:
@@ -93,6 +93,17 @@ try:
         sec["kitchen"]["Kitchen_Kettle"] = _slice(doc.getObject("Kitchen_Kettle").Shape, (1, 0, 0),
                                                   (boxes["Kitchen_Kettle"][0] + boxes["Kitchen_Kettle"][1]) / 2.0)
         res["galley"] = sec
+
+    # — бак T-3500 на полке над аркой: поперечный разрез (YZ) по первому ремню —
+    trk_o = doc.getObject("WaterTank_T3500")
+    if trk_o is not None:
+        TR = g["TANK_RACK"]
+        tag = "pY" if TR["side"] > 0 else "nY"
+        xs_ = TR["_summary"]["straps"][0]
+        sec = {"x": xs_}
+        for nm in ("WaterTank_T3500", "TankStrap_1", "WheelArch_%s" % tag, "BedMattress", "BedDeck"):
+            sec[nm] = _slice(doc.getObject(nm).Shape, (1, 0, 0), xs_)
+        res["trk"] = sec
 
     # — сечения бака (если он есть) —
     tank_o = doc.getObject("WaterTank_TORVA33")

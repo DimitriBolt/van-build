@@ -19,7 +19,7 @@ FREECADCMD="$HOME/Applications/FreeCAD.AppImage --console" FREECAD="$HOME/Applic
 |---|---|---|
 | `rear_corners_drawing.png` | задние углы у пола: арка ↔ D-стойка, оба борта — точки с 4 фото сверху + модель, таблица зазоров | §1f |
 | `battery_bank_drawing.png` | этажерка на 4 батареи (B1 на полу + полка над аркой на 3) и электрика рядом: MPPT, DC-DC, шины, трассы кабелей | `FURNITURE_MEMORY.md` §1h, §1i |
-| `water_tank_drawing.png` | бак для воды TORVA 33 gal у водительской арки: вид на борт, сверху, разрез по колесу | §1d |
+| `water_tank_drawing.png` | бак для воды T-3500 (35 gal) на полке над водительской аркой: сверху, вид на борт, разрез по ремню | §1j |
 | `shower_kitchen_drawing.png` | душ 32×32″ + мини-кухня по водительскому борту: вид на борт, план, разрезы (высота в душе) | §1e |
 
 ## 3D-виды (`renders/`)
@@ -30,7 +30,7 @@ FREECADCMD="$HOME/Applications/FreeCAD.AppImage --console" FREECAD="$HOME/Applic
 | `top_frame.png`, `from_rear_doors.png` | сверху; от задних дверей |
 | `bed_iso.png`, `bed_passenger_wall.png` | кровать крупно; пассажирский борт изнутри |
 | `bank_3d.png`, `bank_wall_view.png`, `bank_top.png` | этажерка на 4 батареи |
-| `tank_3d.png`, `tank_wall_view.png`, `tank_top.png` | бак для воды |
+| `tank_3d.png`, `tank_wall_view.png`, `tank_top.png` | бак T-3500 на полке над водительской аркой |
 | `galley_3d.png`, `galley_wall_view.png`, `galley_top.png` | душ + мини-кухня |
 
 ## Архив (`archive/`)
@@ -43,5 +43,6 @@ FREECADCMD="$HOME/Applications/FreeCAD.AppImage --console" FREECAD="$HOME/Applic
 | `2026-11-05_battery_option1.png` | выбранный вариант 1 — батарея внутрь от стойки кровати, задом в D-стойку |
 | `2026-11-06_battery_rack_front_drawing.png` | передний блок у сдвижной двери (заменён 2026-11-07) |
 | `2026-11-07_battery_rack_drawing.png` | задний блок «2 батареи одна над другой» (заменён единой этажеркой 2026-11-07) |
+| `2026-11-07_water_tank_torva_drawing.png`, `2026-11-07_tank_torva_*.png` | бак TORVA 33 gal у водительской арки на подставке (заменён T-3500 2026-11-07; модель — git-тег `variant/torva-wheel-well-tank`) |
 
 Скрипты архива — `tools/drawings/archive/`.
