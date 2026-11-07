@@ -60,7 +60,7 @@ for ax, tag, side, photos, what in ((axs[0], "nY", "Пассажирский б�
         (y0, x0), (y1, x1) = to_ph(bb[0], bb[2]), to_ph(bb[1], bb[3])
         ax.add_patch(Rectangle((min(y0, y1), x0), abs(y1 - y0), x1 - x0, fc="#ef6c00", alpha=0.12, ec="#ef6c00",
                                lw=1.8, ls="--", zorder=2))
-        ax.text((y0 + y1) / 2 + 0.6, (x0 + x1) / 2 + 1.0, "батареи\n7.63 × 10.07″", ha="center", fontsize=9,
+        ax.text((y0 + y1) / 2 + 0.6, (x0 + x1) / 2 + 1.0, "батареи\n%.2f″ вдоль борта" % ((bb[1] - bb[0]) / IN), ha="center", fontsize=9,
                 color="#e65100", weight="bold")
     else:
         tb = box(d, "WaterTank_TORVA33")

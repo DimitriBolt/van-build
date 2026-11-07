@@ -213,15 +213,19 @@ BED = {
 
 # ─────────── ЭТАЖЕРКА ПОД 2 БАТАРЕИ — пассажирский борт, между D-стойкой и аркой ───────────
 # Принято 2026-11-05: батарея узкой стороной (7.63″) вдоль борта, задом в D-стойку, прижата к
-# внутренней грани задней стойки кровати (стойка — между батареей и бортом). Зазор до арки ≈0 —
-# Dimitri «запихает». Этажерка (проект 2026-11-06): у борта — задняя стойка кровати P1 и НОВАЯ
+# внутренней грани задней стойки кровати (стойка — между батареей и бортом). 2026-11-07 — развёрнута
+# длинной стороной (10.07″) вдоль борта: по фото сверху до арки 11.1″ (было «≈0, запихает»). Этажерка (проект 2026-11-06): у борта — задняя стойка кровати P1 и НОВАЯ
 # такая же P2 у переднего края батареи; со стороны салона — короткие P3, P4 по углам батарей;
 # полка — 2 рейки strut поперёк + фанера 1/2″. Сборка при снятом настиле: нижняя батарея → полка
 # на болтах → верхняя батарея. Координаты привязаны к задней стойке кровати (не к порогу).
 BATTERY_RACK = {
     "enable": True,
     "upper":  True,                     # вторая батарея на полке
-    "battery": (193.8, 255.8, 249.4),   # Buknuwo 12.8V 150Ah: 7.63″ вдоль X × 10.07″ поперёк × 9.82″, 18.8 кг
+    "battery": (193.8, 255.8, 249.4),   # Buknuwo 12.8V 150Ah: 7.63″ × 10.07″ × 9.82″ (выс.), 18.8 кг
+    # блоки, где батареи стоят ДЛИННОЙ стороной (10.07″) вдоль борта; в остальных — узкой (7.63″).
+    # Задний — развёрнут 2026-11-07 (Dimitri): по фото сверху D-стойка ↔ арка 11.1″ → 10.07″ + 5 мм влезают,
+    # проход шире на 2.4″
+    "long_along_wall": ("rear",),
     "dpillar_gap":    5.0,              # задняя грань батарей → передняя грань короба D-стойки (резина);
                                         # форма D-стойки — DPILLAR (фото сверху 2026-11-06)
     "p2_front_inset":   6.0,            # грань P2 со стороны арки — на 6 мм внутрь от грани батареи
@@ -968,9 +972,8 @@ def build():
     R = BATTERY_RACK
     if B.get("enable") and R.get("enable"):
         ps = P["slider_side"]                          # пассажирский борт (−Y)
-        bx, by, bz = R["battery"]
+        b_short, b_long, bz = R["battery"]
         y_wall_side = post_in                          # батареи прижаты к внутр. граням стоек у борта
-        y_in_side = post_in - by                       # грань батарей к центру фургона
         pt = B["plate"][2]
         z_b1 = floor_top + pt                          # нижняя стоит на пластинах стоек
         z_b1_top = z_b1 + bz
@@ -995,6 +998,9 @@ def build():
         for stack in R.get("stacks", ("rear",)):
             front = (stack == "front")
             sfx = "_fwd" if front else ""
+            along = stack in R.get("long_along_wall", ())
+            bx, by = (b_long, b_short) if along else (b_short, b_long)   # bx — вдоль борта (X)
+            y_in_side = post_in - by                   # грань батарей к центру фургона
             rk_g = doc.addObject("App::DocumentObjectGroup", "BatteryRack" + sfx)
             rk_g.Label = ("Этажерка: 2 батареи Buknuwo 150Ah, %s (пассажирский борт) — УТВЕРЖДЕНО 2026-11-06"
                           % ("арка ↔ сдвижная дверь" if front else "D-стойка ↔ арка"))
@@ -1024,7 +1030,7 @@ def build():
                 cross_x0 = X1
 
             # батареи
-            bat1 = rk_box("Battery_Lower", "Батарея нижняя Buknuwo 12.8V 150Ah (7.63″ вдоль борта)",
+            bat1 = rk_box("Battery_Lower", "Батарея нижняя Buknuwo 12.8V 150Ah (%.2f″ вдоль борта)" % (bx / 25.4),
                           (bx, by, bz), (X0, ybase(ps, y_wall_side, by), z_b1), COL_BATTERY)
             if R.get("upper"):
                 rk_box("Battery_Upper", "Батарея верхняя Buknuwo 12.8V 150Ah (на полке)",
@@ -1058,9 +1064,16 @@ def build():
             # (фото сверху 2026-11-06; раньше считали, что нижнюю держит арка)
             if R.get("lower_front_stop"):
                 lh, lz = R["lower_front_stop"]
-                rk_box("RackLowerFrontStop", "Упор нижней батареи вперёд: strut поперёк, болты к %s" % (
-                           "P1/P3" if front else "P2/P4 (уголки)"),
-                       (sd, by + sd, lh), (X1, ybase(ps, y_wall_side, by + sd), floor_top + lz), COL_STRUT)
+                gap_a = W["center_x"] - arch_a_lin(arch_ywall - post_in) - X1 if not front else 1e9
+                if gap_a >= sd + 5.0:          # strut поперёк
+                    rk_box("RackLowerFrontStop", "Упор нижней батареи вперёд: strut поперёк, болты к %s" % (
+                               "P1/P3" if front else "P2/P4 (уголки)"),
+                           (sd, by + sd, lh), (X1, ybase(ps, y_wall_side, by + sd), floor_top + lz), COL_STRUT)
+                else:                          # до арки меньше strut → уголок, как у верхней
+                    st, sh = R["front_stop"]
+                    rk_box("RackLowerFrontStop", "Упор нижней батареи вперёд: уголок 1-1/2″ поперёк, болты к P2/P4 "
+                           "(до арки %.0f мм — strut не влезает)" % gap_a,
+                           (st, by, sh), (X1, ybase(ps, y_wall_side, by), floor_top + lz), COL_STRUT)
             # резиновый брусок: нижняя батарея не подпрыгивает (ставить не над клеммами)
             if R.get("rubber_block"):
                 rbx, rby = R["rubber_block"]
@@ -1099,7 +1112,7 @@ def build():
             arch = arch_shapes.get(ps)
             p1_plate = doc.getObject("BedPostPlate_%s_%s" % ("pY" if ps > 0 else "nY", "front" if front else "rear"))
             rack_summary.append(dict(
-                stack=stack, X=(X0, X1), p2=(p2x0, p2x1),
+                stack=stack, X=(X0, X1), p2=(p2x0, p2x1), bx=bx, by=by, inner_from_wall=arch_ywall - y_in_side,
                 gap_arch=bat1.distToShape(arch)[0] if arch else None,
                 gap_dpillar=None if front else bat1.distToShape(dp_shapes[ps])[0],
                 plates_gap=shapes["RackPostPlate_P2"].distToShape(p1_plate.Shape)[0],
@@ -1612,8 +1625,9 @@ def build():
         mm = lambda v: ("%.1f мм" % v) if v is not None else "—"
         print("[Этажерка, 2 батареи Buknuwo 150Ah — пассажирский борт, %s]" % (
             "арка ↔ сдвижная дверь" if rs["stack"] == "front" else "D-стойка ↔ арка"))
-        print("  Батареи по X: %.0f..%.0f (7.63″ вдоль борта); нижняя до арки: %s%s" % (
-            rs["X"][0], rs["X"][1], mm(rs["gap_arch"]),
+        print("  Батареи по X: %.0f..%.0f (%.2f″ вдоль борта); грань в салон — %.0f мм (%.1f″) от стены у пола" % (
+            rs["X"][0], rs["X"][1], rs["bx"] / 25.4, rs["inner_from_wall"], rs["inner_from_wall"] / 25.4))
+        print("  Нижняя до арки: %s%s" % (mm(rs["gap_arch"]),
             ("; до короба D-стойки: %s" % mm(rs["gap_dpillar"])) if rs["gap_dpillar"] is not None else ""))
         print("  Пластина P2 (TP15): до пластины P1 %s, до арки %s" % (mm(rs["plates_gap"]), mm(rs["p2_plate_arch"])))
         if rs["stack"] == "front":

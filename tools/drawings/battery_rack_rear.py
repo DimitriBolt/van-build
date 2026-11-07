@@ -89,33 +89,35 @@ for pn, plab in (("BedPostPlate_nY_rear", "TP35"), ("RackPostPlate_P2", "TP15"))
     ax.text(mx((pb[0] + pb[1]) / 2), py0 + (pb[3] - pb[2]) / IN + 0.35, plab, ha="center", fontsize=6.5,
             color="#78909c")
 ax.add_patch(Rectangle((X0, YB0), BX, BY, fc=C_BAT, alpha=0.25, ec=C_BAT, lw=2))
-ax.text((X0 + X1) / 2, YB0 + 5.5, "2 батареи\n(одна над другой)\n7.63 × 10.07″", ha="center",
+ax.text((X0 + X1) / 2, YB0 + 4.6, "2 батареи\n(одна над другой)\n%.2f″ вдоль борта" % BX, ha="center",
         fontsize=9, color="#e65100", weight="bold")
 for x0 in (X0, X1 - SD):
     ax.add_patch(Rectangle((x0, YB0), SD, BY + SD, fill=False, ec=C_STRUT, ls=":", lw=1.4))
 for xc in (XC_REAR, XC_FRONT):
     ax.add_patch(Rectangle((xc[0], YW1 + SD), SD, 15, fill=False, ec="#263238", ls="-.", lw=1.2))
 ax.text(XC_FRONT[1] + 0.2, 14.3, "поперечины кровати → на всю ширину", fontsize=7.5, color="#263238")
-ax.add_patch(Rectangle((LSTOP_X[0], YB0), LSTOP_X[1] - LSTOP_X[0], BY + SD, fc="#455a64", alpha=0.6))
-ax.text(LSTOP_X[1] + 0.15, 3.3, "упор нижней\nбатареи", fontsize=7, color="#263238")
+ax.add_patch(Rectangle((LSTOP_X[0], YB0), max(LSTOP_X[1] - LSTOP_X[0], 0.12), (LSTOP[3] - LSTOP[2]) / IN,
+                       fc="#455a64", alpha=0.8))
+ax.annotate("упор нижней батареи\n(уголок поперёк)", xy=(LSTOP_X[1], YB0 + 3.0), xytext=(LSTOP_X[1] + 1.2, 11.2),
+            fontsize=7, color="#263238", arrowprops=dict(arrowstyle="-", lw=0.6, color="#263238"))
 for b, lab in ((p3, "P3"), (p4, "P4")):
     x0 = mx(b[0])
     ax.add_patch(Rectangle((x0, YB1), SW, SD, color=C_STRUT))
     ax.add_patch(Rectangle((x0 + SW / 2 - 1.5, YB1), 3.0, 4.0, fill=False, ec="#90a4ae", ls="--", lw=0.8))
     ax.text(x0 + SW / 2, YB1 + 1.3, lab, ha="center", fontsize=8.5, color="#263238", weight="bold")
 ax.annotate("", xy=(X0, 13.6), xytext=(X1, 13.6), arrowprops=dict(arrowstyle="<->", lw=1))
-ax.text((X0 + X1) / 2, 13.9, "7.63″ (194)", ha="center", fontsize=8.5)
+ax.text((X0 + X1) / 2, 13.9, "%.2f″ (%.0f)" % (BX, BX * IN), ha="center", fontsize=8.5)
 for yy in (YB0 + 0.15, min(YB1, PROT - 2.6)):
     xa = arch_x_at(yy)
     if xa is not None:
         ax.annotate("", xy=(X1, yy), xytext=(xa, yy), arrowprops=dict(arrowstyle="<->", lw=0.9, color="#1565c0"))
         ax.text((X1 + xa) / 2, yy + 0.25, "%.1f″ (%.0f)" % (xa - X1, (xa - X1) * IN), ha="center", fontsize=7.5,
                 color="#1565c0")
-ax.text(X1 + 0.2, 9.6, "свободно до арки\n(кабели, предохранители)", fontsize=7, color="#1565c0")
+ax.text(X1 + 0.9, 9.5, "до арки (растёт к центру)", fontsize=7, color="#1565c0")
 ax.annotate("батареи — задом в короб\nD-стойки через резину %.0f мм" % R["dpillar_gap"],
             xy=(X0, YB0 + 0.6), xytext=(-9.7, 8.2), fontsize=7.5, arrowprops=dict(arrowstyle="->", lw=0.8))
 ax.annotate("", xy=(-7.0, YB0), xytext=(-7.0, YB1), arrowprops=dict(arrowstyle="<->", lw=1))
-ax.text(-7.3, (YB0 + YB1) / 2, "10.07″", rotation=90, ha="right", va="center", fontsize=8.5)
+ax.text(-7.3, (YB0 + YB1) / 2, "%.2f″" % BY, rotation=90, ha="right", va="center", fontsize=8.5)
 ax.text(10.5, 12.3, "пунктир — пластины на полу\nточки — рейки полки (%.1f–%.1f″)\nштрих-пунктир — поперечины\n"
         "кровати = верхние стяжки" % (Z_R[0], Z_R[1]), fontsize=7.5, color="#546e7a")
 ax.set_ylim(-2.8, 15)
@@ -168,7 +170,7 @@ ax.annotate("упор-уголок", xy=(X1 + 0.06, Z_B2[0] + 1.0), xytext=(X1 +
 ax.add_patch(Rectangle(((X0 + X1) / 2 - 1.18, Z_B1[1]), 2.36, Z_R[1] - Z_B1[1], color="#212121", zorder=1.5))
 ax.add_patch(Rectangle((LSTOP_X[0], LSTOP_Z[0]), LSTOP_X[1] - LSTOP_X[0], LSTOP_Z[1] - LSTOP_Z[0], color="#263238",
                        zorder=6))
-ax.annotate("упор нижней батареи\n(strut поперёк, к P2/P4)", xy=(LSTOP_X[1], (LSTOP_Z[0] + LSTOP_Z[1]) / 2),
+ax.annotate("упор нижней батареи\n(уголок поперёк, к P2/P4)", xy=(LSTOP_X[1], (LSTOP_Z[0] + LSTOP_Z[1]) / 2),
             xytext=(7.4, 1.4), fontsize=7, arrowprops=dict(arrowstyle="-", lw=0.7))
 ax.text((X0 + X1) / 2, Z_B1[1] - 0.9, "резиновый брусок", ha="center", fontsize=7, color="white", zorder=6)
 for b in (p3, p4):
@@ -195,7 +197,7 @@ ax.set_ylabel("от чистового пола, дюймы")
 ax.set_title("Вид на пассажирский борт изнутри (арка: светлая — у стены, тёмная — внутренняя грань)",
              fontsize=11, loc="left")
 ax.grid(True, color="#f0f0f0", lw=0.6)
-fig.suptitle("Этажерка под 2 батареи Buknuwo 150Ah (между D-стойкой и аркой, пассажирский борт) — утверждено 2026-11-06\n"
+fig.suptitle("Этажерка под 2 батареи Buknuwo 150Ah (между D-стойкой и аркой, пассажирский борт); 10.07″ вдоль борта — 2026-11-07\n"
              "strut SC14-10-EG; стяжки = поперечины кровати; угол D-стойка ↔ арка — фото сверху 2026-11-06 (±0.2″)",
              fontsize=12)
 fig.tight_layout(rect=(0, 0, 1, 0.975))
