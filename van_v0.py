@@ -446,7 +446,7 @@ TANK_FLOOR = {
 #   "T4100_floor" — T-4100 на полу рядом с аркой (TANK_FLOOR), 2026-11-07
 #   "T3500_shelf" — T-3500 на полке над аркой (TANK_RACK), 2026-11-07 — коммит 50ece98
 #   "TORVA"       — TORVA 33 gal wheel-well на подставке (WATER_TANK), 2026-11-06 — коммит a2906da
-WATER_VARIANT = "T4100_floor"
+WATER_VARIANT = os.environ.get("VAN_WATER_VARIANT") or "T4100_floor"   # env — для tools/save_variant.py
 TANK_FLOOR["enable"] = WATER_VARIANT == "T4100_floor"
 TANK_RACK["enable"] = WATER_VARIANT == "T3500_shelf"
 WATER_TANK["enable"] = WATER_VARIANT == "TORVA"
@@ -486,6 +486,8 @@ _REAL_HOME  = os.environ.get("SNAP_REAL_HOME") or os.path.expanduser("~")
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() \
               else os.path.join(_REAL_HOME, "van-build")
 SAVE_PATH   = os.path.join(PROJECT_DIR, "van_v0.FCStd")   # рядом со скриптом (на M6800 = ~/van-build)
+if os.environ.get("VAN_SAVE_PATH"):                         # отдельный файл варианта (tools/save_variant.py)
+    SAVE_PATH = os.path.abspath(os.environ["VAN_SAVE_PATH"])
 BODY_STL_PATH = os.path.join(PROJECT_DIR, "Ducato_L2H2_body_reference.stl")
 
 # ── Выравнивание скан → СК модели (измерено по body_reference) ──
@@ -747,6 +749,8 @@ def build():
     if DOC_NAME in App.listDocuments():
         App.closeDocument(DOC_NAME)
     doc = App.newDocument(DOC_NAME)
+    doc.Label = "%s — бак %s" % (DOC_NAME, {"T4100_floor": "T-4100 на полу", "T3500_shelf": "T-3500 на полке",
+                                         "TORVA": "TORVA 33 gal"}.get(WATER_VARIANT, WATER_VARIANT))
 
     # ═══════ ОБШИВКА (скан) ═══════
     skin = doc.addObject("App::DocumentObjectGroup", "Scan_Skin")
