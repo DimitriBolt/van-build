@@ -40,7 +40,7 @@ H = int(os.environ.get("RENDER_H", 1100))
 # X = длина фургона, поэтому «от задних дверей в салон» = viewLeft (смотрим вдоль +X)
 # Скрытие — по ПОДСТРОКЕ в имени объекта.
 _NOT_BED = ("Scan_Skin", "Opening", "RearDoorLeaf", "Rib_x", "Rail_pY_z", "Rail_nY_z", "Pillar_",
-            "Hole_", "FactoryThread", "FloorCorrugation", "Floor_")
+            "Hole_", "FactoryThread", "FloorCorrugation", "Floor_XPS$", "Floor_Plywood$")
 VIEWS = [
     ("iso_with_skin.png", "viewIsometric", ()),
     ("iso_frame.png", "viewIsometric", ("Scan_Skin",)),
