@@ -27,7 +27,9 @@ fi
 cat docs/renders/render_log.txt | tail -1
 # 4) варианты бака — отдельные .FCStd с цветами, чтобы открыть рядом и сравнить (VARIANTS=0 — пропустить)
 if [ "${VARIANTS:-1}" != "0" ]; then
-    for v in T4320_floor T4100_floor T3500_shelf; do
+    # 2026-11-07: дальше работаем с T-4320; van_v0_T4100/T3500.FCStd в репо — снимки на d86d191 (не пересобираются;
+    # вернуть: VARIANT_LIST="T4320_floor T4100_floor T3500_shelf")
+    for v in ${VARIANT_LIST:-T4320_floor}; do
         f="van_v0_${v%%_*}.FCStd"
         if [ -z "${DISPLAY:-}" ] && command -v xvfb-run >/dev/null; then
             VAN_WATER_VARIANT=$v VAN_SAVE_PATH=$f xvfb-run -a -s "-screen 0 1920x1200x24" $FREECAD tools/save_variant.py \

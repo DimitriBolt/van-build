@@ -473,6 +473,7 @@ TANK_FLOOR_T4320 = {
     "anchor": (60.0, 30.0, 12.0),       # проушина/кусок L-track на болтах в пол (X × Y × Z)
     "pump": (130.0, 190.0, 110.0),
     "pump_at": "front",                 # на полу перед баком, у нижнего штуцера «к насосу» (сбоку от туалета)
+    "pump_gap": 4.0,                    # 2026-11-07: вплотную к бруску (было 40) — впереди встаёт локер пропана
     # туалет перед баком (Dimitri 2026-11-07): «за баком, если смотреть сзади, — к кабине — поставь этот туалет; он
     # поместится под щит (16.25 < 21.1); впоследствии будет выезжать на платформе на колёсиках вперёд в душевую».
     # Camco, портативный: 16.25 (вдоль борта, направление выезда) × 14 (поперёк) × 17″ (выс.) — по картинке продавца.
@@ -519,17 +520,40 @@ SHOWER_KITCHEN = {
     "ledge_in": 70.0,               # козырёк под задней стенкой: до 70 мм внутрь поддона (за бортик) — стёк в поддон
     "shower_in": (813.0, 813.0),    # (старый квадратный поддон — для справки)
     "roof_clear": 55.0,             # потолок душа ниже железа крыши (под дугами крыши + утеплитель)
-    # мини-кухня
+    "curtain_in": 60.0,             # шторка — на 60 мм внутрь от наружной кромки поддона (внутри бортика)
+    # мини-кухня — 2026-11-07 (Dimitri): придвинута к душу, 2 секции: у душа — мойка, у сиденья — шкафчик + холодильник;
+    # торец кухни к душу ВОГНУТЫЙ по дуге шторки — шторка прилегает к нему по всей высоте
     "kitchen_end_x": 3150.0,        # ~40 мм до плоскости спинок (сиденье не упирается)
-    "kitchen_x0": 2455.0,           # задний край кухни — как был при квадратном душе (2026-11-07: не двигали)
+    "kitchen_concave": True,        # торец к душу — по дуге шторки (низ, цоколь — по дуге поддона +3 мм)
     "kitchen_depth": 560.0,         # 22″ от задней панели
     "counter_h": 914.0,             # 36″ — верх столешницы над чистовым полом
     "counter_th": 25.0,             # мебельный щит/butcher block 1″
     "sink": (305.0, 305.0, 140.0),  # барная мойка 12×12″, глубина 5.5″
-    "fridge": (597.0, 368.0, 445.0),  # 12V ларь ~30 qt (габарит-заглушка: подобрать модель ≤$300, кувшин 10″)
+    "sink_margin": (30.0, 30.0),    # мойка: от вогнутой кромки и от передней кромки столешницы
+    "divider": 12.0,                # перегородка секций — фанера 1/2″
+    # BougeRV CRX3 23 qt (сайт: 603×321×350 мм / 23.7×12.6×13.8″, 22 lb; крышка сверху, петли перекидные)
+    "fridge": (603.0, 321.0, 350.0),
+    "fridge_title": "BougeRV CRX3 23 qt",
+    "fridge_pad": 8.0,              # зазор ларя в нише с каждой стороны
     "fridge_slide": 400.0,          # выдвигается в проход на 400 мм, чтобы открыть крышку
     "plinth": (80.0, 60.0),         # цоколь: высота, отступ
     "upper": (1450.0, 300.0),       # верхний шкафчик: низ над полом, глубина
+    # — газовый проточный нагреватель на задней стенке душа (внутри душа) — 2026-11-07 —
+    # Camplux 1.58 GPM (фото Dimitri): 11.8″ Ш × 17.3″ В × 5.1″ Г, 13 lb; сверху — выход дымовых газов.
+    # ⚠️ Camplux: «только на улице; не использовать в караванах, автомобилях…» — Dimitri решил ставить с защитой:
+    # дымоход вертикально через крышу, датчики CO и пропана, приток воздуха (см. FURNITURE_MEMORY §1m).
+    "gas_heater": {"dims": (300.0, 130.0, 440.0),   # (вдоль стенки Y, от стенки X, высота) — без ручки
+                   "z0": 1000.0,                     # низ корпуса над чистовым полом (ручки ~43″)
+                   "side_gap": 60.0,                 # от стенки по борту
+                   "flue_d": 76.0,                   # дымоход 3″ нержавейка, вертикально через потолок и крышу
+                   "roof_out": 150.0},               # над крышей + колпак
+    # — пропан: стандартный баллон 30 lb (Flame King, фото: ⌀12.3″ × 23.7″, 24 lb пустой, 7 gal) в герметичном
+    #   локере под кроватью перед баком, справа (к проходу) от туалета; дверца — к проходу; вент через пол наружу —
+    "propane": {"cyl_d": 312.0, "cyl_h": 602.0,
+                "inner": 328.0, "inner_h": 650.0,    # внутри локера
+                "wall": 12.0,                        # фанера 1/2″ + герметик, крышка/дверца на уплотнителе
+                "toilet_gap": 20.0, "pump_gap": 10.0,
+                "vent_d": 25.4},                     # вент-трубка 1″ через пол (вниз, наружу)
 }
 
 DOC_NAME    = "van_v0"
@@ -2197,7 +2221,8 @@ def build():
         pX, pY_, pZ = TF["pump"]
         if TF.get("pump_at") == "front":
             tf_box("Water_Pump12V", "Насос 12V + фильтр (заглушка) — на полу перед баком, у нижнего штуцера",
-                   (pX, pY_, pZ), (x_t1 + cw + 40.0, ybase(ts, y_i + 10.0 + pY_, pY_), floor_top), (0.20, 0.35, 0.75))
+                   (pX, pY_, pZ), (x_t1 + cw + TF.get("pump_gap", 40.0), ybase(ts, y_i + 10.0 + pY_, pY_), floor_top),
+                   (0.20, 0.35, 0.75))
         else:
             pl_bb = doc.getObject("BedPostPlate_%s_rear" % ttag).Shape.BoundBox
             tf_box("Water_Pump12V", "Насос 12V + фильтр (заглушка) — на полу в углу за аркой, у заднего торца бака",
@@ -2351,8 +2376,13 @@ def build():
         if pl_o is not None and pl_o.Shape.distToShape(pan)[0] < 3.0:
             pb_ = pl_o.Shape.BoundBox
             ply_, plx_ = 46.0, 127.0
-            pl_o.Shape = Part.makeBox(plx_, ply_, pb_.ZLength, V((pb_.XMin + pb_.XMax) / 2.0 - plx_ / 2.0,
-                                                                ybase(ks, post_out, ply_), pb_.ZMin))
+            pl_base = V((pb_.XMin + pb_.XMax) / 2.0 - plx_ / 2.0, ybase(ks, post_out, ply_), pb_.ZMin)
+            if hasattr(pl_o, "Length"):                              # Part::Box — параметры (Shape перестроится)
+                pl_o.Length, pl_o.Width, pl_o.Height = plx_, ply_, pb_.ZLength
+                pl_o.Placement = App.Placement(pl_base, App.Rotation())
+                pl_o.recompute()
+            else:
+                pl_o.Shape = Part.makeBox(plx_, ply_, pb_.ZLength, pl_base)
             plate_note = "пластина передней стойки кровати — узкая Simpson TP15 вдоль борта (широкая TP35 — под поддоном)"
         # задняя стенка (сверху) и козырёк под ней: вода со стенки стекает за бортик поддона
         put("Shower_WallRear", "Задняя стенка душа по краю щита кровати — только сверху: от уровня щита до потолка "
@@ -2365,23 +2395,60 @@ def build():
             "выезжает в душ", Part.makeBox(4.0, (y_back_pan - 30.0) - (y_sf + 80.0), (z_rw0 - 14.0) - (z_pan + 25.0),
                                            V(xl1 - 6.0, ks * (y_sf + 80.0) - (0 if ks > 0 else (y_back_pan - y_sf - 110.0)),
                                              z_pan + 25.0)), (0.55, 0.75, 0.85), 55)
-        # панель по борту: над поддоном и (выше уровня щита) — от задней стенки
-        back = env_solid(x_rw + pt_, sx1 - (x_rw + pt_), y_sf, floor_top, z_ceil).cut(
+        r_c = R_ - K.get("curtain_in", 50.0)                         # шторка (= вогнутый торец кухни)
+        r_k = r_c + 0.5
+        # панель по борту: над поддоном и (выше уровня щита) — от задней стенки до линии шторки (дальше — кухня)
+        x_back1 = xp0 + r_c if K.get("kitchen_concave") else sx1
+        back = env_solid(x_rw + pt_, x_back1 - (x_rw + pt_), y_sf, floor_top, z_ceil).cut(
             env_solid(x_rw + pt_ - 1, sx1 - x_rw + 2, y_sf - 5, floor_top - 1, z_ceil + 1, g_extra=12.0))
         back = back.cut(Part.makeBox(xp0 - x_rw, 2000.0, z_rw0 - floor_top + 1.0, V(x_rw, -1000.0, floor_top - 1.0)))
         put("Shower_WallBack", "Стенка душа по борту (фанера 1/2″ + FRP); над аркой — только выше уровня щита", back,
             COL_WALL, 10)
-        # потолок: от задней стенки до дуги, по борту — до обшивки
+        # газовый проточный нагреватель на задней стенке, внутри душа (лицом к кабине), дымоход — вертикально вверх
+        GH = K.get("gas_heater")
+        flue = None
+        if GH:
+            ghx, ghy, ghz = GH["dims"][1], GH["dims"][0], GH["dims"][2]
+            z_h0 = floor_top + GH["z0"]
+            z_h1 = z_h0 + ghz
+            y_h1 = yw(z_h1) - 12.0 - GH["side_gap"]                  # грань нагревателя к борту (|Y|)
+            y_h0 = y_h1 - ghy
+            x_h0 = x_rw + pt_
+            heater = Part.makeBox(ghx, ghy, ghz, V(x_h0, ybase(ks, y_h1, ghy), z_h0))
+            try:
+                heater = heater.makeFillet(8.0, [e for e in heater.Edges if abs(e.tangentAt(0).z) > 0.9])
+            except Exception:
+                pass
+            put("Shower_GasHeater", "Газовый проточный нагреватель Camplux 1.58 GPM 11.8×17.3×5.1″ на задней стенке "
+                "(внутри душа); ⚠️ производитель: только на улице — дымоход, датчики CO/пропана, приток воздуха",
+                heater, (0.97, 0.97, 0.97))
+            for i_, (dy_, col_) in enumerate(((0.25, (0.85, 0.20, 0.15)), (0.5, (0.6, 0.6, 0.6)), (0.75, (0.15, 0.40, 0.85)))):
+                put("Shower_GasHeater_Knob%d" % (i_ + 1), "Ручка нагревателя (%s)" % ("газ", "режим", "вода")[i_],
+                    Part.makeCylinder(18.0, 15.0, V(x_h0 + ghx, ks * (y_h0 + dy_ * ghy), z_h0 + 120.0 + (40.0 if i_ == 1 else 0.0)),
+                                      V(1, 0, 0)), col_)
+            fx_c, fy_c = x_h0 + ghx / 2.0, ks * (y_h0 + ghy / 2.0)
+            fr_ = GH["flue_d"] / 2.0
+            z_fl1 = crown + GH["roof_out"]
+            flue = Part.makeCylinder(fr_, z_fl1 - z_h1, V(fx_c, fy_c, z_h1))
+            put("Shower_Flue", "Дымоход нагревателя ⌀%.0f″ нержавейка — вертикально вверх через потолок и крышу" %
+                (GH["flue_d"] / 25.4), flue, (0.62, 0.64, 0.66))
+            put("Shower_FlueCap", "Колпак дымохода на крыше (от дождя/ветра)",
+                Part.makeCylinder(fr_ * 2.0, 60.0, V(fx_c, fy_c, z_fl1)), (0.35, 0.35, 0.35))
+            put("Shower_FlueThimble", "Проходка дымохода через потолок/утеплитель (огнестойкая муфта)",
+                Part.makeCylinder(fr_ + 25.0, 40.0, V(fx_c, fy_c, z_ceil - 20.0)).cut(
+                    Part.makeCylinder(fr_ + 0.5, 50.0, V(fx_c, fy_c, z_ceil - 25.0))), (0.30, 0.30, 0.30))
+        # потолок: от задней стенки до дуги шторки, по борту — до обшивки
         y_ceil_back = yw(z_ceil)
-        ceil = qcyl(xp0, R_, z_ceil - 12.0, 12.0).fuse(
+        ceil = qcyl(xp0, r_c if K.get("kitchen_concave") else R_, z_ceil - 12.0, 12.0).fuse(
             Part.makeBox(xp0 - (x_rw + pt_), R_, 12.0, V(x_rw + pt_, ks * y_back_pan - (R_ if ks > 0 else 0.0),
                                                            z_ceil - 12.0)))
         ceil = ceil.common(Part.makeBox(3000.0, y_ceil_back, 40.0, V(x_rw, 0.0 if ks > 0 else -y_ceil_back,
                                                                     z_ceil - 20.0)))
+        if flue is not None:
+            ceil = ceil.cut(Part.makeCylinder(fr_ + 25.0, 60.0, V(fx_c, fy_c, z_ceil - 30.0)))
         put("Shower_Ceiling", "Потолок душа (фанера 1/2″ + FRP), Z=%.0f: сектор + полоса до задней стенки" % z_ceil, ceil,
             COL_WALL, 10)
         # шторка по дуге (внутри бортика) + прямой участок к задней стенке
-        r_c = R_ - 50.0
         y_c = y_back_pan - r_c                                       # линия шторки у задней стенки
         z_c0, z_c1 = z_pan + 40.0, z_ceil - 60.0
         curt = qcyl(xp0, r_c, z_c0, z_c1 - z_c0).cut(qcyl(xp0, r_c - 3.0, z_c0 - 1.0, z_c1 - z_c0 + 2.0)).fuse(
@@ -2389,8 +2456,9 @@ def build():
                          V(x_rw + pt_ + 10.0, ks * y_c - (0 if ks > 0 else 3.0), z_c0)))
         put("Shower_Curtain", "Шторка душа по дуге поддона (+ прямой участок до задней стенки)", curt,
             (0.55, 0.75, 0.85), 55)
-        rod = _q(Part.makeTorus(r_c, 10.0, V(xp0, ks * y_back_pan, z_ceil - 40.0), V(0, 0, 1), -180, 180, 90), xp0).fuse(
-            Part.makeCylinder(10.0, xp0 - (x_rw + pt_), V(x_rw + pt_, ks * y_c, z_ceil - 40.0), V(1, 0, 0)))
+        r_rod = r_c - 12.0                                           # карниз чуть внутри — шторка ложится на торец кухни
+        rod = _q(Part.makeTorus(r_rod, 8.0, V(xp0, ks * y_back_pan, z_ceil - 40.0), V(0, 0, 1), -180, 180, 90), xp0).fuse(
+            Part.makeCylinder(8.0, xp0 - (x_rw + pt_), V(x_rw + pt_, ks * (y_back_pan - r_rod), z_ceil - 40.0), V(1, 0, 0)))
         put("Shower_CurtainRod", "Карниз шторки — гнутый по дуге (под потолком)", rod, COL_STEEL)
         yb_h = yw(1650.0) - 12.0
         head = Part.makeCylinder(55.0, 25.0, V(xp0 + 300.0, ks * (yb_h - 25.0), 1650.0 + floor_top), V(0, ks, 0))
@@ -2398,66 +2466,163 @@ def build():
         fan = Part.makeCylinder(60.0, 40.0, V(xp0 + 250.0, ks * (y_ceil_back - 120.0), z_ceil - 12.0), V(0, 0, 1))
         put("Shower_ExhaustFan", "Вытяжка 12V ~4″ в потолке душа → небольшое отверстие в стене", fan, COL_DARK)
 
-        # — мини-кухня —
-        kx0 = max(K.get("kitchen_x0", 0.0), sx1 + 5.0)
+        # — мини-кухня: 2 секции (у душа — мойка; у сиденья — шкафчик + холодильник); торец к душу — вогнутый по дуге шторки —
+        def ccyl(r, z0, h):                                          # полный цилиндр вокруг угла сектора
+            return Part.makeCylinder(r, h, V(xp0, ks * y_back_pan, z0))
         kx1 = K["kitchen_end_x"]
+        kx0 = xp0 if K.get("kitchen_concave") else max(K.get("kitchen_x0", 0.0), sx1 + 5.0)
         kl = kx1 - kx0
         z_ct = floor_top + K["counter_h"]
         z_cb = z_ct - K["counter_th"]
         y_kb = yw(z_cb)                                              # задняя плоскость у столешницы
         y_kf = yw(500.0) - K["kitchen_depth"]                        # фронт короба
+        y_ctf = y_kf - 20.0                                          # передняя кромка столешницы (свес 20)
         ph, pr = K["plinth"]
-        carc = env_solid(kx0, kl, y_kf, floor_top + ph, z_cb)
+        cut_hi = ccyl(r_k, -10.0, 3000.0) if K.get("kitchen_concave") else None     # всё ближе дуги шторки — душ
+        cut_lo = ccyl(R_ + 3.0, -10.0, 3000.0) if K.get("kitchen_concave") else None  # цоколь — снаружи бортика
+
+        def kcut(sh, c=None):
+            c = cut_hi if c is None else c
+            return sh.cut(c) if c is not None else sh
+        dvt = K.get("divider", pt_)
         fx, fy, fz = K["fridge"]
-        z_f0 = floor_top + ph + pt_ + 15.0                           # ларь на салазках над дном короба
-        cav_f = Part.makeBox(kl - 2 * pt_, fy + 40.0, fz + 35.0, App.Vector(kx0 + pt_, y_kf - 1.0, z_f0 - 15.0))
-        z_shelf = z_f0 + fz + 20.0
-        cav_u = Part.makeBox(kl - 2 * pt_, (y_kb - y_kf) - pt_, (z_cb - z_shelf - pt_),
-                             App.Vector(kx0 + pt_, y_kf - 1.0, z_shelf + pt_))
-        carc = carc.cut(cav_f).cut(cav_u)
-        put("Kitchen_Carcass", "Короб мини-кухни (фанера 3/4″), %.0f×%.0f, открыт спереди" % (kl, K["kitchen_depth"]),
-            carc, COL_CAB)
-        put("Kitchen_Plinth", "Цоколь кухни",
-            Part.makeBox(kl, (y_kb - y_kf) - pr, ph, App.Vector(kx0, y_kf + pr, floor_top)), (0.35, 0.30, 0.25))
-        top = env_solid(kx0, kl, y_kf - 20.0, z_cb, z_ct).cut(
-            Part.makeBox(K["sink"][0], K["sink"][1], K["counter_th"] + 2,
-                         App.Vector(kx0 + 60.0, (y_kf + y_kb) / 2.0 - K["sink"][1] / 2.0 + 40.0, z_cb - 1)))
-        put("Kitchen_Countertop", "Столешница 1″ (мебельный щит), верх %.0f над полом (36″)" % K["counter_h"], top, COL_TOP)
+        fpad = K.get("fridge_pad", 10.0)
+        x_div1 = kx1 - pt_ - fx - 2.0 * fpad                         # перегородка секций: грань к кабине
+        x_div0 = x_div1 - dvt                                        # … грань к душу
+        # мойка — в секции у душа: как можно ближе к перегородке не надо — к вогнутой кромке (с отступом)
         skx, sky, skz = K["sink"]
-        sk_o = App.Vector(kx0 + 60.0, (y_kf + y_kb) / 2.0 - sky / 2.0 + 40.0, z_ct - skz)
-        sink = Part.makeBox(skx, sky, skz, sk_o).cut(
-            Part.makeBox(skx - 4, sky - 4, skz, App.Vector(sk_o.x + 2, sk_o.y + 2, sk_o.z + 2)))
-        put("Kitchen_Sink", "Барная мойка 12×12″ из нержавейки", sink, COL_STEEL)
-        fct = App.Vector(sk_o.x + skx / 2.0, sk_o.y + sky + 30.0, z_ct)
+        m_arc, m_front = K.get("sink_margin", (40.0, 40.0))
+        y_s0 = y_ctf + m_front
+        y_s1 = y_s0 + sky
+        if K.get("kitchen_concave"):
+            sk_x0 = xp0 + math.sqrt((r_k + m_arc) ** 2 - (y_back_pan - y_s1) ** 2)   # угол мойки у стены — ближе всего к дуге
+        else:
+            sk_x0 = kx0 + 60.0
+        sink_fit = x_div0 - (sk_x0 + skx)
+        z_b = floor_top + ph + pt_                                   # верх дна короба
+        carc = kcut(env_solid(kx0, kl, y_kf, floor_top + ph, z_cb))
+        cav1 = kcut(Part.makeBox(x_div0 - kx0, (y_kb - pt_) - (y_kf - 1.0), z_cb - z_b, V(kx0, ks * (y_kf - 1.0) -
+                    (0 if ks > 0 else (y_kb - pt_) - (y_kf - 1.0)), z_b)),
+                    ccyl(r_k + pt_, -10.0, 3000.0) if K.get("kitchen_concave") else None)
+        z_f0 = z_b + 15.0                                            # ларь на салазках над дном короба
+        z_sh = z_f0 + fz + 40.0                                      # полка над ларём (низ)
+        cav_f = Part.makeBox(kx1 - pt_ - x_div1, fy + 40.0, z_sh - z_b, V(x_div1, y_kf - 1.0, z_b))
+        cav_u = Part.makeBox(kx1 - pt_ - x_div1, (y_kb - pt_) - (y_kf - 1.0), z_cb - (z_sh + pt_),
+                             V(x_div1, y_kf - 1.0, z_sh + pt_))
+        carc = carc.cut(cav1).cut(cav_f).cut(cav_u)
+        put("Kitchen_Carcass", "Короб кухни (фанера 3/4″), 2 секции: мойка | шкафчик + холодильник; торец к душу — "
+            "вогнутый по дуге шторки (гнутая фанера/кант)", carc, COL_CAB)
+        put("Kitchen_Plinth", "Цоколь кухни (у душа — по дуге поддона, снаружи бортика)",
+            kcut(Part.makeBox(kl, (y_kb - y_kf) - pr, ph, V(kx0, y_kf + pr, floor_top)), cut_lo), (0.35, 0.30, 0.25))
+        top = kcut(env_solid(kx0, kl, y_ctf, z_cb, z_ct)).cut(
+            Part.makeBox(skx, sky, K["counter_th"] + 2, V(sk_x0, y_s0, z_cb - 1)))
+        put("Kitchen_Countertop", "Столешница 1″ (мебельный щит), верх %.0f над полом (36″); кромка к душу вогнутая — "
+            "шторка прилегает" % K["counter_h"], top, COL_TOP)
+        sk_o = V(sk_x0, y_s0, z_ct - skz)
+        sink = Part.makeBox(skx, sky, skz, sk_o).cut(Part.makeBox(skx - 4, sky - 4, skz, V(sk_o.x + 2, sk_o.y + 2, sk_o.z + 2)))
+        put("Kitchen_Sink", "Барная мойка 12×12″ из нержавейки (секция у душа)", sink, COL_STEEL)
+        fct = V(sk_o.x + skx / 2.0, y_s1 + 30.0, z_ct)
         faucet = Part.makeCylinder(12.0, 260.0, fct).fuse(
-            Part.makeCylinder(10.0, 170.0, App.Vector(fct.x, fct.y, fct.z + 250.0), App.Vector(0, -1, 0)))
+            Part.makeCylinder(10.0, 170.0, V(fct.x, fct.y, fct.z + 250.0), V(0, -1, 0)))
         put("Kitchen_Faucet", "Кран (насос 12V включается по давлению)", faucet, COL_STEEL)
         put("Kitchen_Kettle", "Электрочайник (от инвертора) или 12V-чайник",
-            Part.makeCylinder(85.0, 230.0, App.Vector(kx1 - 150.0, (y_kf + y_kb) / 2.0, z_ct)), (0.85, 0.85, 0.88))
+            Part.makeCylinder(85.0, 230.0, V(kx1 - 150.0, (y_kf + y_kb) / 2.0, z_ct)), (0.85, 0.85, 0.88))
         put("Kitchen_Outlet", "Розетка 120V + USB над столешницей",
-            Part.makeBox(70.0, 20.0, 115.0, App.Vector(kx1 - 150.0 - 35.0, yw(z_ct + 150.0) - 20.0, z_ct + 120.0)),
+            Part.makeBox(70.0, 20.0, 115.0, V(kx1 - 150.0 - 35.0, yw(z_ct + 150.0) - 20.0, z_ct + 120.0)),
             (0.95, 0.95, 0.95))
-        fridge_x0 = kx0 + (kl - fx) / 2.0
-        put("Kitchen_Fridge", "12V холодильник-ларь ~30 qt на салазках (выдвигается в проход на %.0f мм)" % K["fridge_slide"],
-            Part.makeBox(fx, fy, fz, App.Vector(fridge_x0, y_kf + 8.0, z_f0)), COL_FRIDGE)
+        fridge_x0 = x_div1 + fpad
+        put("Kitchen_Fridge", "Холодильник %s 23.7×12.6×13.8″ на салазках (выдвигается в проход на %.0f мм — "
+            "крышка сверху)" % (K.get("fridge_title", "12V"), K["fridge_slide"]),
+            Part.makeBox(fx, fy, fz, V(fridge_x0, y_kf + 8.0, z_f0)), COL_FRIDGE)
         put("Kitchen_FridgeSlide", "Салазки холодильника (полного выдвижения, под ~45 кг)",
-            Part.makeBox(fx, fy, 15.0, App.Vector(fridge_x0, y_kf + 8.0, z_f0 - 15.0)), COL_STEEL)
-        put("Kitchen_DoorUpper", "Дверца под мойкой (чашки, чай, фильтр)",
-            Part.makeBox(kl - 6.0, 12.0, z_cb - z_shelf - 6.0, App.Vector(kx0 + 3.0, y_kf - 12.0, z_shelf + 3.0)),
-            (0.86, 0.70, 0.48))
+            Part.makeBox(fx, fy, 15.0, V(fridge_x0, y_kf + 8.0, z_f0 - 15.0)), COL_STEEL)
+        x_af = xp0 + math.sqrt(max(r_k ** 2 - (y_back_pan - y_kf) ** 2, 0.0)) if K.get("kitchen_concave") else kx0
+        put("Kitchen_DoorSink", "Дверца под мойкой (чашки, чай, фильтр, сифон)",
+            kcut(Part.makeBox(x_div0 + dvt / 2.0 - 2.0 - (x_af + 3.0), 12.0, z_cb - z_b - 6.0,
+                              V(x_af + 3.0, y_kf - 12.0, z_b + 3.0))), (0.86, 0.70, 0.48))
+        put("Kitchen_DoorUpper", "Дверца шкафчика над холодильником",
+            Part.makeBox(kx1 - 3.0 - (x_div0 + dvt / 2.0 + 2.0), 12.0, z_cb - (z_sh + pt_) - 6.0,
+                         V(x_div0 + dvt / 2.0 + 2.0, y_kf - 12.0, z_sh + pt_ + 3.0)), (0.86, 0.70, 0.48))
         zu0 = floor_top + K["upper"][0]
         zu1 = z_ceil
         y_uf = yw(zu0) - K["upper"][1]
-        put("Kitchen_UpperCabinet", "Верхний шкафчик (чашки/чай), по завалу борта",
-            env_solid(kx0, kl, y_uf, zu0, zu1), COL_CAB)
+        put("Kitchen_UpperCabinet", "Верхний шкафчик (чашки/чай), по завалу борта; торец к душу — по дуге шторки",
+            kcut(env_solid(kx0, kl, y_uf, zu0, zu1)), COL_CAB)
 
-        # — техотсек под передним краем кровати: бойлер (насос с 2026-11-07 — за аркой, у штуцеров бака T-3500) —
-        if not (TANK_RACK.get("enable") or TANK_FLOOR.get("enable")):
-            put("Water_Pump12V", "Насос 12V + фильтр + гидроаккумулятор (под кроватью, у переднего торца бака)",
-                Part.makeBox(150.0, 120.0, 130.0, App.Vector(1440.0, 400.0, floor_top)), (0.20, 0.35, 0.75))
-        put("Water_Heater12V", "Место под бойлер 12V ~6–10 л (под кроватью; 2026-11-07 — под щит, душ сдвинут назад)",
-            Part.makeCylinder(130.0, 380.0, App.Vector(dx1 - 150.0, ks * 140.0, floor_top)), (0.85, 0.85, 0.85))
-
+        # — пропан: баллон 30 lb в герметичном локере под щитом (перед баком, к проходу от туалета) + газ к нагревателю —
+        PR = K.get("propane")
+        prop_summary = None
+        if PR and GH:
+            wl, inn, inn_h = PR["wall"], PR["inner"], PR["inner_h"]
+            outer = inn + 2.0 * wl
+            hL = inn_h + 2.0 * wl
+            to_ = doc.getObject("Toilet_Camco")
+            pu_ = doc.getObject("Water_Pump12V")
+            ly1 = (to_.Shape.BoundBox.YMin - PR["toilet_gap"]) if (to_ is not None and ks > 0) else 364.0
+            lx0 = (pu_.Shape.BoundBox.XMax + PR["pump_gap"]) if pu_ is not None else dx1 - outer - 1.0
+            lx1 = lx0 + outer
+            ly0 = ly1 - outer
+            z_l0 = floor_top
+            shell = Part.makeBox(outer, outer, hL, V(lx0, ly0, z_l0)).cut(
+                Part.makeBox(inn, inn, inn_h, V(lx0 + wl, ly0 + wl, z_l0 + wl)))
+            door_cut = Part.makeBox(outer, wl, hL - 2.0 * wl, V(lx0, ly0, z_l0 + wl))
+            vx, vy = lx0 + wl + 45.0, ly1 - wl - 45.0                  # вент — в дальнем от дверцы углу
+            vent_hole = Part.makeCylinder(PR["vent_d"] / 2.0, z_l0 + wl + 20.0, V(vx, vy, -20.0))
+            put("Propane_Locker", "Локер пропана — герметичный ящик (фанера 1/2″ + герметик/FRP), внутр. %.0f×%.0f×%.0f; "
+                "вент ⌀1″ в полу наружу" % (inn, inn, inn_h), shell.cut(door_cut).cut(vent_hole), (0.93, 0.85, 0.55))
+            put("Propane_LockerDoor", "Дверца локера к проходу (на уплотнителе, 2 замка-защёлки) — баллон вынимается в проход",
+                shell.common(door_cut), (0.98, 0.75, 0.30))
+            for fn in ("Floor_XPS", "Floor_Plywood"):
+                fo = doc.getObject(fn)
+                if fo is not None:
+                    fo.Shape = fo.Shape.cut(vent_hole)
+            put("Propane_Vent", "Вент-трубка локера ⌀1″ через пол вниз наружу (пропан тяжелее воздуха)",
+                Part.makeCylinder(PR["vent_d"] / 2.0, z_l0 + wl + 40.0, V(vx, vy, -40.0)).cut(
+                    Part.makeCylinder(PR["vent_d"] / 2.0 - 2.0, z_l0 + wl + 50.0, V(vx, vy, -45.0))), (0.25, 0.25, 0.25))
+            cd, ch_ = PR["cyl_d"], PR["cyl_h"]
+            ccx, ccy, cz0 = lx0 + outer / 2.0, ly0 + outer / 2.0, z_l0 + wl + 2.0
+            cyl = Part.makeCylinder(cd * 0.38, 40.0, V(ccx, ccy, cz0)).fuse(
+                Part.makeCylinder(cd / 2.0, ch_ - 40.0 - 40.0 - 62.0, V(ccx, ccy, cz0 + 40.0))).fuse(
+                Part.makeCone(cd / 2.0, cd * 0.28, 40.0, V(ccx, ccy, cz0 + ch_ - 102.0))).fuse(
+                Part.makeCylinder(cd * 0.30, 62.0, V(ccx, ccy, cz0 + ch_ - 62.0)).cut(
+                    Part.makeCylinder(cd * 0.27, 70.0, V(ccx, ccy, cz0 + ch_ - 64.0)))).fuse(
+                Part.makeCylinder(22.0, 70.0, V(ccx, ccy, cz0 + ch_ - 102.0 + 40.0)))
+            put("Propane_Cylinder", "Баллон пропана 30 lb (Flame King) ⌀12.3″ × 23.7″, вертикально, вентилем вверх",
+                cyl, (0.96, 0.96, 0.96))
+            put("Propane_Strap", "Хомут баллона к стенке локера (не упадёт на кочке)",
+                Part.makeCylinder(cd / 2.0 + 4.0, 25.0, V(ccx, ccy, cz0 + 0.55 * ch_)).cut(
+                    Part.makeCylinder(cd / 2.0, 30.0, V(ccx, ccy, cz0 + 0.55 * ch_ - 2.0))), (0.30, 0.30, 0.30))
+            put("Propane_Regulator", "Редуктор (в комплекте Camplux) — внутри локера, на вентиле",
+                Part.makeCylinder(45.0, 35.0, V(ccx + 60.0, ccy, cz0 + ch_ - 70.0), V(1, 0, 0)), (0.75, 0.75, 0.78))
+            # газовая линия: из крышки локера (гермоввод) → вверх под поперечины → вдоль борта → вперёд за край щита →
+            # вверх через козырёк к штуцеру газа нагревателя (слева снизу)
+            z_lt = z_l0 + hL
+            z_g = min(z_lt + 50.0, (z_rail_top - sw) - 25.0)
+            y_gas = y_h0 + 50.0
+            x_gv = x_h0 + 14.0
+            pts = [V(lx1 - 40.0, ly1 - 40.0, z_lt), V(lx1 - 40.0, ly1 - 40.0, z_g), V(lx1 - 40.0, y_gas, z_g),
+                   V(x_gv, y_gas, z_g), V(x_gv, y_gas, z_h0)]
+            gl = None
+            for p0_, p1_ in zip(pts, pts[1:]):
+                seg = Part.makeCylinder(5.0, (p1_ - p0_).Length, p0_, p1_ - p0_).fuse(Part.makeSphere(5.0, p1_))
+                gl = seg if gl is None else gl.fuse(seg)
+            put("Gas_Line", "Газ: шланг LP 3/8″ (RV, в оплётке) из гермоввода локера к нагревателю — без соединений в салоне",
+                gl, (0.95, 0.75, 0.10))
+            put("Gas_Bulkhead", "Гермоввод газа в крышке локера", Part.makeCylinder(15.0, 15.0, V(lx1 - 40.0, ly1 - 40.0, z_lt)),
+                (0.45, 0.45, 0.45))
+            # датчики: пропан/CO — низко у локера; CO — у изголовья (кровать)
+            put("Safety_LPCO", "Датчик пропана + CO 12V (RV, низко — пропан стекает к полу), на передней грани локера",
+                Part.makeBox(10.0, 120.0, 85.0, V(lx1, ly0 + 15.0, z_l0 + 110.0)), (0.95, 0.30, 0.25))
+            mt_ = doc.getObject("BedMattress")
+            z_co = (mt_.Shape.BoundBox.ZMax if mt_ is not None else z_rail_top + 200.0) + 250.0
+            put("Safety_CO_Bed", "Датчик CO у изголовья (на задней стенке душа со стороны кровати)",
+                Part.makeBox(30.0, 110.0, 110.0, V(x_rw - 30.0, ks * 450.0, z_co)), (0.95, 0.30, 0.25))
+            K["_gas_pts"] = [[p_.x, p_.y, p_.z] for p_ in pts]          # для чертежей (export_drawing_data)
+            prop_summary = dict(x=(lx0, lx1), y=(ly0, ly1), z_top=z_lt, outer=outer, inner=(inn, inn_h),
+                                deck_over=lx1 - dx1, under_cross=(z_rail_top - sw) - z_lt,
+                                to_toilet=(to_.Shape.BoundBox.YMin - ly1) if to_ is not None else None,
+                                to_pump=(lx0 - pu_.Shape.BoundBox.XMax) if pu_ is not None else None,
+                                gas_len=sum((p1_ - p0_).Length for p0_, p1_ in zip(pts, pts[1:])))
         # — проверки —
         def _dd(a, b):
             return a.distToShape(b)[0]
@@ -2491,14 +2656,53 @@ def build():
         if plate_note:
             checks.append((plate_note, 0.0))
         checks.append(("поддон ↔ арка", pan.distToShape(arch_s)[0]))
+        kpart = [parts[n_] for n_ in parts if n_.startswith("Kitchen_")]
+        checks.append(("кухня ↔ поддон", min(_dd(k_, pan) for k_ in kpart)))
+        checks.append(("кухня ↔ шторка (прилегает)", min(_dd(k_, parts["Shower_Curtain"]) for k_ in kpart)))
+        checks.append(("кухня ↔ карниз", min(_dd(k_, parts["Shower_CurtainRod"]) for k_ in kpart)))
+        checks.append(("мойка ↔ перегородка секций", sink_fit))
+        gas = {}
+        if GH:
+            hsh = parts["Shower_GasHeater"]
+            gas.update(heater_x=(x_h0, x_h0 + ghx), heater_y=(y_h0, y_h1), heater_z=(z_h0, z_h1),
+                       over_pan=x_h0 + ghx - xp0, flue_c=(fx_c, abs(fy_c)), flue_top=z_fl1,
+                       top_to_ceil=(z_ceil - 12.0) - z_h1)
+            checks += [("нагреватель ↔ поддон (по высоте)", _dd(hsh, pan)), ("нагреватель ↔ лейка", _dd(hsh, parts["Shower_Head"])),
+                       ("нагреватель ↔ шторка", _dd(hsh, parts["Shower_Curtain"])),
+                       ("дымоход ↔ вытяжка", _dd(flue, parts["Shower_ExhaustFan"])),
+                       ("дымоход ↔ карниз", _dd(flue, parts["Shower_CurtainRod"])),
+                       ("дымоход ↔ ребро крыши", min(_dd(flue, s_) for s_ in objs("Rib")) if objs("Rib") else 999.0)]
+        if prop_summary:
+            lk = parts["Propane_Locker"]
+            others = [("туалет", objs("Toilet")), ("насос", objs("Water_Pump")), ("бак", objs("WaterTank")),
+                      ("бруски/анкеры бака", objs("TankFloor")), ("поперечины кровати", objs("BedCross")),
+                      ("арка", [arch_s]), ("поддон душа", [pan])]
+            for lab, ss in others:
+                if ss:
+                    checks.append(("локер ↔ " + lab, min(_dd(lk, s_) for s_ in ss)))
+            gl_ = parts["Gas_Line"]
+            if doc.getObject("Toilet_Camco") is not None:
+                tb_ = doc.getObject("Toilet_Camco").Shape.BoundBox
+                sweep = Part.makeBox(xp0 - tb_.XMin, tb_.YLength, tb_.ZLength, App.Vector(tb_.XMin, tb_.YMin, tb_.ZMin))
+                checks.append(("газ ↔ путь туалета в душ", sweep.distToShape(gl_)[0]))
+                checks.append(("локер ↔ путь туалета в душ", sweep.distToShape(lk)[0]))
+            checks.append(("газ ↔ поперечины кровати", min(_dd(gl_, s_) for s_ in objs("BedCross"))))
+            rail_ = doc.getObject("BankRail_Inner")
+            if rail_ is not None:
+                prop_summary["trunk"] = prop_summary["y"][0] - rail_.Shape.BoundBox.YMax
         aisle_sh = y_sf + y_at_z(half, 900.0)                       # от шторки до противоположной стены
         aisle_k = (y_kf - 20.0) + y_at_z(half, 900.0)
+        # вход в душ: от задней стенки (по линии шторки) до угла столешницы
+        x_ent = xp0 + math.sqrt(max(r_k ** 2 - (y_back_pan - y_ctf) ** 2, 0.0))
+        entry = math.hypot(x_ent - (x_rw + pt_), y_ctf - y_c)
         galley_summary = dict(
+            gas=gas, propane=prop_summary, entry=entry, x_div=(x_div0, x_div1), sink_x=(sk_x0, sk_x0 + skx),
+            sec1_front=(x_af, x_div0), sec2=(x_div1, kx1), fridge_title=K.get("fridge_title"), r_c=r_c,
             shower_x=(sx0, sx1), shower_in=(six, siy), y_sf=y_sf, z_pan=z_pan, z_ceil=z_ceil, pan_x0=xp0,
             pan_behind=xp0 - x_rw, rear_wall_z=z_rw0, y_pan_back=y_back_pan, pan_r=R_,
             headroom=(z_ceil - 12.0) - z_pan, kitchen_x=(kx0, kx1), kl=kl, y_kf=y_kf, counter=K["counter_h"],
             seat_gap=3190.0 - kx1, aisle_sh=aisle_sh, aisle_k=aisle_k, checks=checks,
-            floor_top=floor_top, wall_y=y_at_z(half, 900.0))
+            floor_top=floor_top, wall_y=y_at_z(half, 900.0), arch_ywall=arch_ywall)
 
     # ═══════ НАСТИЛ: вырезы под новые стойки P2 и под головки болтов в кузов ═══════
     # (при подъёме кровати настил может оказаться на высоте болтов стоек — головки торчат из стоек в салон)
@@ -2792,8 +2996,31 @@ def build():
                             k["wall_y"] - k["y_sf"], (k["wall_y"] - k["y_sf"]) / 25.4))
         print("  В душе: верх поддона %.0f над полом, низ потолка %.0f → от поддона до потолка %.0f мм (%.1f″)" % (
             k["z_pan"] - f0, k["z_ceil"] - 12.0 - f0, k["headroom"], k["headroom"] / 25.4))
-        print("  Кухня X %.0f..%.0f (%.0f мм / %.1f″), глубина до %.0f мм от стены, столешница %.0f (36″); до спинок сидений %.0f мм" % (
-            k["kitchen_x"][0], k["kitchen_x"][1], k["kl"], k["kl"] / 25.4, k["wall_y"] - k["y_kf"] + 20, k["counter"], k["seat_gap"]))
+        print("  Кухня до X %.0f, торец к душу вогнутый по шторке R%.0f; у прохода от X %.0f (%.1f″ длины), у стены от X %.0f; "
+              "глубина до %.0f мм от стены, столешница %.0f (36″); до спинок сидений %.0f мм" % (
+            k["kitchen_x"][1], k["r_c"], k["sec1_front"][0], (k["kitchen_x"][1] - k["sec1_front"][0]) / 25.4,
+            k["pan_x0"] + k["r_c"], k["wall_y"] - k["y_kf"] + 20, k["counter"], k["seat_gap"]))
+        print("  Секция 1 (мойка): по фасаду X %.0f..%.0f (%.1f″), мойка X %.0f..%.0f;  секция 2 (шкафчик + %s): X %.0f..%.0f "
+              "(%.1f″);  перегородка 1/2″ X %.0f" % (
+            k["sec1_front"][0], k["sec1_front"][1], (k["sec1_front"][1] - k["sec1_front"][0]) / 25.4, k["sink_x"][0],
+            k["sink_x"][1], k["fridge_title"], k["sec2"][0], k["sec2"][1], (k["sec2"][1] - k["sec2"][0]) / 25.4, k["x_div"][0]))
+        print("  Вход в душ (шторка открыта, от задней стенки до угла столешницы): %.0f мм (%.1f″)" % (k["entry"], k["entry"] / 25.4))
+        if k.get("gas"):
+            g_ = k["gas"]
+            print("  Нагреватель: X %.0f..%.0f (над поддоном %.0f мм), от стены %.1f″…%.1f″, низ/верх %.1f″/%.1f″ над полом; "
+                  "до потолка %.0f мм; дымоход ⌀3″ X %.0f, %.1f″ от стены → до %.0f (над крышей)" % (
+                g_["heater_x"][0], g_["heater_x"][1], g_["over_pan"], (k["wall_y"] - g_["heater_y"][1]) / 25.4,
+                (k["wall_y"] - g_["heater_y"][0]) / 25.4, (g_["heater_z"][0] - f0) / 25.4, (g_["heater_z"][1] - f0) / 25.4,
+                g_["top_to_ceil"], g_["flue_c"][0], (k["wall_y"] - g_["flue_c"][1]) / 25.4, g_["flue_top"]))
+        if k.get("propane"):
+            q_ = k["propane"]
+            print("  Локер пропана: X %.0f..%.0f, Y %.0f..%.0f (%.1f″…%.1f″ от стены у пола), верх %.1f″; наружу %.0f×%.0f×%.0f; "
+                  "за край щита %+.0f мм; до поперечин %.0f; до туалета %.0f; до насоса %.0f; багажник рядом %.0f мм (%.1f″); "
+                  "газ ~%.1f м" % (
+                q_["x"][0], q_["x"][1], q_["y"][0], q_["y"][1], (k["arch_ywall"] - q_["y"][1]) / 25.4,
+                (k["arch_ywall"] - q_["y"][0]) / 25.4, (q_["z_top"] - f0) / 25.4, q_["outer"], q_["outer"],
+                q_["z_top"] - f0, q_["deck_over"], q_["under_cross"], q_["to_toilet"] or -1, q_["to_pump"] or -1,
+                q_.get("trunk") or -1, (q_.get("trunk") or 0) / 25.4, q_["gas_len"] / 1000.0))
         print("  Проход: у душа %.0f мм (%.1f″), у кухни %.0f мм (%.1f″)" % (
             k["aisle_sh"], k["aisle_sh"] / 25.4, k["aisle_k"], k["aisle_k"] / 25.4))
         print("  Зазоры: " + "; ".join("%s %.1f" % (n, v) for n, v in k["checks"]))

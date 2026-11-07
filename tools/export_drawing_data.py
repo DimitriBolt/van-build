@@ -88,13 +88,39 @@ try:
         sec = {"x_shower": xs_sh, "x_kitchen": xs_k, "shower": {}, "kitchen": {}}
         for o in doc.Objects:
             if o.Name.startswith("Shower_") and o.Name != "Shower_WallRear":
-                x = (boxes["Shower_WallFront"][0] + boxes["Shower_WallFront"][1]) / 2.0 \
-                    if o.Name == "Shower_WallFront" else xs_sh
-                sec["shower"][o.Name] = _slice(o.Shape, (1, 0, 0), x)
+                sec["shower"][o.Name] = _slice(o.Shape, (1, 0, 0), xs_sh)
             elif o.Name.startswith("Kitchen_"):
                 sec["kitchen"][o.Name] = _slice(o.Shape, (1, 0, 0), xs_k)
         sec["kitchen"]["Kitchen_Kettle"] = _slice(doc.getObject("Kitchen_Kettle").Shape, (1, 0, 0),
                                                   (boxes["Kitchen_Kettle"][0] + boxes["Kitchen_Kettle"][1]) / 2.0)
+        # 2026-11-07: разрез по холодильнику (секция 2), план на разных высотах (вогнутый торец кухни),
+        # разрез под кроватью по локеру пропана (взгляд к кабине)
+        if "Kitchen_Fridge" in boxes:
+            xs_f = (boxes["Kitchen_Fridge"][0] + boxes["Kitchen_Fridge"][1]) / 2.0
+            sec["x_fridge"] = xs_f
+            sec["fridge"] = {o.Name: _slice(o.Shape, (1, 0, 0), xs_f) for o in doc.Objects
+                             if o.Name.startswith("Kitchen_") and o.isDerivedFrom("Part::Feature")}
+        ct = boxes["Kitchen_Countertop"]
+        plan = {}
+        for nm, z in (("Kitchen_Countertop", (ct[4] + ct[5]) / 2.0), ("Kitchen_Carcass", 700.0),
+                      ("Kitchen_Plinth", floor_top + 30.0), ("Kitchen_UpperCabinet", 1700.0),
+                      ("Shower_Ceiling", boxes["Shower_Ceiling"][4] + 6.0)):
+            if nm in boxes:
+                plan[nm] = [[(p[0], p[1]) for p in w] for w in _slice(doc.getObject(nm).Shape, (0, 0, 1), z)]
+        sec["plan"] = plan
+        if "Propane_Locker" in boxes:
+            lb = boxes["Propane_Locker"]
+            xs_l = (lb[0] + lb[1]) / 2.0
+            sec["x_locker"] = xs_l
+            sec["locker"] = {}
+            for o in doc.Objects:
+                if o.isDerivedFrom("Part::Feature") and o.Name.startswith(
+                        ("Propane_", "Toilet_", "BedDeck", "BedMattress", "BedCross", "BedSideRail_pY", "WaterTank_",
+                         "BankShelf", "BankRail_Inner", "Water_Pump", "TankFloor_Cleat_Aisle", "Safety_")):
+                    sl = _slice(o.Shape, (1, 0, 0), xs_l)
+                    if sl:
+                        sec["locker"][o.Name] = sl
+        sec["gas_pts"] = g["SHOWER_KITCHEN"].get("_gas_pts")
         res["galley"] = sec
 
     # — бак T-3500 на полке над аркой: поперечный разрез (YZ) по первому ремню —
