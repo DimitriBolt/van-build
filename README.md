@@ -35,7 +35,7 @@
 | `FURNITURE_MEMORY.md` | Память по мебели: кровать, блоки батарей, бак для воды |
 | `REQUIREMENTS.md` | Требования Dimitri (выполненные и открытые) и достигнутые результаты |
 | `van_v0.FCStd` | Собранный документ FreeCAD (каркас + меш-обшивка) |
-| `van_v0_T4100.FCStd`, `van_v0_T3500.FCStd` | Варианты бака для воды — отдельные файлы с цветами, чтобы открыть рядом и сравнить (собирает `tools/make_docs.sh` через `tools/save_variant.py`) |
+| `van_v0_T4320.FCStd`, `van_v0_T4100.FCStd`, `van_v0_T3500.FCStd` | Варианты бака для воды — отдельные файлы с цветами, чтобы открыть рядом и сравнить (собирает `tools/make_docs.sh` через `tools/save_variant.py`) |
 | `Ducato_L2H2_body_reference.stl` | Чистая наружная оболочка кузова (нужна скрипту) |
 | `Ducato+L2H2+lit+superpose2.stl` | Плотный скан целиком (с мебелью/человеком) |
 | `Ducato+L2H2+lit+superpose2.skp` | Исходная SketchUp-модель |

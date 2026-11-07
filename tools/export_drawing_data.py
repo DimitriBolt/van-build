@@ -107,15 +107,22 @@ try:
         res["trk"] = sec
 
     # — бак T-4100 на полу: поперечный разрез (YZ) по ремню ближе к центру арки —
-    tfl_o = doc.getObject("WaterTank_T4100")
+    tfl_o = doc.getObject(g["TANK_FLOOR"].get("_summary", {}).get("tank_name", "WaterTank_T4100")) \
+        if g["TANK_FLOOR"].get("enable") else None
     if tfl_o is not None:
         TF = g["TANK_FLOOR"]
         tag = "pY" if TF["side"] > 0 else "nY"
-        xs_ = min(TF["_summary"]["straps"], key=lambda x_: abs(x_ - g["WHEEL_ARCH"]["center_x"]))
+        if TF.get("base") == "pallet":                  # по ремню ближе к центру арки
+            xs_ = min(TF["_summary"]["straps"], key=lambda x_: abs(x_ - g["WHEEL_ARCH"]["center_x"]))
+            strap_nm = "TankFloor_Strap_%d" % (1 + TF["_summary"]["straps"].index(xs_))
+        else:                                           # ремни — за аркой; разрез — у проставки к арке
+            sb = boxes["TankFloor_ArchSpacer_1"]
+            xs_, strap_nm = (sb[0] + sb[1]) / 2.0, None
         sec = {"x": xs_}
-        for key, nm in (("tank", "WaterTank_T4100"),
-                        ("strap", "TankFloor_Strap_%d" % (1 + TF["_summary"]["straps"].index(xs_))),
+        for key, nm in (("tank", TF["_summary"]["tank_name"]), ("strap", strap_nm),
                         ("arch", "WheelArch_%s" % tag), ("mattress", "BedMattress"), ("deck", "BedDeck")):
+            if nm is None:
+                continue
             sec[key] = _slice(doc.getObject(nm).Shape, (1, 0, 0), xs_)
         res["tfl"] = sec
 
