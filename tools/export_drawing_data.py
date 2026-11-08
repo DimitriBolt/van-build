@@ -155,6 +155,23 @@ try:
         res["cabinets"] = cab
         res["WALL_CABINETS"] = json.loads(json.dumps(g["WALL_CABINETS"], default=str))
 
+    # — strut: сечения, где видно спинку (с отверстиями) и паз — 2026-11-08 —
+    pref = ("BedPost_", "BedSideRail", "BedCross_", "BankPost_P3", "BankRail_", "BankCross_", "BankHolddown",
+            "Battery_B", "BankShelf", "BedDeck", "BankRailBolt", "Trunk2_Cross")
+    planes = {"yz600": ((1, 0, 0), 600.0), "yz377": ((1, 0, 0), 377.3), "xy300": ((0, 0, 1), 300.0),
+              "xy466": ((0, 0, 1), 466.0), "xy1000": ((0, 0, 1), 1000.0), "xz0": ((0, 1, 0), 0.0),
+              "xzm850": ((0, 1, 0), -850.0)}
+    st = {}
+    for key, (nv, val) in planes.items():
+        st[key] = {}
+        for o in doc.Objects:
+            if o.isDerivedFrom("Part::Feature") and o.Name.startswith(pref):
+                sl = _slice(o.Shape, nv, val)
+                if sl:
+                    st[key][o.Name] = sl
+    res["strut"] = st
+    res["STRUT_BACK"] = [[p, b] for p, b in g["STRUT_BACK"]]
+
     # — бак T-3500 на полке над аркой: поперечный разрез (YZ) по первому ремню —
     trk_o = doc.getObject("WaterTank_T3500")
     if trk_o is not None:
