@@ -576,6 +576,51 @@ TRUNK_SHELF = {
     "title": "Перфолист 304 48×24″ 19 ga, отв. 0.32″ (8 мм), 40%",
 }
 
+# Начальный 3D-вид (Dimitri сохранил «приятный угол», коммит 52f931d) — ставится перед сохранением .FCStd
+VIEW_CAMERA = """OrthographicCamera {
+  viewportMapping ADJUST_CAMERA
+  position 2703.6345 -179.83566 913.30084
+  orientation 0.92288774 0.24093212 0.30038264  1.461176
+  nearDistance -2261.1165
+  farDistance 2575.0374
+  aspectRatio 1
+  focalDistance 1
+  height 2919.8276
+
+}
+"""
+
+# Заметки Dimitri в Label2 (из его .FCStd) — сохраняются при пересборке, идут в начало Label2
+USER_NOTES = {
+    "BankRail_Wall": "Резать 1-ой!! Эта рейка задаёт высоту ножек этажерки. Поесле неё можно-нужно напрезать 2(а лучше 4) "
+                     "ножки. Нужно учесть высоту всего, что стоит на 1-м этаже: Wheel arc, Water tank, Propan locker, туалет! "
+                     "Рейка должна выдерживать Все !! батареи: 60-80 кг!",
+}
+
+# 2026-11-07 (Dimitri): в Label — только короткое название, описание — в Label2
+_LABEL_SEPS = (" — ", ": ", " (", ", ", "; ")
+
+
+_INTENDED = {}           # имя объекта → полная подпись (до автопереименования FreeCAD дублей «…001»)
+
+
+def short_labels(doc, max_len=45):
+    used = {}
+    for o in doc.Objects:
+        full = _INTENDED.get(o.Name, o.Label)
+        cut = min([i for i in (full.find(sp) for sp in _LABEL_SEPS) if i > 0] or [len(full)])
+        short = full[:cut].strip() or full
+        if len(short) > max_len:                             # длинное без разделителей — по границе слова
+            short = short[:max_len].rsplit(" ", 1)[0] + "…"
+        base = short
+        used[base] = used.get(base, 0) + 1
+        if used[base] > 1:
+            short = "%s #%d" % (base, used[base])
+        note = USER_NOTES.get(o.Name)
+        o.Label2 = (note + " | " if note else "") + full
+        o.Label = short
+
+
 DOC_NAME    = "van_v0"
 _REAL_HOME  = os.environ.get("SNAP_REAL_HOME") or os.path.expanduser("~")
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() \
@@ -634,6 +679,7 @@ def add_box(doc, name, label, dims, base, color=None, transparency=None, group=N
     o.Length, o.Width, o.Height = (float(d) for d in dims)
     o.Placement.Base = App.Vector(*[float(v) for v in base])
     o.Label = label
+    _INTENDED[name] = label
     _style(o, color, transparency)
     if group is not None:
         group.addObject(o)
@@ -645,6 +691,7 @@ def add_sphere(doc, name, label, radius, center, color=None, group=None):
     o.Radius = float(radius)
     o.Placement.Base = App.Vector(*[float(v) for v in center])
     o.Label = label
+    _INTENDED[name] = label
     _style(o, color)
     if group is not None:
         group.addObject(o)
@@ -655,6 +702,7 @@ def add_shape(doc, name, label, shape, color=None, transparency=None, group=None
     o = doc.addObject("Part::Feature", name)
     o.Shape = shape
     o.Label = label
+    _INTENDED[name] = label
     _style(o, color, transparency)
     if group is not None:
         group.addObject(o)
@@ -1561,25 +1609,34 @@ def build():
                        nm, note, z_l0 - floor_top - qt), (sw, sd, z_l0 - floor_top - qt),
                    (x0, ybase(ps, y_i, sd), floor_top + qt), COL_STRUT)
         # лестница
-        xw0, xw1 = xr + sw / 2.0, xf - sw / 2.0          # рейка у борта — между стойками кровати
+        # 2026-11-07 (Dimitri, фото): рейка у борта — как продольная рейка кровати: на всю длину X P1..Pf, по грани
+        # стоек кровати со стороны салона, сквозной болт через стойку и рейку (без уголков) — просто и надёжно
+        xw0, xw1 = xr - sw / 2.0, xf + sw / 2.0
         xi0, xi1 = X0, xf + sw / 2.0                     # рейка в салон — по верху P3/P4/P3f, сзади до торца B1
-        bk_box("BankRail_Wall", "Продольная рейка у борта strut, L=%.0f: между задней и передней стойками кровати "
-               "(уголки), посередине — на верх арки через резину" % (xw1 - xw0),
-               (xw1 - xw0, sd, sw), (xw0, ybase(ps, post_out, sd), z_l0), COL_STRUT)
+        bk_box("BankRail_Wall", "Продольная рейка у борта strut, L=%.0f: по грани стоек кровати P1 и Pf со стороны "
+               "салона, сквозной болт 3/8″ через стойку (как продольная рейка кровати); посередине — на верх арки через "
+               "резину" % (xw1 - xw0),
+               (xw1 - xw0, sd, sw), (xw0, ybase(ps, post_in, sd), z_l0), COL_STRUT)
+        for nm, xc in (("P1", xr), ("Pf", xf)):
+            bk_box("BankRailBolt_%s" % nm, "Болт 3/8″ с шайбами: рейка у борта ↔ стойка кровати %s" % nm,
+                   (9.5, sd + (post_out - post_in) + 16.0, 9.5),
+                   (xc - 4.75, ybase(ps, post_out + 8.0, sd + (post_out - post_in) + 16.0), z_l0 + sw / 2.0 - 4.75),
+                   (0.85, 0.85, 0.20))
         bk_box("BankRail_Inner", "Продольная рейка со стороны прохода strut, L=%.0f: по верху P3 и P3f" % (xi1 - xi0),
                (xi1 - xi0, sd, sw), (xi0, ybase(ps, y_i, sd), z_l0), COL_STRUT)
         crosses = (("Rear", xr), ("Front", xf))
         for nm, xc in crosses:
-            bk_box("BankCross_%s" % nm, "Поперечина лестницы %s strut, L=%.0f (между рейками, у стоек)" % (nm, byl),
-                   (sd, byl, sw), (xc - sd / 2.0, ybase(ps, y_w, byl), z_l0), COL_STRUT)
+            bk_box("BankCross_%s" % nm, "Поперечина лестницы %s strut, L=%.0f (между рейками, у стоек)" % (nm, byl - sd),
+                   (sd, byl - sd, sw), (xc - sd / 2.0, ybase(ps, post_in - sd, byl - sd), z_l0), COL_STRUT)
         # фанера полки: от торца B1 до передней стойки кровати, поверх обеих реек; вырез под заднюю стойку кровати
-        ply = Part.makeBox(xw1 - X0, post_out - (y_i - sd), BK["shelf_th"],
+        x_ply1 = xf - sw / 2.0                           # полка — до передней стойки кровати
+        ply = Part.makeBox(x_ply1 - X0, post_out - (y_i - sd), BK["shelf_th"],
                            App.Vector(X0, ybase(ps, post_out, post_out - (y_i - sd)), z_l1))
         pb = doc.getObject("BedPost_nY_rear").Shape.BoundBox
         ply = ply.cut(Part.makeBox(pb.XLength + 4, pb.YLength + 4, BK["shelf_th"] + 2,
                                    App.Vector(pb.XMin - 2, pb.YMin - 2, z_l1 - 1)))
         add_shape(doc, "BankShelf", "Полка — фанера 1/2″ %.0f×%.0f поверх лестницы (вырез под стойку кровати)" % (
-                      xw1 - X0, post_out - (y_i - sd)), ply, color=COL_PLY, transparency=10, group=bg)
+                      x_ply1 - X0, post_out - (y_i - sd)), ply, color=COL_PLY, transparency=10, group=bg)
         bsh["BankShelf"] = ply
         # батареи на полке: B2 над B1, B3/B4 — над аркой
         xs = [X0 + i * (bxl + BK["gap"]) for i in range(int(BK["n_shelf"]))]
@@ -1602,10 +1659,11 @@ def build():
                (sd, byl, sw), (xr - sd / 2.0, ybase(ps, y_w, byl), zh0), COL_STRUT)
         for i, dx in enumerate(BK["arch_pads_dx"]):
             bk_box("BankArchPad_%d" % (i + 1), "Резина %.0f мм: рейка у борта ↔ верх арки" % BK["pad"],
-                   (100.0, sd, BK["pad"]), (W["center_x"] + dx - 50.0, ybase(ps, post_out, sd), z_arch), (0.15, 0.15, 0.15))
+                   (100.0, sd, BK["pad"]), (W["center_x"] + dx - 50.0, ybase(ps, post_in, sd), z_arch), (0.15, 0.15, 0.15))
         L_p = z_l0 - floor_top - qt
         cutlist += [("рейка этажерки", float(xw1 - xw0)), ("рейка этажерки", float(xi1 - xi0)),
-                    ("поперечина этажерки", float(byl)), ("поперечина этажерки", float(byl)), ("прижим B1", float(byl)),
+                    ("поперечина этажерки", float(byl - sd)), ("поперечина этажерки", float(byl - sd)),
+                    ("прижим B1", float(byl)),
                     ] + [("стойка этажерки", float(L_p))] * 2
         # проверки
         obj = lambda n: doc.getObject(n).Shape
@@ -1694,8 +1752,8 @@ def build():
                         clear_rail=z_rail_b - max(eboxes[n][5] for n in eboxes), ground=(gx, gz - ft),
                         free_x=bx1 - bx0)
         bank_summary = dict(X1=(X0, X1), xs=xs, bx=bxl, z_b1=(z_b1, z_b1 + bz), z_arch=z_arch, z_l=(z_l0, z_l1),
-                            z_s1=z_s1, top=top, floor_top=floor_top, rails=(xw1 - xw0, xi1 - xi0), cross=byl,
-                            posts=(L_p, L_p), free=xw1 - (xs[-1] + bxl + st), checks=checks,
+                            z_s1=z_s1, top=top, floor_top=floor_top, rails=(xw1 - xw0, xi1 - xi0), cross=byl - sd,
+                            posts=(L_p, L_p), free=x_ply1 - (xs[-1] + bxl + st), checks=checks,
                             inner=arch_ywall - y_i, under_cross=(z_rail_top - sw) - top, elec=elec)
 
     # ═══════ БАК ДЛЯ ВОДЫ у водительской арки (D-стойка ↔ арка), на подставке ═══════
@@ -2868,16 +2926,15 @@ def build():
             color=COL_REAR, transparency=72, group=op)
 
     doc.recompute()
-    os.makedirs(os.path.dirname(SAVE_PATH), exist_ok=True)
-    doc.saveAs(SAVE_PATH)
-
-    try:
+    short_labels(doc)
+    try:                                                      # начальный вид — «приятный угол» Dimitri
         import FreeCADGui as Gui
         if Gui.activeDocument():
-            Gui.activeDocument().activeView().viewIsometric()
-            Gui.SendMsgToActiveView("ViewFit")
+            Gui.activeDocument().activeView().setCamera(VIEW_CAMERA)
     except Exception:
         pass
+    os.makedirs(os.path.dirname(SAVE_PATH), exist_ok=True)
+    doc.saveAs(SAVE_PATH)
 
     # ─── сводка ───
     bb = overall_bbox(doc)
