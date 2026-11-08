@@ -550,9 +550,13 @@ SHOWER_KITCHEN = {
     # — пропан в герметичном локере под кроватью перед баком, справа (к проходу) от туалета; дверца — к проходу;
     #   вент через пол наружу. 2026-11-07 (Dimitri): 30 lb (⌀12.3″ × 23.7″) — великоват → стандартный 20 lb
     #   (Flame King: 12 × 12 × 17.8″, 17 lb пустой, ~4.7 gal) —
-    "propane": {"cyl_d": 312.0, "cyl_h": 452.0, "title": "20 lb (Flame King) ⌀12″ × 17.8″",
-                "inner": 328.0, "inner_h": 500.0,    # внутри локера (над вентилем ~48 мм — редуктор/шланг)
-                "wall": 12.0,                        # фанера 1/2″ + герметик, крышка/дверца на уплотнителе
+    #   2026-11-07 (Dimitri): впритык — внутри 12″ (= ⌀ баллона); в дне — отверстие под опорное кольцо баллона,
+    #   баллон стоит на полу фургона → внутр. высота = 17.8″ − 1/2″ (дно), наружная = 17.8″ + 1/2″ (крышка)
+    "propane": {"cyl_d": 304.8, "cyl_h": 452.1, "title": "20 lb (Flame King) ⌀12″ × 17.8″",
+                "inner": 304.8,                      # 12″ — впритык к баллону
+                "inner_h": None,                     # = cyl_h − wall (считается)
+                "foot_d": 235.0,                     # опорное кольцо баллона ≈ 0.76·⌀ → отверстие в дне ⌀ +4 мм
+                "wall": 12.7,                        # фанера 1/2″ + герметик, крышка/дверца на уплотнителе
                 "toilet_gap": 20.0, "pump_gap": 10.0,
                 "vent_d": 25.4},                     # вент-трубка 1″ через пол (вниз, наружу)
 }
@@ -2327,8 +2331,12 @@ def build():
             face = Part.Face(Part.makePolygon(vec + [vec[0]]))
             return face.extrude(App.Vector(xl, 0, 0))
 
-        sg = doc.addObject("App::DocumentObjectGroup", "ShowerKitchen")
-        sg.Label = "Душ 32×32″ + мини-кухня (чай) — водительский борт, кровать ↔ кабина (проект 2026-11-06)"
+        # 2026-11-07 (Dimitri): одна группа «Душ + мини-кухня» → две: «Душ» (с газовым нагревателем, пропаном, газом
+        # и датчиками) и «Кухня»
+        sg = doc.addObject("App::DocumentObjectGroup", "Shower")
+        sg.Label = "Душ — поддон-сектор 32″, газовый нагреватель, пропан под кроватью (проект 2026-11-06/07)"
+        kg = doc.addObject("App::DocumentObjectGroup", "Kitchen")
+        kg.Label = "Кухня — 2 секции: мойка | шкафчик + холодильник (проект 2026-11-06/07)"
         COL_WALL = (0.93, 0.93, 0.90)
         COL_PAN = (0.98, 0.98, 0.98)
         COL_STEEL = (0.70, 0.72, 0.75)
@@ -2339,7 +2347,8 @@ def build():
         parts = {}
 
         def put(name, label, shape, color, tr=0):
-            add_shape(doc, name, label, shape, color=color, transparency=tr, group=sg)
+            add_shape(doc, name, label, shape, color=color, transparency=tr,
+                      group=kg if name.startswith("Kitchen_") else sg)
             parts[name] = shape
             return shape
 
@@ -2569,7 +2578,8 @@ def build():
         PR = K.get("propane")
         prop_summary = None
         if PR and GH:
-            wl, inn, inn_h = PR["wall"], PR["inner"], PR["inner_h"]
+            wl, inn = PR["wall"], PR["inner"]
+            inn_h = PR["inner_h"] or (PR["cyl_h"] - wl)               # баллон стоит на полу через отверстие в дне
             outer = inn + 2.0 * wl
             hL = inn_h + 2.0 * wl
             to_ = doc.getObject("Toilet_Camco")
@@ -2582,10 +2592,14 @@ def build():
             shell = Part.makeBox(outer, outer, hL, V(lx0, ly0, z_l0)).cut(
                 Part.makeBox(inn, inn, inn_h, V(lx0 + wl, ly0 + wl, z_l0 + wl)))
             door_cut = Part.makeBox(outer, wl, hL - 2.0 * wl, V(lx0, ly0, z_l0 + wl))
-            vx, vy = lx0 + wl + 45.0, ly1 - wl - 45.0                  # вент — в дальнем от дверцы углу
+            vx, vy = lx0 + wl + 20.0, ly1 - wl - 20.0                  # вент — в дальнем от дверцы углу (мимо баллона)
+            foot_hole = Part.makeCylinder(PR.get("foot_d", 235.0) / 2.0 + 2.0, wl + 2.0,
+                                          V(lx0 + outer / 2.0, ly0 + outer / 2.0, z_l0 - 1.0))
             vent_hole = Part.makeCylinder(PR["vent_d"] / 2.0, z_l0 + wl + 20.0, V(vx, vy, -20.0))
-            put("Propane_Locker", "Локер пропана — герметичный ящик (фанера 1/2″ + герметик/FRP), внутр. %.0f×%.0f×%.0f; "
-                "вент ⌀1″ в полу наружу" % (inn, inn, inn_h), shell.cut(door_cut).cut(vent_hole), (0.93, 0.85, 0.55))
+            put("Propane_Locker", "Локер пропана — герметичный ящик (фанера 1/2″ + герметик/FRP), внутр. %.1f×%.1f×%.1f″ "
+                "(впритык); в дне — отверстие под опорное кольцо баллона; вент ⌀1″ в полу наружу" % (
+                    inn / 25.4, inn / 25.4, inn_h / 25.4), shell.cut(door_cut).cut(vent_hole).cut(foot_hole),
+                (0.93, 0.85, 0.55))
             put("Propane_LockerDoor", "Дверца локера к проходу (на уплотнителе, 2 замка-защёлки) — баллон вынимается в проход",
                 shell.common(door_cut), (0.98, 0.75, 0.30))
             for fn in ("Floor_XPS", "Floor_Plywood"):
@@ -2596,8 +2610,9 @@ def build():
                 Part.makeCylinder(PR["vent_d"] / 2.0, z_l0 + wl + 40.0, V(vx, vy, -40.0)).cut(
                     Part.makeCylinder(PR["vent_d"] / 2.0 - 2.0, z_l0 + wl + 50.0, V(vx, vy, -45.0))), (0.25, 0.25, 0.25))
             cd, ch_ = PR["cyl_d"], PR["cyl_h"]
-            ccx, ccy, cz0 = lx0 + outer / 2.0, ly0 + outer / 2.0, z_l0 + wl + 2.0
-            cyl = Part.makeCylinder(cd * 0.38, 40.0, V(ccx, ccy, cz0)).fuse(
+            ccx, ccy, cz0 = lx0 + outer / 2.0, ly0 + outer / 2.0, z_l0         # на полу фургона (через дно)
+            cyl = Part.makeCylinder(PR.get("foot_d", cd * 0.76) / 2.0, 40.0, V(ccx, ccy, cz0)).cut(
+                Part.makeCylinder(PR.get("foot_d", cd * 0.76) / 2.0 - 3.0, 50.0, V(ccx, ccy, cz0 - 5.0))).fuse(
                 Part.makeCylinder(cd / 2.0, ch_ - 40.0 - 40.0 - 62.0, V(ccx, ccy, cz0 + 40.0))).fuse(
                 Part.makeCone(cd / 2.0, cd * 0.28, 40.0, V(ccx, ccy, cz0 + ch_ - 102.0))).fuse(
                 Part.makeCylinder(cd * 0.30, 62.0, V(ccx, ccy, cz0 + ch_ - 62.0)).cut(
@@ -2605,9 +2620,7 @@ def build():
                 Part.makeCylinder(22.0, 70.0, V(ccx, ccy, cz0 + ch_ - 102.0 + 40.0)))
             put("Propane_Cylinder", "Баллон пропана %s, вертикально, вентилем вверх" % PR.get("title", ""),
                 cyl, (0.96, 0.96, 0.96))
-            put("Propane_Strap", "Хомут баллона к стенке локера (не упадёт на кочке)",
-                Part.makeCylinder(cd / 2.0 + 4.0, 25.0, V(ccx, ccy, cz0 + 0.55 * ch_)).cut(
-                    Part.makeCylinder(cd / 2.0, 30.0, V(ccx, ccy, cz0 + 0.55 * ch_ - 2.0))), (0.30, 0.30, 0.30))
+            # хомута нет: баллон держат стенки (впритык), крышка (впритык) и кольцо в отверстии дна
             put("Propane_Regulator", "Редуктор (в комплекте Camplux) — внутри локера, на вентиле",
                 Part.makeCylinder(45.0, 35.0, V(ccx + 60.0, ccy, cz0 + ch_ - 70.0), V(1, 0, 0)), (0.75, 0.75, 0.78))
             # газовая линия: из крышки локера (гермоввод) → вверх под поперечины → вдоль борта → вперёд за край щита →
