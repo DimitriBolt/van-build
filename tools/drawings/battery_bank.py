@@ -212,7 +212,7 @@ vdim(xr_("Battery_B4")[1] - 0.6, zb_top, zc_b, "", color="#1565c0")
 ax.text(xr_("Battery_B4")[1] - 0.4, zc_b + 1.8, "%.1f″ (%.0f) до поперечин" % (zc_b - zb_top, (zc_b - zb_top) * IN),
         fontsize=7.5, color="#1565c0", ha="right")
 hdim(zr("BankRail_Wall")[0] - 1.1, *xr_("BankRail_Wall"),
-     "рейка у борта %.1f″ (%.0f): между стойками кровати P1 ↔ Pf, посередине — на верх арки через резину %.0f мм" % (
+     "рейка у борта %.1f″ (%.0f): D-стойка → проём сдвижной двери, болт к P1 и Pf, посередине — на верх арки через резину %.0f мм" % (
          (B["BankRail_Wall"][1] - B["BankRail_Wall"][0]) / IN, B["BankRail_Wall"][1] - B["BankRail_Wall"][0],
          R["bank"]["pad"]), fs=7.5, dz=-0.95)
 for n in SHELF_BATS:

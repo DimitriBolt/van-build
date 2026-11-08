@@ -293,6 +293,10 @@ BATTERY_RACK = {
         "stop":    (3.2, 38.1),         # упоры-уголки по торцам ряда на полке и перед B1
         "holddown_gap": 3.0,            # прижимная планка strut над B1 (резина 3 мм)
         "arch_pads_dx": (-200.0, 160.0),  # резиновые опоры рейки у борта на ровном верхе арки (от центра арки)
+        # 2026-11-07 (Dimitri): P3/P3f — выше полки (бортик у батарей), рейка со стороны прохода — к их грани у борта
+        # сквозным болтом (как рейка кровати); обе рейки и полка — назад до D-стойки/задней рамы, вперёд до C-стойки
+        "p3_guard":  102.0,             # P3/P3f выше верха полки на 4″ — бортик, батарея не уедет в багажник
+        "ends_gap":  5.0,               # торцы реек/полки ↔ D-стойка, задняя рама, проём сдвижной двери
     },
     "front_cross_full": True,           # передняя стяжка-поперечина на всю ширину (до противоп. рейки)
     "gap_above_b2":    38.0,            # 1.5″ над верхней батареей — клеммы (для "short")
@@ -1602,41 +1606,74 @@ def build():
         #  рейке в салон хватает пролёта P3 ↔ P3f; B1 спереди упирается в арку через клин)
         inb = (("P3", xr - sw / 2.0, "напротив задней стойки кровати P1"),
                ("P3f", xf - sw / 2.0, "напротив передней стойки кровати"))
+        z_p3t = z_l0 + sw + BK["shelf_th"] + BK.get("p3_guard", 0.0)      # верх P3: над полкой — бортик
         for nm, x0, note in inb:
             bk_box("BankPostPlate_%s" % nm, "Пластина под %s" % nm, (qx, qy, qt),
                    (x0 + sw / 2.0 - qx / 2.0, ybase(ps, y_i, qy), floor_top), COL_STRUT)
-            bk_box("BankPost_%s" % nm, "Стойка %s (короткая, со стороны прохода, %s), L=%.0f — под рейку" % (
-                       nm, note, z_l0 - floor_top - qt), (sw, sd, z_l0 - floor_top - qt),
-                   (x0, ybase(ps, y_i, sd), floor_top + qt), COL_STRUT)
+            bk_box("BankPost_%s" % nm, "Стойка %s (со стороны прохода, %s), L=%.0f — рейка сбоку на болту, верх на %.0f″ "
+                   "выше полки (бортик у батарей)" % (nm, note, z_p3t - floor_top - qt, BK.get("p3_guard", 0.0) / 25.4),
+                   (sw, sd, z_p3t - floor_top - qt), (x0, ybase(ps, y_i, sd), floor_top + qt), COL_STRUT)
         # лестница
         # 2026-11-07 (Dimitri, фото): рейка у борта — как продольная рейка кровати: на всю длину X P1..Pf, по грани
         # стоек кровати со стороны салона, сквозной болт через стойку и рейку (без уголков) — просто и надёжно
-        xw0, xw1 = xr - sw / 2.0, xf + sw / 2.0
-        xi0, xi1 = X0, xf + sw / 2.0                     # рейка в салон — по верху P3/P4/P3f, сзади до торца B1
+        # 2026-11-07: обе рейки — назад до D-стойки (у борта) / задней рамы (у прохода), вперёд до проёма сдвижной двери
+        eg_ = BK.get("ends_gap", 5.0)
+        x_front = slider_x0 - eg_
+        rp_ = doc.getObject("Pillar_Rear_%s" % ("nY" if ps < 0 else "pY"))
+        x_rear_frame = (rp_.Shape.BoundBox.XMax if rp_ is not None else 80.0) + eg_ + 5.0
+
+        def x_from_dp(y_out, yl, z0, zl, x_min):
+            """Самый задний X торца бруса (|Y| y_out−yl..y_out), при котором до D-стойки ≥ ends_gap."""
+            lo, hi = x_min, xr
+            for _ in range(30):
+                mid = (lo + hi) / 2.0
+                bx_ = Part.makeBox(xr - mid, yl, zl, App.Vector(mid, ybase(ps, y_out, yl), z0))
+                if bx_.distToShape(dp_shapes[ps])[0] >= eg_:
+                    hi = mid
+                else:
+                    lo = mid
+            return hi
+        xw0, xw1 = x_from_dp(post_in, sd, z_l0, sw, x_rear_frame), x_front
+        xi0, xi1 = x_from_dp(y_i + sd, sd, z_l0, sw, x_rear_frame), x_front
         bk_box("BankRail_Wall", "Продольная рейка у борта strut, L=%.0f: по грани стоек кровати P1 и Pf со стороны "
                "салона, сквозной болт 3/8″ через стойку (как продольная рейка кровати); посередине — на верх арки через "
-               "резину" % (xw1 - xw0),
+               "резину; назад — до D-стойки, вперёд — до проёма сдвижной двери" % (xw1 - xw0),
                (xw1 - xw0, sd, sw), (xw0, ybase(ps, post_in, sd), z_l0), COL_STRUT)
         for nm, xc in (("P1", xr), ("Pf", xf)):
             bk_box("BankRailBolt_%s" % nm, "Болт 3/8″ с шайбами: рейка у борта ↔ стойка кровати %s" % nm,
                    (9.5, sd + (post_out - post_in) + 16.0, 9.5),
                    (xc - 4.75, ybase(ps, post_out + 8.0, sd + (post_out - post_in) + 16.0), z_l0 + sw / 2.0 - 4.75),
                    (0.85, 0.85, 0.20))
-        bk_box("BankRail_Inner", "Продольная рейка со стороны прохода strut, L=%.0f: по верху P3 и P3f" % (xi1 - xi0),
-               (xi1 - xi0, sd, sw), (xi0, ybase(ps, y_i, sd), z_l0), COL_STRUT)
+        bk_box("BankRail_Inner", "Продольная рейка со стороны прохода strut, L=%.0f: по грани P3 и P3f со стороны "
+               "борта, сквозной болт 3/8″ (как рейка кровати) — под гранью батарей; назад — до задней рамы, вперёд — до "
+               "проёма сдвижной двери" % (xi1 - xi0),
+               (xi1 - xi0, sd, sw), (xi0, ybase(ps, y_i + sd, sd), z_l0), COL_STRUT)
+        for nm, xc in (("P3", xr), ("P3f", xf)):
+            bk_box("BankRailBolt_%s" % nm, "Болт 3/8″ с шайбами: рейка со стороны прохода ↔ стойка %s" % nm,
+                   (9.5, 2 * sd + 16.0, 9.5), (xc - 4.75, ybase(ps, y_i + sd + 8.0, 2 * sd + 16.0), z_l0 + sw / 2.0 - 4.75),
+                   (0.85, 0.85, 0.20))
         crosses = (("Rear", xr), ("Front", xf))
         for nm, xc in crosses:
-            bk_box("BankCross_%s" % nm, "Поперечина лестницы %s strut, L=%.0f (между рейками, у стоек)" % (nm, byl - sd),
-                   (sd, byl - sd, sw), (xc - sd / 2.0, ybase(ps, post_in - sd, byl - sd), z_l0), COL_STRUT)
-        # фанера полки: от торца B1 до передней стойки кровати, поверх обеих реек; вырез под заднюю стойку кровати
-        x_ply1 = xf - sw / 2.0                           # полка — до передней стойки кровати
-        ply = Part.makeBox(x_ply1 - X0, post_out - (y_i - sd), BK["shelf_th"],
-                           App.Vector(X0, ybase(ps, post_out, post_out - (y_i - sd)), z_l1))
-        pb = doc.getObject("BedPost_nY_rear").Shape.BoundBox
-        ply = ply.cut(Part.makeBox(pb.XLength + 4, pb.YLength + 4, BK["shelf_th"] + 2,
-                                   App.Vector(pb.XMin - 2, pb.YMin - 2, z_l1 - 1)))
-        add_shape(doc, "BankShelf", "Полка — фанера 1/2″ %.0f×%.0f поверх лестницы (вырез под стойку кровати)" % (
-                      x_ply1 - X0, post_out - (y_i - sd)), ply, color=COL_PLY, transparency=10, group=bg)
+            bk_box("BankCross_%s" % nm, "Поперечина лестницы %s strut, L=%.0f (между рейками, у стоек)" % (nm, byl - 2 * sd),
+                   (sd, byl - 2 * sd, sw), (xc - sd / 2.0, ybase(ps, post_in - sd, byl - 2 * sd), z_l0), COL_STRUT)
+        # фанера полки: поверх обеих реек, по грань батарей к проходу; 2026-11-07 — назад до D-стойки/задней рамы
+        # (полочка за B2), вперёд до проёма сдвижной двери (полочка под бельё); вырезы под стойки кровати P1, Pf
+        x_ply1 = xf - sw / 2.0                           # электрика на полке — до передней стойки кровати (как было)
+        xp0_, xp1_ = min(xw0, xi0), x_front
+        ply = Part.makeBox(xp1_ - xp0_, post_out - y_i, BK["shelf_th"],
+                           App.Vector(xp0_, ybase(ps, post_out, post_out - y_i), z_l1))
+        for pn_ in ("BedPost_%s_rear" % ("nY" if ps < 0 else "pY"), "BedPost_%s_front" % ("nY" if ps < 0 else "pY")):
+            pb = doc.getObject(pn_).Shape.BoundBox
+            ply = ply.cut(Part.makeBox(pb.XLength + 4, pb.YLength + 4, BK["shelf_th"] + 2,
+                                       App.Vector(pb.XMin - 2, pb.YMin - 2, z_l1 - 1)))
+        dps_ = dp_shapes[ps]
+        for dxo in (-eg_, 0.0, eg_):                         # зазор ends_gap вокруг D-стойки
+            for dyo in (-eg_, 0.0, eg_):
+                ply = ply.cut(dps_.translated(App.Vector(dxo, dyo, 0)))
+        ply = Part.makeCompound([sl_ for sl_ in ply.Solids if sl_.Volume > 1e4]).Solids[0] if len(ply.Solids) > 1 else ply
+        add_shape(doc, "BankShelf", "Полка — фанера 1/2″ %.0f×%.0f поверх лестницы: батареи + полочка за B2 (до D-стойки) "
+                  "+ полочка под бельё (до проёма сдвижной двери); вырезы под стойки кровати" % (
+                      xp1_ - xp0_, post_out - y_i), ply, color=COL_PLY, transparency=10, group=bg)
         bsh["BankShelf"] = ply
         # батареи на полке: B2 над B1, B3/B4 — над аркой
         xs = [X0 + i * (bxl + BK["gap"]) for i in range(int(BK["n_shelf"]))]
@@ -1660,7 +1697,7 @@ def build():
         for i, dx in enumerate(BK["arch_pads_dx"]):
             bk_box("BankArchPad_%d" % (i + 1), "Резина %.0f мм: рейка у борта ↔ верх арки" % BK["pad"],
                    (100.0, sd, BK["pad"]), (W["center_x"] + dx - 50.0, ybase(ps, post_in, sd), z_arch), (0.15, 0.15, 0.15))
-        L_p = z_l0 - floor_top - qt
+        L_p = z_p3t - floor_top - qt
         cutlist += [("рейка этажерки", float(xw1 - xw0)), ("рейка этажерки", float(xi1 - xi0)),
                     ("поперечина этажерки", float(byl - sd)), ("поперечина этажерки", float(byl - sd)),
                     ("прижим B1", float(byl)),
@@ -2805,7 +2842,8 @@ def build():
         z_c0 = z_s + TS["pad"]
         z_c1 = z_c0 + sd                                             # поперечины strut плашмя (13/16″)
         lx, ly, lt = TS["sheet"]
-        y_b = rb.YMin + TS["gap_batt"]                               # от граней батарей (|Y| рейки = батареи)
+        # 2026-11-07: рейка со стороны прохода — теперь под гранью батарей; поперечины — от неё на уголке
+        y_b = (rb.YMax + 5.0) if rb.YMax < 0 else (rb.YMin - 5.0)     # уголок 4 мм + 1 мм от плоскости батарей
         x0_ = max(rb.XMin, tb.XMin) + 4.0
         x1_ = min(x0_ + lx, tb.XMax)                                 # подрезать по переднему торцу бака
         straps = [o.Shape.BoundBox for o in doc.Objects if o.Name.startswith("TankFloor_Strap_")]
@@ -2826,16 +2864,18 @@ def build():
         for i, xc in enumerate(xs_c):
             tput("Trunk2_Cross_%d" % (i + 1), "Поперечина 2-го этажа strut 13/16″ L=%.0f: полка батарей ↔ верх бака" % (
                 y_c1 - y_b), Part.makeBox(sw, y_c1 - y_b, sd, App.Vector(xc - sw / 2.0, y_b, z_c0)), COL_STRUT)
-            tput("Trunk2_PadBatt_%d" % (i + 1), "Резина 3 мм под поперечиной (кромка полки над рейкой)",
-                 Part.makeBox(sw, rb.YMax - y_b, TS["pad"], App.Vector(xc - sw / 2.0, y_b, z_s)), (0.15, 0.15, 0.15))
             tput("Trunk2_PadTank_%d" % (i + 1), "Резина 3 мм под поперечиной (на баке)",
                  Part.makeBox(sw, 120.0, TS["pad"], App.Vector(xc - sw / 2.0, y_c1 - 120.0, z_s)), (0.15, 0.15, 0.15))
             tput("Trunk2_Angle_%d" % (i + 1), "Уголок 90° поперечина → боковая грань рейки полки (strut-болт 1/4″)",
-                 Part.makeBox(sw, 4.0, z_c1 - (rb.ZMin + 10.0), App.Vector(xc - sw / 2.0, rb.YMax, rb.ZMin + 10.0)),
+                 Part.makeBox(sw, 4.0, z_c1 - (rb.ZMin + 10.0), App.Vector(xc - sw / 2.0, rb.YMax + 1.0, rb.ZMin + 10.0)),
                  COL_STRUT)
-        tput("Trunk2_Sheet", "%s, подрезан до %.0f×%.0f (%.1f×%.0f″) — 2-й этаж багажника" % (
+        p3b = doc.getObject("BankPost_P3").Shape.BoundBox          # P3 теперь выше полки — вырез в листе
+        p3_notch = Part.makeBox(p3b.XLength + 6.0, p3b.YLength + 6.0, 20.0,
+                                App.Vector(p3b.XMin - 3.0, p3b.YMin - 3.0, z_c1 - 10.0))
+        tput("Trunk2_Sheet", "%s, %.0f×%.0f (%.1f×%.0f″) — 2-й этаж багажника" % (
             TS["title"], x1_ - x0_, ly, (x1_ - x0_) / 25.4, ly / 25.4),
-            Part.makeBox(x1_ - x0_, ly, lt, App.Vector(x0_, y_b, z_c1)), (0.80, 0.82, 0.85), 35)
+            Part.makeBox(x1_ - x0_, ly, lt, App.Vector(x0_, y_b, z_c1)).cut(p3_notch),
+            (0.80, 0.82, 0.85), 35)
         # проверки
         cr = [o.Shape for o in doc.Objects if o.Name.startswith("BedCross_")]
         bats = [o.Shape for o in doc.Objects if o.Name.startswith("Battery_") or o.Name.startswith("BankBattery")]
