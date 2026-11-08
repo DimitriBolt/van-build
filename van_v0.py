@@ -580,6 +580,33 @@ TRUNK_SHELF = {
     "title": "Перфолист 304 48×24″ 19 ga, отв. 0.32″ (8 мм), 40%",
 }
 
+# ─────────── ОТКИДНАЯ СТОЛЕШНИЦА + ВЕРХНИЕ ШКАФЧИКИ — проект 2026-11-07 ───────────
+# Dimitri: столешницу — продлить к водительскому месту откидной частью на складных кронштейнах (фото: стальные
+# складные кронштейны, между ними 15.7″); раскладывается, когда водительское сиденье развёрнуто на 180° лицом в
+# салон (спинка не мешает), при сиденье вперёд — сложена (висит на торце кухни).
+KITCHEN_FLAP = {
+    "enable": True,
+    "len": 406.4,                     # 16″ (кронштейны 16″; бывают 12/14/16/20″)
+    "th": 12.7,                       # 1/2″ (бамбук/фанера) — сложенная должна влезть в 40 мм до спинки
+    "bracket": (22.0, 30.0, 380.0),   # кронштейн сложенный: толщина, ширина, длина плеча
+    "spacing": 398.8,                 # 15.7″ между кронштейнами (по фото)
+}
+# Шкафчики под потолком (Dimitri): по пассажирскому борту — от задней двери до сдвижной, бамбук 12.2×12.2×16.5″ с
+# дверцей, СТОЯ; над изголовьем по водительскому борту — от задней двери до задней стенки душа, 13.4×11.3×11.3″,
+# «сколько влезет». Боковины Dimitri вырежет по профилю борта.
+WALL_CABINETS = {
+    "enable": True,
+    "wall_gap": 60.0,                 # до обшивки (утеплитель + панель), как у душа/кухни
+    "ceil_gap": 5.0,                  # под потолком (потолок = крыша − 55 мм)
+    "between": 2.0,                   # между шкафчиками
+    "sets": [
+        {"name": "Pass", "side": -1, "dims": (309.9, 309.9, 419.1), "to": "slider",
+         "title": "Шкафчик пассажирский", "desc": "бамбук 12.2×12.2×16.5″ с дверцей, стоя, под потолком по пассажирскому борту"},
+        {"name": "Drv", "side": +1, "dims": (340.4, 287.0, 287.0), "to": "shower",
+         "title": "Шкафчик над изголовьем", "desc": "бамбук 13.4×11.3×11.3″ с дверцей, под потолком по водительскому борту"},
+    ],
+}
+
 # Начальный 3D-вид (Dimitri сохранил «приятный угол», коммит 52f931d) — ставится перед сохранением .FCStd
 VIEW_CAMERA = """OrthographicCamera {
   viewportMapping ADJUST_CAMERA
@@ -2668,6 +2695,25 @@ def build():
         y_uf = yw(zu0) - K["upper"][1]
         put("Kitchen_UpperCabinet", "Верхний шкафчик (чашки/чай), по завалу борта; торец к душу — по дуге шторки",
             kcut(env_solid(kx0, kl, y_uf, zu0, zu1)), COL_CAB)
+        # откидная часть столешницы — на торце кухни у сиденья: сложена (вниз) / разложена (призрак, сиденье на 180°)
+        KF = KITCHEN_FLAP
+        flap_summary = None
+        if KF.get("enable"):
+            fl_, fth = KF["len"], KF["th"]
+            bt_, bw_, bl_ = KF["bracket"]
+            fy0, fy1 = y_ctf, yw(z_ct) - 5.0
+            yc_ = (fy0 + fy1) / 2.0
+            for i_, yb_ in enumerate((yc_ - KF["spacing"] / 2.0, yc_ + KF["spacing"] / 2.0)):
+                put("Kitchen_FlapBracket%d" % (i_ + 1), "Складной кронштейн %d (сложен) — на торце кухни, плечо %.0f″" % (
+                    i_ + 1, bl_ / 25.4), Part.makeBox(bt_, bw_, bl_, V(kx1, ks * yb_ - bw_ / 2.0, z_ct - fth - bl_)), COL_STEEL)
+                put("Kitchen_FlapBracketOpen%d" % (i_ + 1), "Кронштейн %d разложен (сиденье развёрнуто на 180°)" % (i_ + 1),
+                    Part.makeBox(bl_, bw_, bt_, V(kx1, ks * yb_ - bw_ / 2.0, z_ct - fth - bt_)), COL_STEEL, 70)
+            put("Kitchen_Flap", "Откидная столешница %.0f×%.0f″ (1/2″) — сложена, висит на торце кухни" % (
+                fl_ / 25.4, (fy1 - fy0) / 25.4), Part.makeBox(fth, fy1 - fy0, fl_, V(kx1 + bt_, fy0, z_ct - fl_)), COL_TOP)
+            put("Kitchen_FlapOpen", "Откидная столешница разложена — вровень со столешницей, над развёрнутым сиденьем",
+                Part.makeBox(fl_, fy1 - fy0, fth, V(kx1, fy0, z_ct - fth)), COL_TOP, 65)
+            flap_summary = dict(len=fl_, w=fy1 - fy0, x_open=(kx1, kx1 + fl_), to_seat=3190.0 - (kx1 + bt_ + fth),
+                                z_fold_low=z_ct - fl_ - floor_top)
 
         # — пропан: баллон 30 lb в герметичном локере под щитом (перед баком, к проходу от туалета) + газ к нагревателю —
         PR = K.get("propane")
@@ -2820,7 +2866,7 @@ def build():
         x_ent = xp0 + math.sqrt(max(r_k ** 2 - (y_back_pan - y_ctf) ** 2, 0.0))
         entry = math.hypot(x_ent - (x_rw + pt_), y_ctf - y_c)
         galley_summary = dict(
-            gas=gas, propane=prop_summary, entry=entry, x_div=(x_div0, x_div1), sink_x=(sk_x0, sk_x0 + skx),
+            gas=gas, propane=prop_summary, entry=entry, flap=flap_summary, x_div=(x_div0, x_div1), sink_x=(sk_x0, sk_x0 + skx),
             sec1_front=(x_af, x_div0), sec2=(x_div1, kx1), fridge_title=K.get("fridge_title"), r_c=r_c,
             shower_x=(sx0, sx1), shower_in=(six, siy), y_sf=y_sf, z_pan=z_pan, z_ceil=z_ceil, pan_x0=xp0,
             pan_behind=xp0 - x_rw, rear_wall_z=z_rw0, y_pan_back=y_back_pan, pan_r=R_,
@@ -2904,6 +2950,65 @@ def build():
                              h2_deck=(doc.getObject("BedDeck").Shape.BoundBox.ZMin - (z_c1 + lt)),
                              over_tank=(y_b + ly) - tb.YMin, bat_top=None)
         TRUNK_SHELF["_summary"] = {k: v for k, v in trunk_summary.items() if k != "checks"}
+
+    # ═══════ ШКАФЧИКИ ПОД ПОТОЛКОМ по бортам (проект 2026-11-07) ═══════
+    cab_summary = []
+    WC = WALL_CABINETS
+    if WC.get("enable"):
+        cg = doc.addObject("App::DocumentObjectGroup", "WallCabinets")
+        cg.Label = "Шкафчики под потолком — пассажирский борт и над изголовьем (проект 2026-11-07)"
+        crown_ = half[-1][1]
+        z_cl = crown_ - SHOWER_KITCHEN.get("roof_clear", 55.0)
+        pz_ = sorted(z for _, z in half if z < crown_)
+        wg = WC["wall_gap"]
+        ywc = lambda z: y_at_z(half, min(z, pz_[-1])) - wg
+        mat_ = doc.getObject("BedMattress")
+        for st_ in WC["sets"]:
+            sg_ = st_["side"]
+            cx_, cd_, ch_ = st_["dims"]
+            z1 = z_cl - WC["ceil_gap"]
+            for _ in range(80):                                     # верх — пока у задней стенки остаётся глубина
+                z0 = z1 - ch_
+                yf = ywc(z0) - cd_
+                if ywc(z1) >= yf + 60.0:
+                    break
+                z1 -= 10.0
+            rpn = doc.getObject("Pillar_Rear_%s" % ("pY" if sg_ > 0 else "nY"))
+            xa = (rpn.Shape.BoundBox.XMax if rpn is not None else 80.0) + 5.0
+            if st_["to"] == "slider":
+                xb = slider_x0 - 5.0
+            else:
+                rw_ = doc.getObject("Shower_WallRear")
+                xb = (rw_.Shape.BoundBox.XMin if rw_ is not None else dx1) - 5.0
+            for rb_ in sorted((o.Shape.BoundBox for o in doc.Objects if o.Name.startswith("Rib_x")), key=lambda b: b.XMin):
+                if rb_.XMin < xa + cx_ and rb_.XMax > xa - 1.0:       # гнутое ребро крыши у задней двери — за ним
+                    xa = rb_.XMax + 5.0
+            n_ = int((xb - xa + WC["between"]) // (cx_ + WC["between"]))
+            zs_ = [z0] + [z for z in pz_ if z0 < z < z1] + [z1]
+            pts_ = [(yf, z0), (yf, z1)] + [(ywc(z), z) for z in reversed(zs_)]
+            boxes_ = []
+            for i in range(n_):
+                xi = xa + i * (cx_ + WC["between"])
+                vec = [App.Vector(xi, sg_ * y, z) for y, z in pts_]
+                sol = Part.Face(Part.makePolygon(vec + [vec[0]])).extrude(App.Vector(cx_, 0, 0))
+                nm = "Cab%s_%d" % (st_["name"], i + 1)
+                add_shape(doc, nm, "%s %d — %s; боковины вырезаны по профилю борта" % (st_["title"], i + 1, st_["desc"]),
+                          sol, color=(0.86, 0.68, 0.40), group=cg)
+                add_shape(doc, nm + "_Door", "Дверца шкафчика %s %d" % (st_["title"].split()[-1], i + 1),
+                          Part.makeBox(cx_ - 6.0, 4.0, ch_ - 6.0, App.Vector(xi + 3.0, sg_ * yf - (4.0 if sg_ > 0 else 0.0),
+                                                                           z0 + 3.0)), color=(0.93, 0.78, 0.50), group=cg)
+                boxes_.append(sol)
+            chk = []
+            for lab, pref in (("рёбра кузова", "Rib_x"), ("продольные рейки кузова", "Rail_"), ("стойки кровати", "BedPost_"),
+                              ("душ", "Shower_"), ("электрика", "Elec_")):
+                ss = [o.Shape for o in doc.Objects if o.Name.startswith(pref) and o.isDerivedFrom("Part::Feature")
+                      and not o.Shape.isNull() and o.Shape.Solids]
+                if ss and boxes_:
+                    chk.append((lab, min(b.distToShape(s_)[0] for b in boxes_ for s_ in ss)))
+            cab_summary.append(dict(name=st_["title"], n=n_, x=(xa, xa + n_ * cx_ + (n_ - 1) * WC["between"]), free=xb - (
+                xa + n_ * cx_ + (n_ - 1) * WC["between"]), z=(z0 - floor_top, z1 - floor_top), y_front=yf,
+                over_mat=(z0 - mat_.Shape.BoundBox.ZMax) if mat_ is not None else None, depth_top=ywc(z1) - yf,
+                from_wall=y_at_z(half, z0) - yf, checks=chk))
 
     # ═══════ НАСТИЛ: вырезы под новые стойки P2 и под головки болтов в кузов ═══════
     # (при подъёме кровати настил может оказаться на высоте болтов стоек — головки торчат из стоек в салон)
@@ -3205,6 +3310,10 @@ def build():
             k["sec1_front"][0], k["sec1_front"][1], (k["sec1_front"][1] - k["sec1_front"][0]) / 25.4, k["sink_x"][0],
             k["sink_x"][1], k["fridge_title"], k["sec2"][0], k["sec2"][1], (k["sec2"][1] - k["sec2"][0]) / 25.4, k["x_div"][0]))
         print("  Вход в душ (шторка открыта, от задней стенки до угла столешницы): %.0f мм (%.1f″)" % (k["entry"], k["entry"] / 25.4))
+        if k.get("flap"):
+            f_ = k["flap"]
+            print("  Откидная столешница %.0f×%.0f″: разложена X %.0f..%.0f; сложена — до плоскости спинки %.0f мм, низ %.1f″ над полом" % (
+                f_["len"] / 25.4, f_["w"] / 25.4, f_["x_open"][0], f_["x_open"][1], f_["to_seat"], f_["z_fold_low"] / 25.4))
         if k.get("gas"):
             g_ = k["gas"]
             print("  Нагреватель: X %.0f..%.0f (над поддоном %.0f мм), от стены %.1f″…%.1f″, низ/верх %.1f″/%.1f″ над полом; "
@@ -3224,6 +3333,12 @@ def build():
         print("  Проход: у душа %.0f мм (%.1f″), у кухни %.0f мм (%.1f″)" % (
             k["aisle_sh"], k["aisle_sh"] / 25.4, k["aisle_k"], k["aisle_k"] / 25.4))
         print("  Зазоры: " + "; ".join("%s %.1f" % (n, v) for n, v in k["checks"]))
+    for c_ in cab_summary:
+        print("[%s — проект 2026-11-07]" % c_["name"])
+        print("  %d шт., X %.0f..%.0f (свободно %.0f мм); низ/верх %.1f″/%.1f″ над полом; над матрасом %.1f″; фасад %.1f″ от "
+              "обшивки (внизу), глубина у верха %.0f мм" % (c_["n"], c_["x"][0], c_["x"][1], c_["free"], c_["z"][0] / 25.4,
+              c_["z"][1] / 25.4, (c_["over_mat"] or 0) / 25.4, c_["from_wall"] / 25.4, c_["depth_top"]))
+        print("  Зазоры: " + "; ".join("%s %.1f" % (n, v) for n, v in c_["checks"]))
     if trunk_summary:
         t = trunk_summary
         f0 = t["floor_top"]

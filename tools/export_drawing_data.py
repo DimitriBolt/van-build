@@ -138,6 +138,23 @@ try:
         res["trunk"] = tr
         res["TRUNK_SHELF"] = json.loads(json.dumps(g["TRUNK_SHELF"], default=lambda o: list(o) if isinstance(o, tuple) else str(o)))
 
+    # — шкафчики под потолком: сечения первого шкафчика каждого ряда (профиль борта) —
+    if doc.getObject("CabPass_1") is not None:
+        cab = {}
+        for nm in ("CabPass_1", "CabDrv_1"):
+            o = doc.getObject(nm)
+            if o is not None:
+                xc = (o.Shape.BoundBox.XMin + o.Shape.BoundBox.XMax) / 2.0
+                cab[nm] = _slice(o.Shape, (1, 0, 0), xc)
+                for o2 in doc.Objects:
+                    if o2.isDerivedFrom("Part::Feature") and o2.Name.startswith(("BedMattress", "BedDeck", "Battery_B2",
+                                                                                "BankShelf")):
+                        sl = _slice(o2.Shape, (1, 0, 0), xc)
+                        if sl:
+                            cab.setdefault("_ctx", {})[o2.Name + "@" + nm] = sl
+        res["cabinets"] = cab
+        res["WALL_CABINETS"] = json.loads(json.dumps(g["WALL_CABINETS"], default=str))
+
     # — бак T-3500 на полке над аркой: поперечный разрез (YZ) по первому ремню —
     trk_o = doc.getObject("WaterTank_T3500")
     if trk_o is not None:

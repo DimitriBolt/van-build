@@ -53,7 +53,7 @@ VIEWS = [
 ]
 # этажерки под батареи: кровать и всё дальнее скрыто. Элемент, оканчивающийся на "$", —
 # ТОЧНОЕ имя объекта (иначе подстрока).
-_RACK_HIDE = _NOT_BED + ("_pY", "BedSideRail", "BedDeck", "BedMattress", "BedWall",
+_RACK_HIDE = _NOT_BED + ("CabPass", "CabDrv", "_pY", "BedSideRail", "BedDeck", "BedMattress", "BedWall",
                          "BedPostBodyBolt", "RailBolt", "Tank", "Shower_", "Kitchen_", "Water_", "Toilet", "Propane_",
                          "Gas_", "Safety_")
 _REAR_RACK = tuple(n + "$" for n in (
@@ -68,7 +68,7 @@ VIEWS += [
     ("bank_top.png", "viewTop", _RACK_HIDE + ("BedCross",)),
 ]
 # бак T-3500 на полке над водительской аркой: пассажирский борт и всё с него скрыто
-_TANK_HIDE = _NOT_BED + ("_nY", "Battery_", "Bank", "RackShelf", "RackPost", "RackRubber", "RackLower", "RackP2",
+_TANK_HIDE = _NOT_BED + ("CabPass", "CabDrv", "_nY", "Battery_", "Bank", "RackShelf", "RackPost", "RackRubber", "RackLower", "RackP2",
                          "BedDeck", "BedMattress", "BedWall", "BedPostBodyBolt",
                          "Shower_", "Kitchen_", "Propane_", "Gas_", "Safety_", "Elec_", "Cable_")
 VIEWS += [
@@ -79,7 +79,7 @@ VIEWS += [
     ("tank_top.png", "viewTop", _TANK_HIDE + ("BedCross", "BedSideRail")),
 ]
 # душ + мини-кухня (водительский борт, перед кроватью)
-_GALLEY_HIDE = _NOT_BED + ("_nY", "Battery_", "Bank", "Elec_", "Cable_", "RackShelf", "RackPost", "RackRubber", "RackLower", "RackP2",
+_GALLEY_HIDE = _NOT_BED + ("CabPass", "CabDrv", "_nY", "Battery_", "Bank", "Elec_", "Cable_", "RackShelf", "RackPost", "RackRubber", "RackLower", "RackP2",
                            "BedWall", "BedPostBodyBolt", "DPillar")
 VIEWS += [
     # из прохода у сдвижной двери на водительский борт, сверху-сзади
@@ -101,9 +101,19 @@ VIEWS += [
 
 
 # 2026-11-07: багажник с 2-м этажом (перфолист) — от задних дверей и сверху-сзади, щит/матрас сняты
-_TRUNK_HIDE = ("Scan_Skin", "Opening", "RearDoorLeaf", "Rib_x", "Rail_pY_z", "Rail_nY_z", "Pillar_", "Hole_",
+_TRUNK_HIDE = ("CabPass", "CabDrv", "Scan_Skin", "Opening", "RearDoorLeaf", "Rib_x", "Rail_pY_z", "Rail_nY_z", "Pillar_", "Hole_",
                "FactoryThread", "BedMattress", "Shower_", "Kitchen_", "Elec_", "Cable_")
 VIEWS += [
+    # 2026-11-07: шкафчики под потолком (из кабины назад) и откидная столешница (из прохода к кабине)
+    ("cabinets_3d.png", (-1.0, 0.0, -0.3), tuple(h for h in _TRUNK_HIDE if not h.startswith("Cab")) +
+     ("Shower_", "Propane_", "Gas_", "Safety_")),
+    ("kitchen_flap.png", (0.35, 1.0, -0.4), tuple(h for h in _TRUNK_HIDE if h != "Kitchen_") + (
+        "Shower_", "Bed", "Bank", "Battery", "Trunk2", "Water", "Toilet", "Propane", "TankFloor", "Floor", "WheelArch",
+        "Gas_", "Safety_", "DPillar", "Rail_", "FloorRib", "Thread", "Kitchen_FlapOpen", "Kitchen_FlapBracketOpen")),
+    ("kitchen_flap_open.png", (0.35, 1.0, -0.4), tuple(h for h in _TRUNK_HIDE if h != "Kitchen_") + (
+        "Shower_", "Bed", "Bank", "Battery", "Trunk2", "Water", "Toilet", "Propane", "TankFloor", "Floor", "WheelArch",
+        "Gas_", "Safety_", "DPillar", "Rail_", "FloorRib", "Thread", "Kitchen_Flap$", "Kitchen_FlapBracket1$",
+        "Kitchen_FlapBracket2$")),
     ("trunk_from_rear.png", "viewLeft", _TRUNK_HIDE),
     ("trunk_3d.png", (0.75, 0.55, -0.6), _TRUNK_HIDE + ("BedDeck", "BedWall")),
 ]
