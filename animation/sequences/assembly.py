@@ -18,8 +18,8 @@ STEPS = [
     {   # 2
         'label': '1 Матрас',
         'kind': 'simple',
-        'distance': 400.0,
-        'steps': 40,
+        'distance': 1500,
+        'steps': 300,
         'step_time': 0.01,
         'revolutions': 0.0,
         'parts': [
@@ -29,8 +29,8 @@ STEPS = [
     {   # 3
         'label': '2 Настил',
         'kind': 'simple',
-        'distance': 250.0,
-        'steps': 50,
+        'distance': 1000,
+        'steps': 200,
         'step_time': 0.01,
         'revolutions': 0.0,
         'parts': [
