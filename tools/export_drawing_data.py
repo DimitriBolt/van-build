@@ -123,30 +123,20 @@ try:
         sec["gas_pts"] = g["SHOWER_KITCHEN"].get("_gas_pts")
         res["galley"] = sec
 
-    # — 2-й этаж багажника: поперечный разрез по середине листа между поперечинами (взгляд вперёд) —
-    if doc.getObject("Trunk2_Cross_1") is not None:
+    # — 2-й этаж багажника (выдвижной поддон): разрезы по P3 (X 377) и по подвесу/P3m; вид сбоку вдоль водит. рейки —
+    if doc.getObject("Trunk2_Tray") is not None:
         TSS = g["TRUNK_SHELF"]["_summary"]
-        xs_ = TSS["crosses"][0]["x"]                         # разрез по поперечине #1 (P3 ↔ стойка кровати pY rear)
-        tr = {"x": xs_}
-        for o in doc.Objects:
-            if o.isDerivedFrom("Part::Feature") and o.Name.startswith(
-                    ("Battery_B", "BankShelf", "BankRail", "BankPost", "BankCross", "WaterTank_", "TankFloor_", "Trunk2_", "Trunk1_",
-                     "BedDeck", "BedMattress", "BedSideRail", "WheelArch_", "BedPost_")):
-                sl = _slice(o.Shape, (1, 0, 0), xs_)
-                if sl:
-                    tr[o.Name] = sl
-        res["trunk"] = tr
-        if len(TSS["crosses"]) > 1:                         # второй разрез — по поперечине #3 и её опорам
-            x3_ = TSS["crosses"][1]["x"]
-            tr3 = {"x": x3_}
+        pref = ("Battery_B", "BankShelf", "BankRail", "BankPost", "BankCross", "WaterTank_", "TankFloor_", "Trunk2_",
+                "Trunk1_", "BedDeck", "BedMattress", "BedSideRail", "WheelArch_", "BedPost_", "BedCross_", "Toilet_",
+                "Propane_", "Water_Pump")
+        for key, xs_ in (("trunk", 377.3), ("trunk3", TSS["x_hanger"])):
+            tr = {"x": xs_}
             for o in doc.Objects:
-                if o.isDerivedFrom("Part::Feature") and o.Name.startswith(
-                        ("Battery_B", "BankShelf", "BankRail", "BankPost", "WaterTank_", "TankFloor_", "Trunk2_", "Trunk1_", "BedDeck",
-                         "BedMattress", "BedSideRail", "WheelArch_", "BedCross_", "Toilet_", "Propane_", "Water_Pump")):
-                    sl = _slice(o.Shape, (1, 0, 0), x3_)
+                if o.isDerivedFrom("Part::Feature") and o.Name.startswith(pref) and not o.Name.endswith(("_Out", "_Front")):
+                    sl = _slice(o.Shape, (1, 0, 0), xs_)
                     if sl:
-                        tr3[o.Name] = sl
-            res["trunk3"] = tr3
+                        tr[o.Name] = sl
+            res[key] = tr
         res["TRUNK_SHELF"] = json.loads(json.dumps(g["TRUNK_SHELF"], default=lambda o: list(o) if isinstance(o, tuple) else str(o)))
 
     # — шкафчики под потолком: сечения первого шкафчика каждого ряда (профиль борта) —
@@ -168,7 +158,7 @@ try:
 
     # — strut: сечения, где видно спинку (с отверстиями) и паз — 2026-11-08 —
     pref = ("BedPost_", "BedSideRail", "BedCross_", "BankPost_P3", "BankRail_", "BankCross_", "BankHolddown",
-            "Battery_B", "BankShelf", "BedDeck", "BankRailBolt", "Trunk2_Cross")
+            "Battery_B", "BankShelf", "BedDeck", "BankRailBolt", "Trunk2_")
     planes = {"yz600": ((1, 0, 0), 600.0), "yz377": ((1, 0, 0), 377.3), "xy300": ((0, 0, 1), 300.0),
               "xy466": ((0, 0, 1), 466.0), "xy1000": ((0, 0, 1), 1000.0), "xz0": ((0, 1, 0), 0.0),
               "xzm850": ((0, 1, 0), -850.0)}
