@@ -179,7 +179,8 @@ r("Trunk2_TrayFwd_Out", fill=False, ec="#6d4c41", ls="--", lw=1.6, zorder=6)
 # полка: контур с вырезом под D-стойку и отверстием под газовую трубку
 x0s, x1s, y0s, y1s = SH["x"][0], SH["x"][1], SH["y"][0], SH["y"][1]
 nt = SH.get("notch")
-pts = [(x0s, y0s), (x1s, y0s), (x1s, y1s)] + ([(nt[1], y1s), (nt[1], nt[2]), (x0s, nt[2])] if nt else [(x0s, y1s)])
+pts = SH.get("outline") or ([(x0s, y0s), (x1s, y0s), (x1s, y1s)] +
+                            ([(nt[1], y1s), (nt[1], nt[2]), (x0s, nt[2])] if nt else [(x0s, y1s)]))
 ax.add_patch(Polygon([(px(a), py(b)) for a, b in pts], closed=True, fc=C_SH, alpha=0.55, ec="#6d4c41", lw=2.0, zorder=6))
 gh = SH.get("gas_hole")
 if gh:
@@ -198,7 +199,7 @@ for n in sorted(B):
     if n.startswith("Trunk2_PostP3m"):
         r(n, fc=C_ST, ec="#37474f", zorder=8)
 lab = dict(ha="center", fontsize=10, weight="bold", zorder=9)
-ax.text(px((x0s + x1s) / 2) - 6, py((y0s + y1s) / 2) + 4, "ПОЛКА 2-го эт. (фанера 3/4″)\n%.1f × %.1f″, над ней %.1f″" % (
+ax.text(px((x0s + x1s) / 2) - 6, py((y0s + y1s) / 2) + 4, "ПОЛКА 2-го эт. (фанера 3/4″)\n%.1f × %.1f″ (до шторки душа), над ней %.1f″" % (
     (x1s - x0s) / IN, (y1s - y0s) / IN, SH["over_cross"] / IN), color="#4e342e", **lab)
 ax.text(px(sum(qf["x"]) / 2) + 6, py(sum(qf["y"]) / 2) + 2.5, "ПЕРЕДНИЙ ящик 2-го эт.\n%.1f × %.1f″ → вперёд %.0f″" % (
     (qf["x"][1] - qf["x"][0]) / IN, (qf["y"][1] - qf["y"][0]) / IN, qf["out"] / IN), color="#6d4c41", **lab)

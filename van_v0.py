@@ -587,7 +587,7 @@ TRUNK_SHELF = {
     "slide1": {"L": 914.4, "H": 76.2, "T": 19.3, "title": "SLIDEWAY 500 lb Locking 36″"},
     "spine": {"locker_gap": 10.0},    # хребет: до дверцы локера пропана
     # полка 2-го этажа (водит. половина) вместо заднего ящика — фанера 3/4″, опоры strut 6″ на 3 стойках
-    "shelf": {"th": 19.05, "pillar_gap": 5.0, "gas_gap": 15.0, "cleat_L": 152.4},
+    "shelf": {"th": 19.05, "pillar_gap": 5.0, "gas_gap": 15.0, "cleat_L": 152.4, "curtain_gap": 5.0},
     "front_gap": 15.0,                # передний ящик (закрыт) — до края щита
     "opening_gap": 15.0,              # задние ящики и направляющие — внутри проёма задних дверей (|Y| < стойки)
     "x_rear": 30.0,                   # задний торец направляющих (закрыто) — от порога
@@ -645,7 +645,6 @@ STRUT_BACK = [
     (r"BankHolddown_B1$", "-X"),                    # ?
     (r"Trunk2_PostP3m$", "wall"),                   # как P3: спинка к рейке батарей, паз в проход (направляющая)
     (r"Trunk2_SpinePost_\d$", "+Y"),               # хребет: паз — к переднему ящику (направляющая, как на P3), спинка — к полке
-    (r"Trunk1_SpineRail$", "+Y"),                   # спинкой к пазу стоек, паз — к направляющей ящика 1-го этажа
     (r"Trunk2_ShelfCleat_S\d$", "-Y"),             # опора полки: спинка к спинке со стойкой хребта
     (r"Trunk2_ShelfCleat_W$", "+Y"),                # опора полки: спинка к спинке со стойкой кровати pY rear
 ]
@@ -3111,21 +3110,16 @@ def build():
         z1s0 = z10 + b1["base"] + 8.0
         zr1 = z1s0 + S1["H"] / 2.0 - sw / 2.0
         x1s0, x1s1 = TS["x_rear"], TS["x_rear"] + S1["L"]
-        tput("Trunk1_SpineRail", "Рейка хребта 1-го этажа strut L=%.0f: спинкой к пазу стоек хребта (болт в гайку-канал); "
-             "в её пазу — направляющая ящика 1-го этажа (кончается до дверцы локера)" % (x1s1 - x1s0),
-             Part.makeBox(x1s1 - x1s0, sd, sw, App.Vector(x1s0, y_rp[0], zr1)), COL_STRUT)
-        y_s1 = (y_rp[0] - SL["T"], y_rp[0])
-        for i_, xc_ in enumerate(posts_x):
-            tput("Trunk2_SpineBolt_%d_1" % (i_ + 1), "Болт 3/8″: рейка хребта 1-го этажа ↔ стойка %d (гайка-канал в пазу "
-                 "стойки)" % (i_ + 1), Part.makeCylinder(4.75, 2 * sd + 16.0, App.Vector(xc_, y_rp[0] - 8.0, zr1 + sw / 2.0),
-                                                     App.Vector(0, 1, 0)), (0.85, 0.85, 0.20))
+        y_s1 = y_scp                                                 # 2026-11-08 (Dimitri): рейка хребта 1-го этажа не нужна —
+                                                                     # направляющая прямо на пазах стоек хребта, как на P3
         # направляющие
         for nm_, lab, x0_, ln_, y0_, z0_, ttl in (
                 ("Trunk2_SlidePass", "переднего ящика (пасс.), на пазах P3 и P3m", xs0, SL["L"], y_p, z_s0, SL["title"]),
                 ("Trunk2_SlideSpine", "переднего ящика, на пазах стоек хребта (как на P3)", xs0, SL["L"], y_scp[0], z_s0,
                  SL["title"]),
                 ("Trunk1_SlidePass", "ящика 1-го этажа (пасс.), на пазах P3 и P3m", x1s0, S1["L"], y_p, z1s0, S1["title"]),
-                ("Trunk1_SlideSpine", "ящика 1-го этажа, на рейке хребта", x1s0, S1["L"], y_s1[0], z1s0, S1["title"])):
+                ("Trunk1_SlideSpine", "ящика 1-го этажа, на пазах стоек хребта (как на P3)", x1s0, S1["L"], y_s1[0], z1s0,
+                 S1["title"])):
             tput(nm_, "Направляющая %s — %s" % (ttl, lab),
                  Part.makeBox(ln_, SL["T"], SL["H"], App.Vector(x0_, y0_, z0_)), (0.80, 0.82, 0.86))
         for nm_, z0_ in (("Trunk2_P3Shim", z_s0), ("Trunk1_P3Shim", z1s0)):
@@ -3139,11 +3133,30 @@ def build():
         z_p1 = z_p0 + SH["th"]
         px0, px1, py0, py1 = rp_.XMax + SH["pillar_gap"], x_fr, yc1, bpr.YMin
         ply = Part.makeBox(px1 - px0, py1 - py0, SH["th"], App.Vector(px0, py0, z_p0))
+        # 2026-11-08 (Dimitri): полку — вперёд за край щита до нижней шторки душа и до ребра стенки душа по борту
+        cul = doc.getObject("Shower_CurtainLower")
+        swb = doc.getObject("Shower_WallBack")
+        outline = [(px0, py0), (px1, py0), (px1, py1), (px0, py1)]
+        if cul is not None and swb is not None:
+            cb_, wb_ = cul.Shape.BoundBox, swb.Shape.BoundBox
+            px1 = cb_.XMin - SH["curtain_gap"]                       # до нижней шторки
+            xw, yw = wb_.XMin, wb_.YMin                             # ребро стенки душа по борту
+            # прямой участок основной шторки (вдоль X у прохода) — полка за ним, шторка висит мимо её кромки
+            ye0 = py0
+            scu = doc.getObject("Shower_Curtain")
+            if scu is not None:
+                cc_ = scu.Shape.common(Part.makeBox(px1 - xw, yw - py0, SH["th"], App.Vector(xw, py0, z_p0)))
+                if not cc_.isNull() and cc_.Volume > 1.0:
+                    ye0 = cc_.BoundBox.YMax + SH["curtain_gap"]
+            ply = Part.makeBox(xw - px0, py1 - py0, SH["th"], App.Vector(px0, py0, z_p0)).fuse(
+                Part.makeBox(px1 - xw, yw - ye0, SH["th"], App.Vector(xw, ye0, z_p0))).removeSplitter()
+            outline = [(px0, py0), (xw, py0), (xw, ye0), (px1, ye0), (px1, yw), (xw, yw), (xw, py1), (px0, py1)]
         dpf = doc.getObject("DPillarFace_pY_ref")
         notch = None
         if dpf is not None:                                         # вырез под D-стойку
             db_ = dpf.Shape.BoundBox
             notch = (px0, db_.XMax + SH["pillar_gap"], db_.YMin - SH["pillar_gap"], py1)
+            outline = outline[:-1] + [(notch[1], py1), (notch[1], notch[2]), (px0, notch[2])]
             ply = ply.cut(Part.makeBox(notch[1] - notch[0] + 1.0, notch[3] - notch[2] + 1.0, SH["th"] + 2.0,
                                        App.Vector(notch[0] - 1.0, notch[2], z_p0 - 1.0)))
         gas_hole = None
@@ -3173,7 +3186,8 @@ def build():
             tput(nm_.replace("Cleat", "Bolt"), "Болт 3/8″: опора полки ↔ %s" % lab,
                  Part.makeCylinder(4.75, 2 * sd + 16.0, App.Vector(xc_, yb_, z_p0 - sw / 2.0), App.Vector(0, 1, 0)),
                  (0.85, 0.85, 0.20))
-        shelf = dict(x=(px0, px1), y=(py0, py1), z=(z_p0, z_p1), th=SH["th"], notch=notch, gas_hole=gas_hole,
+        shelf = dict(x=(px0, px1), y=(py0, py1), z=(z_p0, z_p1), th=SH["th"], notch=notch, gas_hole=gas_hole, outline=outline,
+                     area_ft2=ply.Area / 2.0 / 92903.0,
                      over_cross=doc.getObject("BedCross_1").Shape.BoundBox.ZMin - z_p1,
                      over_deck=doc.getObject("BedDeck").Shape.BoundBox.ZMin - z_p1,
                      supports=[(posts_x[0], yc1), (posts_x[1], yc1), ((bpr.XMin + bpr.XMax) / 2.0, bpr.YMin)])
@@ -3209,8 +3223,13 @@ def build():
                 v = mind([tparts[nm_]], pref)
                 if v is not None and v < 25:
                     tch.append(("%s ↔ %s" % (nm_.replace("Trunk2_", "").replace("Trunk1_", ""), lab), v))
-        tch.append(("за край щита (макс X, закрыто)", max(tparts[n_].BoundBox.XMax for n_ in tparts
-                                                         if not n_.endswith("_Out")) - dx1))
+        tch.append(("за край щита (макс X, закрыто; кроме полки — её Dimitri довёл до шторки душа)",
+                    max(tparts[n_].BoundBox.XMax for n_ in tparts if not n_.endswith("_Out")
+                        and not n_.startswith("Trunk2_Shelf")) - dx1))
+        for lab, pref in (("душ", "Shower_"), ("стойки кровати", "BedPost_")):
+            v = mind([tparts["Trunk2_Shelf"]], pref)
+            if v is not None:
+                tch.append(("полка ↔ %s" % lab, v))
         # дверца локера пропана (в багажник, X %.0f..%.0f) открывается на 90° — в зоне ничего неподвижного
         ldb = doc.getObject("Propane_LockerDoor").Shape.BoundBox
         swing = Part.makeBox(ldb.XLength, ldb.XLength, ldb.ZLength, App.Vector(ldb.XMin, ldb.YMin - ldb.XLength, ldb.ZMin))
