@@ -124,7 +124,7 @@ try:
         res["galley"] = sec
 
     # — багажник (3 ящика + хребет): разрезы по P3/стойке хребта 1 (X 395) и по подвесу/P3m/стойке хребта 2 (X 848) —
-    if doc.getObject("Trunk2_TrayRear") is not None:
+    if doc.getObject("Trunk2_TrayFwd") is not None:
         TSS = g["TRUNK_SHELF"]["_summary"]
         pref = ("Battery_B", "BankShelf", "BankRail", "BankPost", "BankCross", "WaterTank_", "TankFloor_", "Trunk2_",
                 "Trunk1_", "BedDeck", "BedMattress", "BedSideRail", "WheelArch_", "BedPost_", "BedCross_", "Toilet_",

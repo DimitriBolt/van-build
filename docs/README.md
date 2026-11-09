@@ -29,7 +29,7 @@ FREECADCMD="$HOME/Applications/FreeCAD.AppImage --console" FREECAD="$HOME/Applic
 | `water_tank_T3500_drawing.png` | **вариант:** бак T-3500 (35 gal) на полке над водительской аркой, сдвинут к D-стойке: сверху, вид на борт, разрез по ремню | §1j |
 | `strut_orientation_drawing.png` | strut: где спинка (овалы через 2″) и где паз — сечения всех узлов | Правила соединений strut |
 | `wall_cabinets_drawing.png` | шкафчики под потолком (пассажирский борт, над изголовьем) + откидная столешница | §1o |
-| `trunk_drawing.png` | багажник под кроватью: 3 выдвижных ящика на SLIDEWAY + хребет — 2 разреза, вид сбоку, план | §1n |
+| `trunk_drawing.png` | багажник под кроватью: 2 ящика на SLIDEWAY + полка над баком + хребет — 2 разреза, вид сбоку, план | §1n |
 | `shower_kitchen_drawing.png` | душ-сектор 32″ с газовым нагревателем + кухня в 2 секции (вогнутый торец) + локер пропана под кроватью: вид на борт, план, 4 разреза | §1e, §1m |
 
 ## 3D-виды (`renders/`)
@@ -45,7 +45,7 @@ FREECADCMD="$HOME/Applications/FreeCAD.AppImage --console" FREECAD="$HOME/Applic
 | `tank_T3500_3d.png`, `…_wall_view.png`, `…_top.png` | бак T-3500 на полке (вариант) |
 | `galley_3d.png`, `galley_wall_view.png`, `galley_top.png` | душ + мини-кухня |
 | `cabinets_3d.png`, `kitchen_flap.png`, `kitchen_flap_open.png` | шкафчики под потолком; откидная столешница сложена / разложена |
-| `trunk_from_rear.png`, `trunk_3d.png`, `trunk_fwd_3d.png` | багажник: 3 ящика (закрыты + выдвинуты-призраки) — от задних дверей; сзади-сверху; спереди-сверху (без щита) |
+| `trunk_from_rear.png`, `trunk_3d.png`, `trunk_fwd_3d.png` | багажник: 2 ящика (закрыты + выдвинуты-призраки) и полка — от задних дверей; сзади-сверху; спереди-сверху (без щита) |
 | `shower_rear_wall.png`, `propane_3d.png` | задняя стенка душа с нагревателем (из кабины назад); локер пропана под кроватью (щит снят) |
 
 ## Архив (`archive/`)
