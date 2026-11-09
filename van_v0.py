@@ -575,8 +575,14 @@ TRUNK_SHELF = {
     "enable": True,
     # 2026-11-08 (Dimitri): поперечины — от края до края, висят на «язычках» (спинка, отогнутая вверх): #1 на P3 и
     # стойке кровати pY rear, #3 на P3f и стойке pY front; #2 убрана; бак не нагружать (гибкий). Лист — позже.
+    # 2026-11-08 (вечер): #3 на P3f ↔ pY front шла через душ и нарушала правило Dimitri «никакие технические
+    # конструкции не выступают из-под настила кровати» → #3 перенесена под щит, X между бруском бака и локером
+    # пропана: пассажирская сторона — новая ножка P3m (как P3, спинка к спинке с рейкой батарей, бортик у B4);
+    # водительская — пол занят аркой/баком/туалетом → подвес Hanger3: короткий strut вниз от продольной рейки
+    # кровати pY (рейки и стойки кровати постоянные; снимаются только матрас, настил и поперечины кровати).
     "cross": [("1", "BankPost_P3", "BedPost_pY_rear", True),
-              ("3", "BankPost_P3f", "BedPost_pY_front", False)],   # #3 — проходит через душ: ждёт решения
+              ("3", "Trunk2_PostP3m", "Trunk2_Hanger3", True)],
+    "p3m_shim": 4.0,                  # P3m отодвинута от рейки на 4 мм (арка) — проставка/шайбы в болте
     "tank_gap": 6.0,                  # поперечина над баком — с зазором, бак не нагружаем
     "tongue_h": 50.0,                 # язычок над поперечиной (болт 3/8″ посередине)
     "sheet": (609.6, 1219.2, 0.95),   # перфолист 48×24″ 19 ga — ОТЛОЖЕН (не строится)
@@ -627,7 +633,9 @@ STRUT_BACK = [
     (r"BankRail_Inner$", "aisle"),                  # п. 4: спинкой к P3, паз к борту (под батареями)
     (r"BankCross_(Rear|Front)$", "-X"),             # ? на ребре между рейками
     (r"BankHolddown_B1$", "-X"),                    # ?
-    (r"Trunk2_Cross_\d$", "+Z"),                   # отложено (переделка 2-го этажа)
+    (r"Trunk2_Cross_\d$", "+Z"),                   # висит на язычках (спинка вверх, язычки — её продолжение)
+    (r"Trunk2_PostP3m$", "wall"),                   # как P3: спинка к рейке батарей, паз в проход (язычок #3)
+    (r"Trunk2_Hanger3$", "wall"),                   # спинкой к пазу рейки кровати, паз в проход (язычок #3)
 ]
 
 
@@ -2997,6 +3005,32 @@ def build():
             add_shape(doc, name, label, shape, color=color, transparency=tr, group=tg)
             tparts[name] = shape
             return shape
+        # опоры поперечины #3 (под щитом): X — посередине между передним бруском бака и локером пропана
+        if any(c_[1] == "Trunk2_PostP3m" for c_ in TS["cross"]):
+            lo_ = max(o.Shape.BoundBox.XMax for o in doc.Objects if o.Name.startswith(("TankFloor_Cleat_Front",
+                                                                                      "TankFloor_Fitting")))
+            hi_ = doc.getObject("Propane_Locker").Shape.BoundBox.XMin if doc.getObject("Propane_Locker") else dx1 - 200
+            x3 = (lo_ + hi_) / 2.0
+            p3b_ = doc.getObject("BankPost_P3").Shape.BoundBox
+            rbi = doc.getObject("BankRail_Inner").Shape.BoundBox
+            ysh = TS.get("p3m_shim", 0.0)
+            tput("Trunk2_PlateP3m", "Пластина под P3m (как под P3)", Part.makeBox(127.0, 102.0, 3.0, App.Vector(
+                x3 - 63.5, rbi.YMax + ysh, floor_top)), COL_STRUT)
+            tput("Trunk2_PostP3m", "Ножка P3m (как P3): спинка к спинке с рейкой батарей (проставка %.0f мм — арка), "
+                 "бортик у B4; на ней висит поперечина #3" % ysh,
+                 Part.makeBox(sw, sd, p3b_.ZMax - (floor_top + 3.0), App.Vector(x3 - sw / 2.0, rbi.YMax + ysh,
+                                                                               floor_top + 3.0)), COL_STRUT)
+            tput("Trunk2_PostP3mBolt", "Болт 3/8″: P3m ↔ рейка со стороны прохода (через овалы спинок + проставка)",
+                 Part.makeCylinder(4.75, 2 * sd + ysh + 16.0, App.Vector(x3, rbi.YMin - 8.0, (rbi.ZMin + rbi.ZMax) / 2.0),
+                                   App.Vector(0, 1, 0)), (0.85, 0.85, 0.20))
+            srp = doc.getObject("BedSideRail_pY").Shape.BoundBox
+            hz0 = z_c0 - 15.0
+            tput("Trunk2_Hanger3", "Подвес поперечины #3: strut вниз от продольной рейки кровати pY (спинкой к её пазу, "
+                 "болт с гайкой-каналом — двигается вдоль рейки); на нём висит #3",
+                 Part.makeBox(sw, sd, srp.ZMax - hz0, App.Vector(x3 - sw / 2.0, srp.YMin - sd, hz0)), COL_STRUT)
+            tput("Trunk2_Hanger3Bolt", "Болт 3/8″ подвеса → гайка-канал в пазу продольной рейки кровати pY",
+                 Part.makeCylinder(4.75, sd + 30.0, App.Vector(x3, srp.YMin - sd - 8.0, (srp.ZMin + srp.ZMax) / 2.0),
+                                   App.Vector(0, 1, 0)), (0.85, 0.85, 0.20))
         for cn, pa_n, pb_n, ok_ in TS["cross"]:
             pa, pb = doc.getObject(pa_n).Shape.BoundBox, doc.getObject(pb_n).Shape.BoundBox
             xc = (pa.XMin + pa.XMax) / 2.0
@@ -3024,11 +3058,20 @@ def build():
         for c_ in crosses:
             sh_ = [tparts["Trunk2_Cross_%s" % c_["n"]]]
             for lab, pref in (("бак", "WaterTank_"), ("ремни бака", "TankFloor_Strap"), ("батареи", "Battery_"),
+                              ("насос", "Water_Pump"), ("брусок бака", "TankFloor_Cleat"), ("газ", "Gas_"),
                               ("поперечины кровати", "BedCross_"), ("туалет", "Toilet_"), ("локер", "Propane_Locker"),
                               ("душ", "Shower_")):
                 v = mind(sh_, pref)
                 if v is not None and v < 300:
                     tch.append(("#%s ↔ %s" % (c_["n"], lab), v))
+        for nm_ in ("Trunk2_PostP3m", "Trunk2_Hanger3"):
+            if nm_ in tparts:
+                for lab, pref in (("арка", "WheelArch_"), ("батареи", "Battery_"), ("туалет", "Toilet_"),
+                                  ("бак", "WaterTank_")):
+                    v = mind([tparts[nm_]], pref)
+                    if v is not None and v < 200:
+                        tch.append(("%s ↔ %s" % (nm_.split("_")[1], lab), v))
+        tch.append(("за край щита (макс X)", max(tparts[n_].BoundBox.XMax for n_ in tparts) - dx1))
         rb = doc.getObject("BankRail_Inner").Shape.BoundBox
         cl_ = doc.getObject("TankFloor_Cleat_Aisle")
         y_tr1 = cl_.Shape.BoundBox.YMin if cl_ is not None else (tb.YMin if tb else 0.0)

@@ -136,6 +136,17 @@ try:
                 if sl:
                     tr[o.Name] = sl
         res["trunk"] = tr
+        if len(TSS["crosses"]) > 1:                         # второй разрез — по поперечине #3 и её опорам
+            x3_ = TSS["crosses"][1]["x"]
+            tr3 = {"x": x3_}
+            for o in doc.Objects:
+                if o.isDerivedFrom("Part::Feature") and o.Name.startswith(
+                        ("Battery_B", "BankShelf", "BankRail", "BankPost", "WaterTank_", "TankFloor_", "Trunk2_", "BedDeck",
+                         "BedMattress", "BedSideRail", "WheelArch_", "BedCross_", "Toilet_", "Propane_", "Water_Pump")):
+                    sl = _slice(o.Shape, (1, 0, 0), x3_)
+                    if sl:
+                        tr3[o.Name] = sl
+            res["trunk3"] = tr3
         res["TRUNK_SHELF"] = json.loads(json.dumps(g["TRUNK_SHELF"], default=lambda o: list(o) if isinstance(o, tuple) else str(o)))
 
     # — шкафчики под потолком: сечения первого шкафчика каждого ряда (профиль борта) —

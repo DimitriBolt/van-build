@@ -37,10 +37,11 @@ def hdim(ax, z, x0, x1, txt, fs=8.5, dz=0.45, color="k"):
             bbox=dict(fc="white", ec="none", alpha=0.8, pad=0.4))
 
 
-fig = plt.figure(figsize=(17, 21), dpi=110)
-gs = fig.add_gridspec(2, 1, height_ratios=[0.95, 1.0])
+fig = plt.figure(figsize=(17, 30), dpi=110)
+gs = fig.add_gridspec(3, 1, height_ratios=[0.95, 0.95, 1.0])
 axs = fig.add_subplot(gs[0])
-axp = fig.add_subplot(gs[1])
+ax3 = fig.add_subplot(gs[1])
+axp = fig.add_subplot(gs[2])
 
 # ───────── РАЗРЕЗ (взгляд вперёд) ─────────
 ax = axs
@@ -101,6 +102,45 @@ ax.set_ylabel("от чистового пола, дюймы")
 ax.set_title("Разрез по багажнику X=%.1f″ от задних дверей (взгляд вперёд, к кабине)" % px(SEC["x"]), loc="left",
              fontsize=12)
 
+# ───────── РАЗРЕЗ по поперечине #3 (опоры: P3m и подвес от рейки кровати) ─────────
+if "trunk3" in d:
+    S3 = d["trunk3"]
+    ax = ax3
+    ax.plot([p[0] for p in wl], [p[1] for p in wl], color="#616161", lw=2)
+    ax.plot([p[0] for p in wr], [p[1] for p in wr], color="#616161", lw=2)
+    ax.add_patch(Rectangle((hy(1000), -1.8), 2000 / IN, 1.8, color="#e8d9b5"))
+    STY3 = STY + [("Toilet_", dict(fc="#bdbdbd", ec="#424242")), ("Propane_", dict(fc="#f3d98b", ec="#bf8f00")),
+                  ("Water_Pump", dict(fc="#3949ab")), ("BedCross_", dict(fc=C_ST)), ("Trunk2_Plate", dict(fc=C_ST)),
+                  ("Trunk2_PostP3m", dict(fc="#26a69a", ec="#00695c")), ("Trunk2_Hanger3", dict(fc="#26a69a", ec="#00695c"))]
+    for pref, kw in STY3:
+        for n in sorted(S3):
+            if n.startswith(pref) and n != "x":
+                for w in S3[n]:
+                    if len(w) > 2:
+                        ax.add_patch(Polygon([(hy(p[1]), mz(p[2])) for p in w], closed=True, zorder=3, **kw))
+    c3 = B["Trunk2_Cross_3"]
+    ax.add_patch(Rectangle((hy(c3[3]), mz(c3[4])), (c3[3] - c3[2]) / IN, (c3[5] - c3[4]) / IN, fill=False, ec="#00695c",
+                           ls="--", lw=1.2, zorder=4))
+    for nm, txt, dy in (("Trunk2_Hanger3", "подвес от продольной рейки\nкровати (рейка постоянная)", 4.0),
+                        ("Trunk2_PostP3m", "новая ножка P3m\n(как P3, у B4)", -4.0)):
+        b = B[nm]
+        ax.annotate(txt, xy=(hy((b[2] + b[3]) / 2), mz((b[4] + b[5]) / 2)), xytext=(hy((b[2] + b[3]) / 2) + (6 if dy > 0
+                    else -12), mz((b[4] + b[5]) / 2) + dy), fontsize=9, color="#00695c", arrowprops=dict(arrowstyle="->"),
+                    zorder=8)
+    ax.text(hy(0), mz(c3[5]) + 3.0, "поперечина #3 — висит на язычках (под щитом, между баком и локером)", ha="center",
+            fontsize=11, weight="bold", color="#00695c", zorder=5)
+    for nm, lab in (("Toilet_Camco", "туалет"), ("Propane_Locker", "")):
+        if nm in B and nm in S3 and lab:
+            b = B[nm]
+            ax.text(hy((b[2] + b[3]) / 2), mz(b[5]) - 3, lab, ha="center", fontsize=9, zorder=6)
+    ax.set_xlim(hy(1010), hy(-1010))
+    ax.set_ylim(-3, 40)
+    ax.set_aspect("equal")
+    ax.grid(True, color="#f2f2f2", lw=0.6)
+    ax.set_xlabel("поперёк фургона, дюймы от оси (слева — водительский борт)")
+    ax.set_ylabel("от чистового пола, дюймы")
+    ax.set_title("Разрез по поперечине #3, X=%.1f″ от задних дверей (взгляд вперёд)" % px(S3["x"]), loc="left", fontsize=12)
+
 # ───────── ПЛАН ─────────
 ax = axp
 
@@ -148,6 +188,15 @@ for n in sorted(B):
     if n.startswith("Trunk2_Cross_"):
         r(n, fc=C_ST, ec="#37474f", zorder=6)
 r("Trunk2_Sheet", fc="#90a4ae", alpha=0.35, ec="#263238", lw=1.5, hatch="..", zorder=5)
+for n in ("Trunk2_PostP3m", "Trunk2_Hanger3"):
+    r(n, fc="#26a69a", ec="#00695c", zorder=7)
+if has("Trunk2_Cross_3"):
+    b = B["Trunk2_Cross_3"]
+    ax.text(px(b[1]) + 0.3, py(-250), "#3", fontsize=10, weight="bold", color="#00695c", zorder=8)
+    b = B["Trunk2_Cross_1"]
+    ax.text(px(b[1]) + 0.3, py(-250), "#1", fontsize=10, weight="bold", color="#37474f", zorder=8)
+ax.axvline(px(T["x_deck"]), color="#8d6e63", ls="-.", lw=1.2)
+ax.text(px(T["x_deck"]) + 0.3, py(G["arch_ywall"]) - 3, "край щита\n(правило: ничего\nдальше)", fontsize=8, color="#8d6e63")
 ax.text(px(1000.0), py(-400), "1-й этаж\n(здесь — до\nпоперечин\nкровати 30″)", ha="center",
         va="center", fontsize=9.5, color="#6d4c41", zorder=7)
 for n, lab in ((tk, "бак T-4320"), ("Toilet_Camco", "туалет"), ("Propane_Locker", "пропан\n20 lb")):
@@ -166,11 +215,11 @@ ax.set_aspect("equal")
 ax.grid(True, color="#f2f2f2", lw=0.6)
 ax.set_xlabel("от задних дверей вперёд, дюймы")
 ax.set_ylabel("поперёк, дюймы от оси (+ — водительский борт)")
-ax.set_title("План под кроватью: 1-й этаж (жёлтый — свободный пол), поперечины 2-го этажа (#3 — через душ, ждёт решения)", loc="left",
+ax.set_title("План под кроватью: 1-й этаж (жёлтый — свободный пол), поперечины 2-го этажа #1 и #3 (всё под щитом)", loc="left",
              fontsize=12)
 
 fig.suptitle("Багажник под кроватью (2026-11-08, из модели): поперечины 2-го этажа от борта до борта на язычках —\n"
-             "#1 P3 ↔ стойка кровати pY rear; #3 P3f ↔ pY front (красная — через душ, ждёт решения); перфолист — позже",
+             "#1 P3 ↔ стойка кровати pY rear; #3 ножка P3m ↔ подвес от рейки кровати (всё под щитом); перфолист — позже",
              fontsize=13)
 fig.tight_layout(rect=(0, 0, 1, 0.965))
 save(fig, "trunk_drawing.png")
