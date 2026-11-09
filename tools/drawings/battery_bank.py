@@ -158,7 +158,7 @@ for n in [k for k in B if k.startswith("BankArchPad_")]:
     rect_xz(ax, n, color="#212121", zorder=4)
 for n in BATS:
     rect_xz(ax, n, fc=C_BAT, ec="#bf360c", zorder=2)
-for n in [k for k in B if k.startswith("BankStop_")] + ["BankHolddown_B1"]:
+for n in [k for k in B if k.startswith("BankStop_")] + [k for k in B if k == "BankHolddown_B1"]:
     rect_xz(ax, n, color="#37474f", zorder=5)
 rect_xz(ax, "BankWedge_B1Arch", fc="#a0703c", ec="#5d4037", zorder=5)
 for i, n in enumerate(BATS):
@@ -217,8 +217,9 @@ hdim(zr("BankRail_Wall")[0] - 1.1, *xr_("BankRail_Wall"),
          R["bank"]["pad"]), fs=7.5, dz=-0.95)
 for n in SHELF_BATS:
     hdim(zb_top + 0.9, *xr_(n), "10.07″", fs=7.5)
-ax.annotate("прижимная планка над B1", xy=(mx(B["BankHolddown_B1"][1]), zr("BankHolddown_B1")[1]),
-            xytext=(-6.6, 13.0), fontsize=7.5, arrowprops=dict(arrowstyle="-", lw=0.7))
+if "BankHolddown_B1" in B:
+    ax.annotate("прижимная планка над B1", xy=(mx(B["BankHolddown_B1"][1]), zr("BankHolddown_B1")[1]),
+                xytext=(-6.6, 13.0), fontsize=7.5, arrowprops=dict(arrowstyle="-", lw=0.7))
 ax.annotate("клин в арку", xy=(xr_("BankWedge_B1Arch")[1], zr("BankWedge_B1Arch")[1]), xytext=(17.0, 12.0),
             fontsize=7.5, arrowprops=dict(arrowstyle="-", lw=0.7))
 ax.text(mx(B["BankPost_P3f"][0]) - 0.2, zr("BankPost_P3f")[1] - 3.0, "P3, P3f — пунктир\n(со стороны прохода)",
