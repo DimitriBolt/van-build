@@ -736,6 +736,34 @@ VIEW_CAMERA = """OrthographicCamera {
 }
 """
 
+# 2026-11-08 (Dimitri): по умолчанию скрыты — обшивка #2, каркас, проёмы дверей (сейчас с ними не работаем, мешают
+# видеть остальное). Включаются глазиком в дереве. Рендеры (tools/render_views.py) это не трогает: VAN_HIDE_ON_SAVE=0.
+HIDE_ON_SAVE = ["Scan_Skin_Body", "Frame", "Openings"]
+
+
+def hide_default(doc):
+    if os.environ.get("VAN_HIDE_ON_SAVE", "1") == "0":
+        return
+
+    def _hide(o):
+        try:
+            o.Visibility = False
+        except Exception:
+            pass
+        vo = getattr(o, "ViewObject", None)
+        if vo is not None:
+            try:
+                vo.Visibility = False
+            except Exception:
+                pass
+        for c in getattr(o, "Group", []) or []:
+            _hide(c)
+    for n in HIDE_ON_SAVE:
+        o = doc.getObject(n)
+        if o is not None:
+            _hide(o)
+
+
 # Заметки Dimitri в Label2 (из его .FCStd) — сохраняются при пересборке, идут в начало Label2
 USER_NOTES = {
     "BankRail_Wall": "Резать 1-ой!! Эта рейка задаёт высоту ножек этажерки. Поесле неё можно-нужно напрезать 2(а лучше 4) "
@@ -3221,6 +3249,7 @@ def build():
     apply_strut_profiles(doc)
     doc.recompute()
     short_labels(doc)
+    hide_default(doc)
     try:                                                      # начальный вид — «приятный угол» Dimitri
         import FreeCADGui as Gui
         if Gui.activeDocument():

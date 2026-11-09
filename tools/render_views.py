@@ -167,6 +167,7 @@ def main():
     rc = 0
     with open(os.path.join(OUT, "render_log.txt"), "w", encoding="utf-8") as log:
         try:
+            os.environ["VAN_HIDE_ON_SAVE"] = "0"                    # рендерам нужны все объекты видимыми
             g = {"__file__": SCRIPT, "__name__": "__main__"}
             exec(compile(open(SCRIPT, encoding="utf-8").read(), SCRIPT, "exec"), g)
             _maximize_view()
