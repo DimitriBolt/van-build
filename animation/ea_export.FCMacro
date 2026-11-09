@@ -1,0 +1,192 @@
+# -*- coding: utf-8 -*-
+"""ea_export — записать анимацию ExplodedAssembly из открытого документа в animation/sequences/<имя>.py
+
+Запуск (в FreeCAD, с открытым файлом анимации, например van_v0_T4320_drawer.FCStd):
+    Файл → Открыть… → animation/ea_export.FCMacro → Макрос → Выполнить макрос (Ctrl+F6)
+
+Что делает:
+  * читает группы (траектории) из папки ExplodedAssembly — в том порядке, в каком они стоят в дереве;
+  * спрашивает имя последовательности (по умолчанию из имени файла: *_drawer → drawers, *_anim → assembly);
+  * пишет animation/sequences/<имя>.py — только данные: детали по внутренним именам (obj.Name),
+    направления — векторами, Distance / Steps / Step Time / Revolutions, плюс список скрытых объектов.
+Положение деталей (собрано / разобрано) на результат не влияет — экспортировать можно в любом состоянии.
+Обратный макрос — ea_build.FCMacro (свежая модель + этот файл → новый файл анимации).
+"""
+import datetime
+import os
+import re
+
+import FreeCAD as App
+import FreeCADGui as Gui
+
+try:
+    from PySide import QtWidgets
+except ImportError:  # старый шим PySide во FreeCAD
+    from PySide import QtGui as QtWidgets
+
+TITLE = "ea_export"
+
+
+def repo_dir(doc):
+    """Корень репозитория van-build: вверх от файла документа до папки с van_v0.py."""
+    start = os.path.dirname(doc.FileName) if doc.FileName else ""
+    cur = start
+    while cur and cur != os.path.dirname(cur):
+        if os.path.isfile(os.path.join(cur, "van_v0.py")):
+            return cur
+        cur = os.path.dirname(cur)
+    return start or os.path.expanduser("~/van-build")
+
+
+def default_seq_name(doc):
+    stem = os.path.splitext(os.path.basename(doc.FileName or doc.Name))[0]
+    m = re.search(r"_anim_([A-Za-z0-9_]+)$", stem)
+    if m:
+        return m.group(1)
+    for suf, seq in (("_drawers", "drawers"), ("_drawer", "drawers"), ("_anim", "assembly")):
+        if stem.endswith(suf):
+            return seq
+    return "sequence"
+
+
+def num(x):
+    r = round(float(x), 4) + 0.0  # + 0.0 убирает «-0.0»
+    return repr(r)
+
+
+def vec(v):
+    return "(%s, %s, %s)" % (num(v[0]), num(v[1]), num(v[2]))
+
+
+def one_line(s):
+    return " ".join(str(s).split())
+
+
+def collect(doc, ea_folder):
+    """Группы ExplodedAssembly → список шагов (dict) + предупреждения."""
+    steps, warnings = [], []
+    traj_lines = set()
+    for g in ea_folder.Group:
+        if g.Name.startswith("SimpleGroup"):
+            kind = "simple"
+        elif g.Name.startswith("BoltGroup"):
+            kind = "bolt"
+        else:
+            if not g.Name.startswith("trajectory_line"):
+                warnings.append("пропущено «%s» (%s): поддерживаются только Simple Group и Bolt Group"
+                                % (g.Label, g.Name))
+            traj_lines.add(g.Name)
+            continue
+        for sub in getattr(g, "Group", []):
+            traj_lines.add(sub.Name)
+        names = list(g.names)
+        dv, rv, rc = list(g.dir_vectors), list(g.rot_vectors), list(g.rot_centers)
+        n = min(len(names), len(dv), len(rv), len(rc))
+        if n < len(names):
+            warnings.append("«%s»: у %d деталей нет данных о направлении — пропущены" % (g.Label, len(names) - n))
+        parts = []
+        for i in range(n):
+            o = doc.getObject(names[i])
+            if o is None:
+                warnings.append("«%s»: детали %s уже нет в документе — пропущена" % (g.Label, names[i]))
+                continue
+            parts.append(dict(name=names[i], label=o.Label, vec=dv[i], rot_axis=rv[i], rot_center=rc[i]))
+        steps.append(dict(label=g.Label, kind=kind, distance=g.Distance, steps=g.AnimationSteps,
+                          step_time=g.AnimationStepTime, revolutions=g.Revolutions, parts=parts))
+    skip = traj_lines | {ea_folder.Name} | {g.Name for g in ea_folder.Group}
+    hidden = sorted(o.Name for o in doc.Objects
+                    if o.Name not in skip and hasattr(o, "Visibility") and not o.Visibility)
+    return steps, hidden, warnings
+
+
+def render(seq_name, src, steps, hidden, labels):
+    out = []
+    w = out.append
+    w("# -*- coding: utf-8 -*-")
+    w("# Анимация «%s» для ExplodedAssembly — это ДАННЫЕ, не программа." % seq_name)
+    w("# Источник: %s (ea_export, %s)." % (src, datetime.datetime.now().strftime("%Y-%m-%d %H:%M")))
+    w("#")
+    w("# STEPS идут в порядке РАЗБОРКИ — как группы в папке ExplodedAssembly:")
+    w("#   ▶ Play Forward проигрывает их сверху вниз, ◀ Play Backwards («сборка») — снизу вверх.")
+    w("# name       — внутреннее имя детали (obj.Name); справа в комментарии — её Label.")
+    w("# vec        — направление движения; длина вектора масштабирует ход (0.5 = половина distance).")
+    w("# distance   — мм; steps — число кадров; step_time — пауза между кадрами, с; revolutions — обороты (Bolt Group).")
+    w("# rot_axis / rot_center — ось и центр вращения (нужны только при revolutions ≠ 0).")
+    w("# Собрать файл анимации на свежей модели — макрос animation/ea_build.FCMacro.")
+    w("# Если правите файл руками, учтите: повторный ea_export с тем же именем перезапишет его целиком.")
+    w("")
+    w("SEQUENCE = %r" % seq_name)
+    w("")
+    w("STEPS = [")
+    for i, st in enumerate(steps, 1):
+        w("    {   # %d" % i)
+        w("        'label': %r," % st["label"])
+        w("        'kind': %r," % st["kind"])
+        w("        'distance': %s," % num(st["distance"]))
+        w("        'steps': %d," % int(st["steps"]))
+        w("        'step_time': %s," % num(st["step_time"]))
+        w("        'revolutions': %s," % num(st["revolutions"]))
+        w("        'parts': [")
+        for p in st["parts"]:
+            w("            {'name': %r, 'vec': %s, 'rot_axis': %s, 'rot_center': %s},  # %s"
+              % (p["name"], vec(p["vec"]), vec(p["rot_axis"]), vec(p["rot_center"]), one_line(p["label"])))
+        w("        ],")
+        w("    },")
+    w("]")
+    w("")
+    w("# Объекты, скрытые в файле анимации на момент экспорта; ea_build скроет их снова.")
+    w("HIDDEN = [")
+    for n in hidden:
+        w("    %r,  # %s" % (n, one_line(labels.get(n, ""))))
+    w("]")
+    w("")
+    return "\n".join(out)
+
+
+def main():
+    mw = Gui.getMainWindow()
+    doc = App.ActiveDocument
+    if doc is None:
+        QtWidgets.QMessageBox.warning(mw, TITLE, "Нет открытого документа.")
+        return
+    ea_folder = doc.getObject("ExplodedAssembly")
+    if ea_folder is None or not ea_folder.Group:
+        QtWidgets.QMessageBox.warning(mw, TITLE, "В документе «%s» нет групп ExplodedAssembly." % doc.Label)
+        return
+    steps, hidden, warnings = collect(doc, ea_folder)
+    if not steps:
+        QtWidgets.QMessageBox.warning(mw, TITLE, "Нечего экспортировать:\n" + "\n".join(warnings))
+        return
+
+    echo = getattr(QtWidgets.QLineEdit, "Normal", None)
+    if echo is None:
+        echo = QtWidgets.QLineEdit.EchoMode.Normal
+    name, ok = QtWidgets.QInputDialog.getText(
+        mw, TITLE, "Имя последовательности (латиница, цифры, _):", echo, default_seq_name(doc))
+    if not ok:
+        return
+    name = re.sub(r"[^A-Za-z0-9_]", "_", name.strip()) or "sequence"
+
+    default = os.path.join(repo_dir(doc), "animation", "sequences", name + ".py")
+    path, _ = QtWidgets.QFileDialog.getSaveFileName(mw, TITLE + ": куда записать", default, "Python (*.py)")
+    if not path:
+        return
+    if not path.endswith(".py"):
+        path += ".py"
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    labels = {o.Name: o.Label for o in doc.Objects}
+    src = os.path.basename(doc.FileName) if doc.FileName else doc.Label
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(render(name, src, steps, hidden, labels))
+
+    lines = ["Записано: %s" % path, "Шагов: %d, деталей: %d, скрытых объектов: %d"
+             % (len(steps), sum(len(s["parts"]) for s in steps), len(hidden)), ""]
+    lines += ["%d. %s — %d дет., Distance %s" % (i, s["label"], len(s["parts"]), num(s["distance"]))
+              for i, s in enumerate(steps, 1)]
+    if warnings:
+        lines += ["", "Предупреждения:"] + warnings
+    App.Console.PrintMessage(TITLE + ": " + "\n".join(lines) + "\n")
+    QtWidgets.QMessageBox.information(mw, TITLE, "\n".join(lines))
+
+
+main()

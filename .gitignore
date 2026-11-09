@@ -23,3 +23,8 @@ renders/
 # …кроме последних 3D-видов проекта в docs/renders (хранятся в git); журнал рендера — нет
 !docs/renders/
 docs/renders/render_log.txt
+
+# Файлы анимации ExplodedAssembly — рабочие копии модели / результат ea_build.
+# Источник правды для анимаций — animation/sequences/*.py
+*_anim*.FCStd
+*_drawer.FCStd

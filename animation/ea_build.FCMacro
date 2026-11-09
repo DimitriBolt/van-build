@@ -1,0 +1,195 @@
+# -*- coding: utf-8 -*-
+"""ea_build — свежая модель + animation/sequences/<имя>.py → новый файл анимации ExplodedAssembly
+
+Запуск (в FreeCAD; нужен установленный верстак ExplodedAssembly):
+    Файл → Открыть… → animation/ea_build.FCMacro → Макрос → Выполнить макрос (Ctrl+F6)
+
+Что делает:
+  1. спрашивает файл последовательности (animation/sequences/*.py) и модель (по умолчанию van_v0_T4320.FCStd);
+  2. КОПИРУЕТ модель в <модель>_anim_<имя>.FCStd рядом с ней (сама модель не меняется) и открывает копию;
+  3. создаёт в копии группы ExplodedAssembly — так же, как Create Simple Group / Create Bolt Group в GUI;
+  4. скрывает объекты из списка HIDDEN, ставит модель «в сборе» (как ⏮ Go To Start) и сохраняет.
+Если детали из последовательности в модели больше нет — она пропускается, и макрос об этом сообщает.
+Обратный макрос — ea_export.FCMacro.
+"""
+import os
+import shutil
+
+import FreeCAD as App
+import FreeCADGui as Gui
+
+try:
+    from PySide import QtWidgets
+except ImportError:  # старый шим PySide во FreeCAD
+    from PySide import QtGui as QtWidgets
+
+TITLE = "ea_build"
+DEFAULT_MODEL = "van_v0_T4320.FCStd"
+
+
+def repo_dir():
+    """Корень van-build: от активного документа вверх до van_v0.py, иначе ~/van-build."""
+    doc = App.ActiveDocument
+    cur = os.path.dirname(doc.FileName) if doc is not None and doc.FileName else ""
+    while cur and cur != os.path.dirname(cur):
+        if os.path.isfile(os.path.join(cur, "van_v0.py")):
+            return cur
+        cur = os.path.dirname(cur)
+    return os.path.expanduser("~/van-build")
+
+
+def load_sequence(path):
+    ns = {}
+    with open(path, encoding="utf-8") as f:
+        exec(compile(f.read(), path, "exec"), ns)
+    name = ns.get("SEQUENCE") or os.path.splitext(os.path.basename(path))[0]
+    return str(name), list(ns.get("STEPS", [])), list(ns.get("HIDDEN", []))
+
+
+def import_addon():
+    # модуль верстака (Mod/ExplodedAssembly/ExplodedAssembly.py); папки Mod/* FreeCAD кладёт в sys.path при запуске.
+    # Верстак не активируем: при активации он добавляет папку ExplodedAssembly в АКТИВНЫЙ документ (например, в модель).
+    import ExplodedAssembly as ea
+    return ea
+
+
+def build(doc, ea, steps, hidden):
+    """Создать группы в doc. Возвращает (созданные группы, пропущенные детали, пропущенные шаги)."""
+    App.setActiveDocument(doc.Name)
+    ea.checkDocumentStructure()
+    folder = doc.getObject("ExplodedAssembly")
+    if folder.Group:
+        raise RuntimeError("в модели уже есть группы ExplodedAssembly (%d) — нужна чистая модель" % len(folder.Group))
+
+    init = dict(folder.InitialPlacements or {})
+    created, missing, skipped = [], [], []
+    for i, st in enumerate(steps, 1):
+        label = st.get("label") or "шаг %d" % i
+        parts = []
+        for p in st.get("parts", []):
+            o = doc.getObject(p["name"])
+            if o is None or not hasattr(o, "Placement"):
+                missing.append("%d. %s: %s" % (i, label, p["name"]))
+            else:
+                parts.append(p)
+        if not parts:
+            skipped.append("%d. %s" % (i, label))
+            continue
+
+        if st.get("kind", "simple") == "bolt":
+            g = doc.addObject("App::DocumentObjectGroupPython", "BoltGroup")
+            ea.BoltGroupObject(g)
+            if getattr(g, "ViewObject", None) is not None:
+                ea.BoltGroupObjectViewProvider(g.ViewObject)
+        else:
+            g = doc.addObject("App::DocumentObjectGroupPython", "SimpleGroup")
+            ea.SimpleGroupObject(g)
+            if getattr(g, "ViewObject", None) is not None:
+                ea.SimpleGroupObjectViewProvider(g.ViewObject)
+
+        g.Label = label
+        g.names = [p["name"] for p in parts]
+        g.dir_vectors = [App.Vector(*p["vec"]) for p in parts]
+        g.rot_vectors = [App.Vector(*p.get("rot_axis", p["vec"])) for p in parts]
+        g.rot_centers = [App.Vector(*p.get("rot_center", (0.0, 0.0, 0.0))) for p in parts]
+        g.Distance = float(st.get("distance", 20.0))
+        g.AnimationSteps = int(st.get("steps", 20))
+        g.AnimationStepTime = float(st.get("step_time", 0.0))
+        g.Revolutions = float(st.get("revolutions", 0.0))
+
+        # «собранное» положение запоминается один раз — как при создании группы в GUI
+        for p in parts:
+            if p["name"] not in init:
+                plm = doc.getObject(p["name"]).Placement
+                init[p["name"]] = ((plm.Base.x, plm.Base.y, plm.Base.z), tuple(plm.Rotation.Q))
+        folder.addObject(g)
+        created.append(g)
+    folder.InitialPlacements = init
+
+    for n in hidden:
+        o = doc.getObject(n)
+        if o is not None and hasattr(o, "Visibility"):
+            o.Visibility = False
+
+    doc.recompute()            # группы пересчитываются → модель «разобрана» (так устроено дополнение)
+    if created:
+        ea.resetPlacement()    # …и обратно «в сборе», как кнопка ⏮ Go To Start
+    folder.CurrentTrajectory = 0
+    folder.InAnimation = False
+    return created, missing, skipped
+
+
+def main():
+    mw = Gui.getMainWindow()
+    repo = repo_dir()
+
+    seq_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+        mw, TITLE + " 1/2: какую анимацию собрать", os.path.join(repo, "animation", "sequences"), "Python (*.py)")
+    if not seq_path:
+        return
+    try:
+        seq_name, steps, hidden = load_sequence(seq_path)
+    except Exception as e:
+        QtWidgets.QMessageBox.warning(mw, TITLE, "Не удалось прочитать %s:\n%s" % (seq_path, e))
+        return
+    if not steps:
+        QtWidgets.QMessageBox.warning(mw, TITLE, "В %s нет шагов (STEPS пуст)." % seq_path)
+        return
+
+    model_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+        mw, TITLE + " 2/2: на какой модели", os.path.join(repo, DEFAULT_MODEL), "FreeCAD (*.FCStd)")
+    if not model_path:
+        return
+
+    stem = os.path.splitext(os.path.basename(model_path))[0]
+    out_path = os.path.join(os.path.dirname(model_path), "%s_anim_%s.FCStd" % (stem, seq_name))
+    if os.path.abspath(out_path) == os.path.abspath(model_path):
+        QtWidgets.QMessageBox.warning(mw, TITLE, "Выбран сам файл анимации, а нужна модель.")
+        return
+
+    yes = QtWidgets.QMessageBox.Yes if hasattr(QtWidgets.QMessageBox, "Yes") else QtWidgets.QMessageBox.StandardButton.Yes
+    no = QtWidgets.QMessageBox.No if hasattr(QtWidgets.QMessageBox, "No") else QtWidgets.QMessageBox.StandardButton.No
+    for d in list(App.listDocuments().values()):
+        if d.FileName and os.path.abspath(d.FileName) == os.path.abspath(out_path):
+            if QtWidgets.QMessageBox.question(mw, TITLE, "Файл %s открыт. Закрыть его (без сохранения) и собрать заново?"
+                                              % os.path.basename(out_path), yes | no) != yes:
+                return
+            App.closeDocument(d.Name)
+    if os.path.exists(out_path):
+        if QtWidgets.QMessageBox.question(mw, TITLE, "Файл %s уже есть. Перезаписать?"
+                                          % os.path.basename(out_path), yes | no) != yes:
+            return
+
+    try:
+        ea = import_addon()
+    except Exception as e:
+        QtWidgets.QMessageBox.warning(mw, TITLE, "Не найден верстак ExplodedAssembly (Менеджер дополнений):\n%s" % e)
+        return
+
+    shutil.copyfile(model_path, out_path)
+    doc = App.openDocument(out_path)
+    try:
+        created, missing, skipped = build(doc, ea, steps, hidden)
+    except Exception as e:
+        App.Console.PrintError("%s: %s\n" % (TITLE, e))
+        QtWidgets.QMessageBox.warning(mw, TITLE, "Ошибка: %s\nФайл %s не сохранён." % (e, out_path))
+        return
+    doc.save()
+    try:
+        Gui.SendMsgToActiveView("ViewFit")
+    except Exception:
+        pass
+
+    lines = ["Собрано: %s" % out_path, "Последовательность «%s»: групп %d из %d" % (seq_name, len(created), len(steps)), ""]
+    lines += ["%d. %s — %d дет., Distance %.1f" % (i, g.Label, len(g.names), g.Distance)
+              for i, g in enumerate(created, 1)]
+    if missing:
+        lines += ["", "Нет в модели (пропущены):"] + missing
+    if skipped:
+        lines += ["", "Шаги без деталей (не созданы):"] + skipped
+    lines += ["", "Модель «в сборе». ▶ — разобрать, ◀ — собрать."]
+    App.Console.PrintMessage(TITLE + ": " + "\n".join(lines) + "\n")
+    QtWidgets.QMessageBox.information(mw, TITLE, "\n".join(lines))
+
+
+main()

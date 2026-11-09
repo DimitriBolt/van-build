@@ -32,6 +32,8 @@
 | `tools/make_docs.sh` | **Все рисунки из модели** → `docs/` (2D-чертежи + 3D-виды) и `van_v0.FCStd` с цветами |
 | `tools/export_drawing_data.py`, `tools/drawings/*.py` | Данные модели → `docs/drawing_data.json` → чертежи (matplotlib) |
 | `docs/` | Последние версии всех чертежей и видов — индекс в `docs/README.md` |
+| `animation/` | Анимации сборки и движений (ExplodedAssembly): `sequences/*.py` — данные Dimitri; макросы `ea_export` / `ea_build`; договор — `animation/README.md` |
+| `CHANGELOG.md` | Кто что поменял в модели и анимациях (особенно — внутренние имена деталей) |
 | `FURNITURE_MEMORY.md` | Память по мебели: кровать, блоки батарей, бак для воды |
 | `REQUIREMENTS.md` | Требования Dimitri (выполненные и открытые) и достигнутые результаты |
 | `van_v0.FCStd` | Собранный документ FreeCAD (каркас + меш-обшивка) |
