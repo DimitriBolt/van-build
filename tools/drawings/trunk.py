@@ -111,7 +111,8 @@ if "trunk3" in d:
     ax.add_patch(Rectangle((hy(1000), -1.8), 2000 / IN, 1.8, color="#e8d9b5"))
     STY3 = STY + [("Toilet_", dict(fc="#bdbdbd", ec="#424242")), ("Propane_", dict(fc="#f3d98b", ec="#bf8f00")),
                   ("Water_Pump", dict(fc="#3949ab")), ("BedCross_", dict(fc=C_ST)), ("Trunk2_Plate", dict(fc=C_ST)),
-                  ("Trunk2_PostP3m", dict(fc="#26a69a", ec="#00695c")), ("Trunk2_Hanger3", dict(fc="#26a69a", ec="#00695c"))]
+                  ("Trunk2_PostP3m", dict(fc="#26a69a", ec="#00695c")), ("Trunk2_Post3W", dict(fc="#26a69a", ec="#00695c")),
+                  ("Trunk2_TankSpacer", dict(fc="#424242"))]
     for pref, kw in STY3:
         for n in sorted(S3):
             if n.startswith(pref) and n != "x":
@@ -121,7 +122,7 @@ if "trunk3" in d:
     c3 = B["Trunk2_Cross_3"]
     ax.add_patch(Rectangle((hy(c3[3]), mz(c3[4])), (c3[3] - c3[2]) / IN, (c3[5] - c3[4]) / IN, fill=False, ec="#00695c",
                            ls="--", lw=1.2, zorder=4))
-    for nm, txt, dy in (("Trunk2_Hanger3", "подвес от продольной рейки\nкровати (рейка постоянная)", 4.0),
+    for nm, txt, dy in (("Trunk2_Post3W", "ножка Post3W до пола: между\nбаком и туалетом, вверху —\nв поперечину кровати #2", 4.0),
                         ("Trunk2_PostP3m", "новая ножка P3m\n(как P3, у B4)", -4.0)):
         b = B[nm]
         ax.annotate(txt, xy=(hy((b[2] + b[3]) / 2), mz((b[4] + b[5]) / 2)), xytext=(hy((b[2] + b[3]) / 2) + (6 if dy > 0
@@ -188,7 +189,7 @@ for n in sorted(B):
     if n.startswith("Trunk2_Cross_"):
         r(n, fc=C_ST, ec="#37474f", zorder=6)
 r("Trunk2_Sheet", fc="#90a4ae", alpha=0.35, ec="#263238", lw=1.5, hatch="..", zorder=5)
-for n in ("Trunk2_PostP3m", "Trunk2_Hanger3"):
+for n in ("Trunk2_PostP3m", "Trunk2_Post3W", "Trunk2_TankSpacer"):
     r(n, fc="#26a69a", ec="#00695c", zorder=7)
 if has("Trunk2_Cross_3"):
     b = B["Trunk2_Cross_3"]
@@ -219,7 +220,7 @@ ax.set_title("План под кроватью: 1-й этаж (жёлтый — 
              fontsize=12)
 
 fig.suptitle("Багажник под кроватью (2026-11-08, из модели): поперечины 2-го этажа от борта до борта на язычках —\n"
-             "#1 P3 ↔ стойка кровати pY rear; #3 ножка P3m ↔ подвес от рейки кровати (всё под щитом); перфолист — позже",
+             "#1 P3 ↔ стойка кровати pY rear; #3 ножка P3m ↔ ножка Post3W между баком и туалетом (всё под щитом); перфолист — позже",
              fontsize=13)
 fig.tight_layout(rect=(0, 0, 1, 0.965))
 save(fig, "trunk_drawing.png")
