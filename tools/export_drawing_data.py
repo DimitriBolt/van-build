@@ -124,14 +124,14 @@ try:
         res["galley"] = sec
 
     # — 2-й этаж багажника: поперечный разрез по середине листа между поперечинами (взгляд вперёд) —
-    if doc.getObject("Trunk2_Sheet") is not None:
+    if doc.getObject("Trunk2_Cross_1") is not None:
         TSS = g["TRUNK_SHELF"]["_summary"]
-        xs_ = (TSS["xs"][0] + TSS["xs"][1]) / 2.0
+        xs_ = TSS["crosses"][0]["x"]                         # разрез по поперечине #1 (P3 ↔ стойка кровати pY rear)
         tr = {"x": xs_}
         for o in doc.Objects:
             if o.isDerivedFrom("Part::Feature") and o.Name.startswith(
                     ("Battery_B", "BankShelf", "BankRail", "BankPost", "BankCross", "WaterTank_", "TankFloor_", "Trunk2_",
-                     "BedDeck", "BedMattress", "BedSideRail", "WheelArch_")):
+                     "BedDeck", "BedMattress", "BedSideRail", "WheelArch_", "BedPost_")):
                 sl = _slice(o.Shape, (1, 0, 0), xs_)
                 if sl:
                     tr[o.Name] = sl

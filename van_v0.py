@@ -573,10 +573,13 @@ SHOWER_KITCHEN = {
 # (от батарей через багажник на бак), 24″ вдоль — подрезать по переднему торцу бака.
 TRUNK_SHELF = {
     "enable": True,
-    "sheet": (609.6, 1219.2, 0.95),   # 24″ (вдоль X) × 48″ (поперёк) × 19 ga
-    "pad": 3.0,                       # резина под поперечинами (на полке и на баке)
-    "gap_batt": 3.0,                  # от граней батарей
-    "n_cross": 3,
+    # 2026-11-08 (Dimitri): поперечины — от края до края, висят на «язычках» (спинка, отогнутая вверх): #1 на P3 и
+    # стойке кровати pY rear, #3 на P3f и стойке pY front; #2 убрана; бак не нагружать (гибкий). Лист — позже.
+    "cross": [("1", "BankPost_P3", "BedPost_pY_rear", True),
+              ("3", "BankPost_P3f", "BedPost_pY_front", False)],   # #3 — проходит через душ: ждёт решения
+    "tank_gap": 6.0,                  # поперечина над баком — с зазором, бак не нагружаем
+    "tongue_h": 50.0,                 # язычок над поперечиной (болт 3/8″ посередине)
+    "sheet": (609.6, 1219.2, 0.95),   # перфолист 48×24″ 19 ga — ОТЛОЖЕН (не строится)
     "title": "Перфолист 304 48×24″ 19 ga, отв. 0.32″ (8 мм), 40%",
 }
 
@@ -701,7 +704,9 @@ def apply_strut_profiles(doc):
         grp = o.getParentGroup()
         doc.removeObject(name)
         add_shape(doc, name, label + "; спинка (отверстия 2″) → %s" % {"aisle": "в проход", "wall": "к борту",
-                  "+X": "вперёд", "-X": "назад", "+Z": "вверх", "-Z": "вниз"}[back], shp, color=COL_STRUT, group=grp)
+                  "+X": "вперёд", "-X": "назад", "+Z": "вверх", "-Z": "вниз"}[back], shp,
+                  color=(0.90, 0.25, 0.20) if "⚠️" in label else COL_STRUT, transparency=55 if "⚠️" in label else None,
+                  group=grp)
         done.append(name)
     print("[STRUT] профиль со спинкой/пазом: %d деталей; пропущено: %s" % (len(done), ", ".join(skipped) or "—"))
 
@@ -2973,81 +2978,69 @@ def build():
             seat_gap=3190.0 - kx1, aisle_sh=aisle_sh, aisle_k=aisle_k, checks=checks,
             floor_top=floor_top, wall_y=y_at_z(half, 900.0), arch_ywall=arch_ywall)
 
-    # ═══════ 2-Й ЭТАЖ БАГАЖНИКА: перфолист на 3 поперечинах (полка батарей ↔ бак) ═══════
+    # ═══════ 2-Й ЭТАЖ БАГАЖНИКА — поперечины от борта до борта, висят на «язычках» (2026-11-08, Dimitri) ═══════
+    # #1: P3 ↔ стойка кровати pY rear; #3: P3f ↔ стойка кровати pY front; #2 — убрана. Бак НЕ нагружаем (гибкий,
+    # без рёбер жёсткости) — поперечина над ним с зазором. Перфолист — ОТЛОЖЕН (переделка позже).
     trunk_summary = None
     TS = TRUNK_SHELF
-    rail_i = doc.getObject("BankRail_Inner")
     tank_o = doc.getObject("WaterTank_T4320") if WATER_VARIANT == "T4320_floor" else None
-    if TS.get("enable") and rail_i is not None and tank_o is not None and B.get("enable"):
+    if TS.get("enable") and doc.getObject("BankPost_P3") is not None and B.get("enable"):
         tg = doc.addObject("App::DocumentObjectGroup", "TrunkShelf")
-        tg.Label = "2-й этаж багажника — перфолист на полку батарей и бак (проект 2026-11-07)"
-        rb, tb = rail_i.Shape.BoundBox, tank_o.Shape.BoundBox
-        shelf_o = doc.getObject("BankShelf")
-        z_s = max(shelf_o.Shape.BoundBox.ZMax if shelf_o else rb.ZMax, tb.ZMax)   # верх полки / бака
-        z_c0 = z_s + TS["pad"]
-        z_c1 = z_c0 + sd                                             # поперечины strut плашмя (13/16″)
-        lx, ly, lt = TS["sheet"]
-        # 2026-11-07: рейка со стороны прохода — теперь под гранью батарей; поперечины — от неё на уголке
-        y_b = (rb.YMax + 5.0) if rb.YMax < 0 else (rb.YMin - 5.0)     # уголок 4 мм + 1 мм от плоскости батарей
-        x0_ = max(rb.XMin, tb.XMin) + 4.0
-        x1_ = min(x0_ + lx, tb.XMax)                                 # подрезать по переднему торцу бака
-        straps = [o.Shape.BoundBox for o in doc.Objects if o.Name.startswith("TankFloor_Strap_")]
-        y_c1 = tb.YMin + 274.0                                       # поперечины заходят на бак на ~11″
-        n_ = TS["n_cross"]
-        xs_c = [x0_ + sw / 2.0 + i * (x1_ - x0_ - sw) / (n_ - 1) for i in range(n_)]
-        for i, xc in enumerate(xs_c):                                # не класть резину на ремни бака — сдвинуть вперёд
-            for sb_ in straps:
-                if xc + sw / 2.0 > sb_.XMin - 5.0 and xc - sw / 2.0 < sb_.XMax + 5.0:
-                    xc = sb_.XMax + 5.0 + sw / 2.0
-            xs_c[i] = min(xc, x1_ - sw / 2.0)
-        tparts = {}
+        tg.Label = "2-й этаж багажника — поперечины борт-борт на язычках (проект 2026-11-08)"
+        tb = tank_o.Shape.BoundBox if tank_o is not None else None
+        z_c0 = (tb.ZMax if tb is not None else doc.getObject("BankShelf").Shape.BoundBox.ZMax) + TS["tank_gap"]
+        z_c1 = z_c0 + sd                                             # strut плашмя, спинка вверх (паз вниз)
+        tt = STRUT["t"]
+        tparts, crosses = {}, []
 
         def tput(name, label, shape, color, tr=0):
             add_shape(doc, name, label, shape, color=color, transparency=tr, group=tg)
             tparts[name] = shape
             return shape
-        for i, xc in enumerate(xs_c):
-            tput("Trunk2_Cross_%d" % (i + 1), "Поперечина 2-го этажа strut 13/16″ L=%.0f: полка батарей ↔ верх бака" % (
-                y_c1 - y_b), Part.makeBox(sw, y_c1 - y_b, sd, App.Vector(xc - sw / 2.0, y_b, z_c0)), COL_STRUT)
-            tput("Trunk2_PadTank_%d" % (i + 1), "Резина 3 мм под поперечиной (на баке)",
-                 Part.makeBox(sw, 120.0, TS["pad"], App.Vector(xc - sw / 2.0, y_c1 - 120.0, z_s)), (0.15, 0.15, 0.15))
-            tput("Trunk2_Angle_%d" % (i + 1), "Уголок 90° поперечина → боковая грань рейки полки (strut-болт 1/4″)",
-                 Part.makeBox(sw, 4.0, z_c1 - (rb.ZMin + 10.0), App.Vector(xc - sw / 2.0, rb.YMax + 1.0, rb.ZMin + 10.0)),
-                 COL_STRUT)
-        p3b = doc.getObject("BankPost_P3").Shape.BoundBox          # P3 теперь выше полки — вырез в листе
-        p3_notch = Part.makeBox(p3b.XLength + 6.0, p3b.YLength + 6.0, 20.0,
-                                App.Vector(p3b.XMin - 3.0, p3b.YMin - 3.0, z_c1 - 10.0))
-        tput("Trunk2_Sheet", "%s, %.0f×%.0f (%.1f×%.0f″) — 2-й этаж багажника" % (
-            TS["title"], x1_ - x0_, ly, (x1_ - x0_) / 25.4, ly / 25.4),
-            Part.makeBox(x1_ - x0_, ly, lt, App.Vector(x0_, y_b, z_c1)).cut(p3_notch),
-            (0.80, 0.82, 0.85), 35)
+        for cn, pa_n, pb_n, ok_ in TS["cross"]:
+            pa, pb = doc.getObject(pa_n).Shape.BoundBox, doc.getObject(pb_n).Shape.BoundBox
+            xc = (pa.XMin + pa.XMax) / 2.0
+            y0, y1 = pa.YMax + tt, pb.YMin - tt                       # между язычками (язычок = продолжение спинки)
+            col, tr = (COL_STRUT, 0) if ok_ else ((0.90, 0.25, 0.20), 55)
+            note = "" if ok_ else " — ⚠️ КОНФЛИКТ: проходит через душ (ждёт решения Dimitri)"
+            tput("Trunk2_Cross_%s" % cn, "Поперечина 2-го этажа #%s strut L=%.0f: %s ↔ %s, висит на язычках%s" % (
+                cn, y1 - y0, pa_n, pb_n, note), Part.makeBox(sw, y1 - y0, sd, App.Vector(xc - sw / 2.0, y0, z_c0)), col, tr)
+            for side_, yt in (("a", pa.YMax), ("b", pb.YMin - tt)):
+                tput("Trunk2_Tongue_%s%s" % (cn, side_), "Язычок поперечины #%s (спинка, отогнута вверх) → %s" % (
+                    cn, pa_n if side_ == "a" else pb_n), Part.makeBox(sw, tt, sd + TS["tongue_h"],
+                                                                      App.Vector(xc - sw / 2.0, yt, z_c0)), col, tr)
+                bz = z_c1 + TS["tongue_h"] / 2.0
+                tput("Trunk2_Bolt_%s%s" % (cn, side_), "Болт 3/8″ язычка: %s" % (
+                    "гайка-канал в паз P3" if side_ == "a" else "через овал спинки стойки кровати (шаг 2″), гайка в пазу"),
+                     Part.makeCylinder(4.75, 60.0, App.Vector(xc, yt + (tt / 2.0) - 30.0, bz), App.Vector(0, 1, 0)),
+                     (0.85, 0.85, 0.20), tr)
+            crosses.append(dict(n=cn, x=xc, y=(y0, y1), ok=ok_, a=pa_n, b=pb_n))
         # проверки
-        cr = [o.Shape for o in doc.Objects if o.Name.startswith("BedCross_")]
-        bats = [o.Shape for o in doc.Objects if o.Name.startswith("Battery_") or o.Name.startswith("BankBattery")]
-        tsh = list(tparts.values())
-        tch = [("поперечины кровати", min(a.distToShape(b)[0] for a in tsh for b in cr)),
-               ("ремни бака", min(a.distToShape(o.Shape)[0] for a in tsh for o in doc.Objects
-                                   if o.Name.startswith("TankFloor_Strap_"))),
-               ("упоры полки", min(a.distToShape(o.Shape)[0] for a in tsh for o in doc.Objects
-                                    if o.Name.startswith("BankStop_")))]
-        if bats:
-            tch.append(("батареи", min(a.distToShape(b)[0] for a in tsh for b in bats)))
-        for nm_ in ("Toilet_Camco", "Water_Pump12V", "Propane_Locker"):
-            if doc.getObject(nm_) is not None:
-                tch.append((nm_, min(a.distToShape(doc.getObject(nm_).Shape)[0] for a in tsh)))
+        def mind(shapes, pref):
+            ss = [o.Shape for o in doc.Objects if o.Name.startswith(pref) and o.isDerivedFrom("Part::Feature")
+                  and not o.Shape.isNull() and o.Shape.Solids]
+            return min(a.distToShape(b)[0] for a in shapes for b in ss) if ss else None
+        tch = []
+        for c_ in crosses:
+            sh_ = [tparts["Trunk2_Cross_%s" % c_["n"]]]
+            for lab, pref in (("бак", "WaterTank_"), ("ремни бака", "TankFloor_Strap"), ("батареи", "Battery_"),
+                              ("поперечины кровати", "BedCross_"), ("туалет", "Toilet_"), ("локер", "Propane_Locker"),
+                              ("душ", "Shower_")):
+                v = mind(sh_, pref)
+                if v is not None and v < 300:
+                    tch.append(("#%s ↔ %s" % (c_["n"], lab), v))
+        rb = doc.getObject("BankRail_Inner").Shape.BoundBox
         cl_ = doc.getObject("TankFloor_Cleat_Aisle")
-        y_tr1 = cl_.Shape.BoundBox.YMin if cl_ is not None else tb.YMin     # 1-й этаж: до бруска бака
+        y_tr1 = cl_.Shape.BoundBox.YMin if cl_ is not None else (tb.YMin if tb else 0.0)
         lk_ = doc.getObject("Propane_Locker")
-        z_cr = min(b.BoundBox.ZMin for b in cr)
-        trunk_summary = dict(floor_top=floor_top, x=(x0_, x1_), y=(y_b, y_b + ly), z_sheet=z_c1 + lt, z_cross=(z_c0, z_c1),
-                             cross_len=y_c1 - y_b, xs=xs_c, checks=tch,
-                             w1=y_tr1 - rb.YMax, y1=(rb.YMax, y_tr1),
-                             h1_under=z_c0 - TS["pad"] - floor_top, h1_open=z_cr - floor_top,
+        cr = [o.Shape for o in doc.Objects if o.Name.startswith("BedCross_")]
+        z_cr = min(b_.BoundBox.ZMin for b_ in cr)
+        trunk_summary = dict(floor_top=floor_top, crosses=crosses, z_cross=(z_c0, z_c1), checks=tch,
+                             w1=y_tr1 - rb.YMax, y1=(rb.YMax, y_tr1), h1_under=z_c0 - floor_top, h1_open=z_cr - floor_top,
                              x_rear=dx0, x_lock=lk_.Shape.BoundBox.XMin if lk_ is not None else dx1,
                              y_lock=lk_.Shape.BoundBox.YMin if lk_ is not None else None, x_deck=dx1,
-                             h2_cross=z_cr - (z_c1 + lt),
-                             h2_deck=(doc.getObject("BedDeck").Shape.BoundBox.ZMin - (z_c1 + lt)),
-                             over_tank=(y_b + ly) - tb.YMin, bat_top=None)
+                             h2_cross=z_cr - z_c1, h2_deck=doc.getObject("BedDeck").Shape.BoundBox.ZMin - z_c1,
+                             tank_gap=TS["tank_gap"])
         TRUNK_SHELF["_summary"] = {k: v for k, v in trunk_summary.items() if k != "checks"}
 
     # ═══════ ШКАФЧИКИ ПОД ПОТОЛКОМ по бортам (проект 2026-11-07) ═══════
@@ -3443,19 +3436,15 @@ def build():
     if trunk_summary:
         t = trunk_summary
         f0 = t["floor_top"]
-        print("[2-й этаж багажника — перфолист на полку батарей и бак T-4320 — ПРОЕКТ 2026-11-07]")
-        print("  Лист X %.0f..%.0f (%.1f″ вдоль) × Y %.0f..%.0f (%.0f″ поперёк, на бак %.1f″); верх %.0f мм (%.2f″) над полом" % (
-            t["x"][0], t["x"][1], (t["x"][1] - t["x"][0]) / 25.4, t["y"][0], t["y"][1], (t["y"][1] - t["y"][0]) / 25.4,
-            t["over_tank"] / 25.4, t["z_sheet"] - f0, (t["z_sheet"] - f0) / 25.4))
-        print("  Поперечины strut 3×%.0f при X %s; низ %.0f мм (%.2f″) над полом" % (
-            t["cross_len"], ", ".join("%.0f" % x for x in t["xs"]), t["z_cross"][0] - f0, (t["z_cross"][0] - f0) / 25.4))
-        print("  1-й этаж: ширина %.0f мм (%.1f″) между рейкой батарей и бруском бака; под 2-м этажом %.0f мм (%.1f″), "
-              "впереди него до поперечин кровати %.0f мм (%.1f″); длина от двери до локера %.0f мм (%.1f″), до края щита %.0f (%.1f″)" % (
-            t["w1"], t["w1"] / 25.4, t["h1_under"], t["h1_under"] / 25.4, t["h1_open"], t["h1_open"] / 25.4,
-            t["x_lock"] - t["x_rear"], (t["x_lock"] - t["x_rear"]) / 25.4, t["x_deck"] - t["x_rear"],
-            (t["x_deck"] - t["x_rear"]) / 25.4))
-        print("  2-й этаж: до поперечины кровати %.0f мм (%.1f″), до низа щита %.0f мм (%.1f″)" % (
-            t["h2_cross"], t["h2_cross"] / 25.4, t["h2_deck"], t["h2_deck"] / 25.4))
+        print("[2-й этаж багажника — поперечины борт-борт на язычках — ПРОЕКТ 2026-11-08; перфолист отложен]")
+        for c_ in t["crosses"]:
+            print("  #%s X %.0f: %s ↔ %s, L=%.0f%s" % (c_["n"], c_["x"], c_["a"], c_["b"], c_["y"][1] - c_["y"][0],
+                                                     "" if c_["ok"] else "  ⚠️ через душ — ждёт решения"))
+        print("  Низ поперечин %.0f мм (%.2f″) над полом, над баком %.0f мм; до поперечин кровати %.0f мм" % (
+            t["z_cross"][0] - f0, (t["z_cross"][0] - f0) / 25.4, t["tank_gap"], t["h2_cross"]))
+        print("  1-й этаж: ширина %.0f мм (%.1f″); под поперечинами 2-го этажа %.0f мм (%.1f″), между ними до поперечин "
+              "кровати %.0f мм (%.1f″)" % (t["w1"], t["w1"] / 25.4, t["h1_under"], t["h1_under"] / 25.4, t["h1_open"],
+                                         t["h1_open"] / 25.4))
         print("  Зазоры: " + "; ".join("%s %.1f" % (n, v) for n, v in t["checks"]))
     print("-" * 70)
     if bb:

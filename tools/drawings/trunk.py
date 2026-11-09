@@ -50,7 +50,8 @@ ax.plot([p[0] for p in wl], [p[1] for p in wl], color="#616161", lw=2)
 ax.plot([p[0] for p in wr], [p[1] for p in wr], color="#616161", lw=2)
 ax.add_patch(Rectangle((hy(1000), -1.8), 2000 / IN, 1.8, color="#e8d9b5"))
 STY = [("WheelArch_", dict(fc="#bdbdbd", ec="#9e9e9e")), ("BedSideRail", dict(fc=C_ST)), ("BedDeck", dict(fc=C_DECK, ec="#8d6e63")),
-       ("BedMattress", dict(fc="#9fb4e0", alpha=0.5, ec="#5c6bc0")), ("BankPost", dict(fc=C_ST)), ("BankCross", dict(fc=C_ST)),
+       ("BedMattress", dict(fc="#9fb4e0", alpha=0.5, ec="#5c6bc0")), ("BankPost", dict(fc=C_ST)), ("BedPost_", dict(fc=C_ST)), ("Trunk2_Tongue", dict(fc="#37474f")),
+       ("Trunk2_Bolt", dict(fc="#f9a825")), ("BankCross", dict(fc=C_ST)),
        ("BankRail", dict(fc=C_ST, ec="#37474f")), ("BankShelf", dict(fc="#d7b98e", ec="#8d6e63")),
        ("Battery_B", dict(fc=C_BAT, ec="#bf360c", alpha=0.85)), ("WaterTank_", dict(fc=C_T, alpha=0.55, ec="#1f5f8b", lw=1.4)),
        ("TankFloor_", dict(fc="#a1887f", ec="#5d4037")), ("Trunk2_Pad", dict(fc="#212121")),
@@ -72,20 +73,19 @@ cb = B["BedCross_1"]
 ax.add_patch(Rectangle((hy(cb[3]), mz(cb[4])), (cb[3] - cb[2]) / IN, (cb[5] - cb[4]) / IN, fill=False, ec="#263238",
                        ls="-.", lw=0.9, zorder=4))
 ax.text(hy(-600), mz(cb[5]) + 0.4, "поперечина кровати #1 (за разрезом)", fontsize=7.5, color="#263238")
-zs2 = mz(T["z_sheet"])
+zs2 = mz(T["z_cross"][1])                                   # верх поперечин 2-го этажа
 y_r1, y_c1 = T["y1"]                                        # грань рейки батарей / брусок бака (|Y| со знаком)
 # 1-й этаж
 ax.add_patch(Rectangle((hy(y_c1), 0), (y_c1 - y_r1) / IN, mz(T["z_cross"][0]), fc="#fff8e1", ec="none", zorder=1))
 ax.text((hy(y_c1) + hy(y_r1)) / 2, 6.5, "1-й ЭТАЖ\n(пол багажника)", ha="center", fontsize=12, weight="bold",
         color="#6d4c41", zorder=5)
-ax.text(hy(100), zs2 + 6.5, "2-й ЭТАЖ — перфолист", ha="center", fontsize=12, weight="bold",
-        color="#37474f", zorder=5)
+ax.text(hy(0), zs2 + 8.5, "поперечина 2-го этажа #1 (P3 ↔ стойка кровати), лист — позже", ha="center", fontsize=11,
+        weight="bold", color="#37474f", zorder=5)
 hdim(ax, 3.0, hy(y_c1), hy(y_r1), "%.1f″ (рейка батарей ↔ брусок бака)" % (T["w1"] / IN))
 vdim(ax, hy(y_r1) - 2.0, 0, mz(T["z_cross"][0]), "%.1f″\nпод поперечинами" % mz(T["z_cross"][0]), side=-1)
-vdim(ax, hy(y_r1) - 9.0, 0, zs2, "%.2f″\nверх листа" % zs2, side=-1)
+vdim(ax, hy(y_r1) - 9.0, 0, zs2, "%.2f″\nверх поперечины" % zs2, side=-1)
 vdim(ax, hy(400), zs2, mz(B["BedDeck"][4]), "%.1f″ до щита\n(между поперечинами)" % (T["h2_deck"] / IN), fs=8)
 vdim(ax, hy(-350), zs2, mz(cb[4]), "%.1f″ до поперечины\nкровати" % (T["h2_cross"] / IN), fs=8)
-hdim(ax, zs2 + 2.3, hy(T["y"][1]), hy(T["y"][0]), "лист 48″ (на бак %.1f″)" % (T["over_tank"] / IN), fs=8.5)
 tk = next(n for n in B if n.startswith("WaterTank_"))
 ax.text((hy(B[tk][2]) + hy(B[tk][3])) / 2, mz(B[tk][5]) / 2, "бак\nT-4320", ha="center", fontsize=10, color="#0d47a1",
         weight="bold", zorder=6)
@@ -148,9 +148,7 @@ for n in sorted(B):
     if n.startswith("Trunk2_Cross_"):
         r(n, fc=C_ST, ec="#37474f", zorder=6)
 r("Trunk2_Sheet", fc="#90a4ae", alpha=0.35, ec="#263238", lw=1.5, hatch="..", zorder=5)
-ax.text(px(sum(T["x"]) / 2), py(-300), "2-й ЭТАЖ\nперфолист\n%.0f × 48″" % ((T["x"][1] - T["x"][0]) / IN), ha="center",
-        va="center", fontsize=10.5, weight="bold", color="#263238", zorder=7)
-ax.text(px((T["x"][1] + T["x_deck"]) / 2), py(-400), "1-й этаж\n(здесь — до\nпоперечин\nкровати 30″)", ha="center",
+ax.text(px(1000.0), py(-400), "1-й этаж\n(здесь — до\nпоперечин\nкровати 30″)", ha="center",
         va="center", fontsize=9.5, color="#6d4c41", zorder=7)
 for n, lab in ((tk, "бак T-4320"), ("Toilet_Camco", "туалет"), ("Propane_Locker", "пропан\n20 lb")):
     if has(n):
@@ -160,20 +158,19 @@ for n, lab in ((tk, "бак T-4320"), ("Toilet_Camco", "туалет"), ("Propan
 ax.text(px(700), py(-870), "батареи (полка 17.85″)", ha="center", fontsize=8.5, color="white", weight="bold", zorder=8)
 hdim(ax, py(y_r1) + 1.6, px(T["x_rear"]), px(T["x_deck"]), "1-й этаж: %.1f″ до края щита" % ((T["x_deck"] - T["x_rear"]) / IN))
 hdim(ax, py(y_c1) - 1.8, px(T["x_rear"]), px(T["x_lock"]), "%.1f″ до локера" % ((T["x_lock"] - T["x_rear"]) / IN), fs=8)
-hdim(ax, py(T["y"][1]) + 1.2, px(T["x"][0]), px(T["x"][1]), "%.1f″" % ((T["x"][1] - T["x"][0]) / IN), fs=8.5)
 vdim(ax, px(T["x_deck"]) - 1.5, py(y_r1), py(y_l), "%.1f″" % ((y_l - y_r1) / IN), side=-1, fs=8)
 vdim(ax, px(T["x_rear"]) + 1.0, py(y_r1), py(y_c1), "%.1f″" % (T["w1"] / IN), fs=8.5)
-ax.set_xlim(-2.5, 58)
+ax.set_xlim(-2.5, 66)
 ax.set_ylim(py(-yw0) - 4.5, py(yw0) + 4)
 ax.set_aspect("equal")
 ax.grid(True, color="#f2f2f2", lw=0.6)
 ax.set_xlabel("от задних дверей вперёд, дюймы")
 ax.set_ylabel("поперёк, дюймы от оси (+ — водительский борт)")
-ax.set_title("План под кроватью: 1-й этаж (жёлтый — свободный пол), 2-й этаж — перфолист на 3 поперечинах", loc="left",
+ax.set_title("План под кроватью: 1-й этаж (жёлтый — свободный пол), поперечины 2-го этажа (#3 — через душ, ждёт решения)", loc="left",
              fontsize=12)
 
-fig.suptitle("Багажник под кроватью — 2 этажа (2026-11-07, из модели)\n"
-             "перфолист 304 48 × 24″ 19 ga (вдоль %.0f″) на 3 поперечинах strut 13/16″: "
-             "рейка батарей (уголок) ↔ верх бака (резина 3 мм)" % ((T["x"][1] - T["x"][0]) / IN), fontsize=13)
+fig.suptitle("Багажник под кроватью (2026-11-08, из модели): поперечины 2-го этажа от борта до борта на язычках —\n"
+             "#1 P3 ↔ стойка кровати pY rear; #3 P3f ↔ pY front (красная — через душ, ждёт решения); перфолист — позже",
+             fontsize=13)
 fig.tight_layout(rect=(0, 0, 1, 0.965))
 save(fig, "trunk_drawing.png")
