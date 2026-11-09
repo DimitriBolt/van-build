@@ -130,7 +130,7 @@ try:
         tr = {"x": xs_}
         for o in doc.Objects:
             if o.isDerivedFrom("Part::Feature") and o.Name.startswith(
-                    ("Battery_B", "BankShelf", "BankRail", "BankPost", "BankCross", "WaterTank_", "TankFloor_", "Trunk2_",
+                    ("Battery_B", "BankShelf", "BankRail", "BankPost", "BankCross", "WaterTank_", "TankFloor_", "Trunk2_", "Trunk1_",
                      "BedDeck", "BedMattress", "BedSideRail", "WheelArch_", "BedPost_")):
                 sl = _slice(o.Shape, (1, 0, 0), xs_)
                 if sl:
@@ -141,7 +141,7 @@ try:
             tr3 = {"x": x3_}
             for o in doc.Objects:
                 if o.isDerivedFrom("Part::Feature") and o.Name.startswith(
-                        ("Battery_B", "BankShelf", "BankRail", "BankPost", "WaterTank_", "TankFloor_", "Trunk2_", "BedDeck",
+                        ("Battery_B", "BankShelf", "BankRail", "BankPost", "WaterTank_", "TankFloor_", "Trunk2_", "Trunk1_", "BedDeck",
                          "BedMattress", "BedSideRail", "WheelArch_", "BedCross_", "Toilet_", "Propane_", "Water_Pump")):
                     sl = _slice(o.Shape, (1, 0, 0), x3_)
                     if sl:

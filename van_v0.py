@@ -586,6 +586,15 @@ TRUNK_SHELF = {
     "cross": [("1", "BankPost_P3", "BedPost_pY_rear", True),
               ("3", "Trunk2_PostP3m", "Trunk2_Post3W", True)],
     "p3m_shim": 4.0,                  # P3m отодвинута от рейки на 4 мм (арка) — проставка/шайбы в болте
+    # 2026-11-08 (Dimitri: «реализуй более простое и эффективное»): ящики багажника.
+    # 1-й этаж — ящик на 4 неповоротных колёсиках 2″ прямо по фанере пола (выше, чем на роликах-треке);
+    #   катится назад к двери и вперёд до края щита; фиксатор в крайних положениях (шпингалет в отверстие в полу).
+    # 2-й этаж — ящик скользит по полоскам UHMW на поперечинах #1 и #3 (без роликов: ~10″ вместо ~7″).
+    "boxes": {
+        "floor1": {"len": 609.6, "caster_h": 64.0, "caster_inset": 100.0, "top_gap": 15.0, "side_gap": 15.0,
+                   "wall": 12.7, "x_rear": 20.0},
+        "floor2": {"len": 914.4, "width": 1219.2, "uhmw": 3.0, "top_gap": 15.0, "wall": 12.7, "x_rear": 150.0},
+    },
     "tank_gap": 6.0,                  # поперечина над баком — с зазором, бак не нагружаем
     "tongue_h": 50.0,                 # язычок над поперечиной (болт 3/8″ посередине)
     "sheet": (609.6, 1219.2, 0.95),   # перфолист 48×24″ 19 ga — ОТЛОЖЕН (не строится)
@@ -3021,6 +3030,7 @@ def build():
     # #1: P3 ↔ стойка кровати pY rear; #3: P3f ↔ стойка кровати pY front; #2 — убрана. Бак НЕ нагружаем (гибкий,
     # без рёбер жёсткости) — поперечина над ним с зазором. Перфолист — ОТЛОЖЕН (переделка позже).
     trunk_summary = None
+    trunk_boxes = {}
     TS = TRUNK_SHELF
     tank_o = doc.getObject("WaterTank_T4320") if WATER_VARIANT == "T4320_floor" else None
     if TS.get("enable") and doc.getObject("BankPost_P3") is not None and B.get("enable"):
@@ -3111,6 +3121,69 @@ def build():
                     v = mind([tparts[nm_]], pref)
                     if v is not None and v < 200:
                         tch.append(("%s ↔ %s" % (nm_.split("_")[1], lab), v))
+        # — ящики багажника —
+        BX = TS.get("boxes", {})
+
+        def open_box(x0, y0, z0, lx, ly, lz, w):
+            return Part.makeBox(lx, ly, lz, App.Vector(x0, y0, z0)).cut(
+                Part.makeBox(lx - 2 * w, ly - 2 * w, lz, App.Vector(x0 + w, y0 + w, z0 + w)))
+        if "floor1" in BX:
+            b1 = BX["floor1"]
+            p3m_ = doc.getObject("Trunk2_PostP3m") or doc.getObject("BankPost_P3")
+            y0 = p3m_.Shape.BoundBox.YMax + b1["side_gap"]
+            lkb = doc.getObject("Propane_Locker").Shape.BoundBox if doc.getObject("Propane_Locker") else None
+            y1 = (lkb.YMin if lkb is not None else 0.0) - b1["side_gap"]
+            zt = z_c0 - b1["top_gap"]
+            ch = b1["caster_h"]
+            for pos, x0, tr_, lab in (("Rear", b1["x_rear"], 0, "у задней двери (по-походному)"),
+                                      ("Front", dx1 - 5.0 - b1["len"], 80, "выкачен вперёд к краю щита")):
+                sfx = "" if pos == "Rear" else "_Front"
+                tput("Trunk1_Box" + sfx, "Ящик 1-го этажа %.0f×%.0f×%.0f″ на колёсиках — %s" % (
+                    b1["len"] / 25.4, (y1 - y0) / 25.4, (zt - floor_top) / 25.4, lab),
+                     open_box(x0, y0, floor_top + ch, b1["len"], y1 - y0, zt - floor_top - ch, b1["wall"]),
+                     (0.80, 0.62, 0.40), tr_)
+                for i_, (dx_, dy_) in enumerate(((1, 0), (1, 1), (0, 0), (0, 1))):
+                    cx_ = x0 + (b1["caster_inset"] if dx_ == 0 else b1["len"] - b1["caster_inset"])
+                    cy_ = (y0 + b1["caster_inset"]) if dy_ == 0 else (y1 - b1["caster_inset"])
+                    tput("Trunk1_Caster%s_%d" % (sfx, i_ + 1), "Колёсико 2″ неповоротное (резина) — катится по фанере пола",
+                         Part.makeCylinder(25.0, 22.0, App.Vector(cx_, cy_ - 11.0, floor_top + 25.0),
+                                           App.Vector(0, 1, 0)).fuse(
+                             Part.makeBox(40.0, 30.0, ch - 50.0, App.Vector(cx_ - 20.0, cy_ - 15.0, floor_top + 50.0))),
+                         (0.20, 0.20, 0.20), tr_)
+                tput("Trunk1_Latch" + sfx, "Фиксатор — шпингалет в отверстие в полу (по-походному / выкачен)",
+                     Part.makeCylinder(6.0, ch + 40.0, App.Vector(x0 + b1["len"] / 2.0, y0 + 30.0, floor_top - 10.0)),
+                     (0.85, 0.85, 0.20), tr_)
+            trunk_boxes["floor1"] = dict(x=(b1["x_rear"], b1["x_rear"] + b1["len"]),
+                                         x_front=(dx1 - 5.0 - b1["len"], dx1 - 5.0), y=(y0, y1), h_total=zt - floor_top,
+                                         h_body=zt - floor_top - ch, travel=(dx1 - 5.0 - b1["len"]) - b1["x_rear"])
+        if "floor2" in BX:
+            b2 = BX["floor2"]
+            cr_all = sorted((tparts[n_] for n_ in tparts if n_.startswith("Trunk2_Cross_")), key=lambda c: c.BoundBox.XMin)
+            ya = max(c_.BoundBox.YMin for c_ in cr_all) + 10.0
+            ytop = doc.getObject("BedCross_1").Shape.BoundBox.ZMin - b2["top_gap"]
+            z2 = z_c1 + b2["uhmw"]
+            for i_, c_ in enumerate(cr_all):
+                tput("Trunk2_UHMW_%d" % (i_ + 1), "Полоса UHMW 3 мм на поперечине — по ней скользит ящик 2-го этажа",
+                     Part.makeBox(c_.BoundBox.XLength, b2["width"], b2["uhmw"], App.Vector(c_.BoundBox.XMin, ya, z_c1)),
+                     (0.97, 0.97, 0.97))
+            xr2 = b2["x_rear"]
+            pull = (xr2 + b2["len"]) - cr_all[-1].BoundBox.XMax - 20.0      # пока опирается на обе поперечины
+            for pos, dx_, tr_, lab in (("", 0.0, 0, "на месте"),
+                                       ("_Out", -pull, 80, "выдвинут назад на %.0f″" % (pull / 25.4))):
+                tput("Trunk2_Box" + pos, "Ящик 2-го этажа %.0f×%.0f×%.0f″ — скользит по UHMW, %s" % (
+                    b2["len"] / 25.4, b2["width"] / 25.4, (ytop - z2) / 25.4, lab),
+                     open_box(xr2 + dx_, ya, z2, b2["len"], b2["width"], ytop - z2, b2["wall"]), (0.72, 0.55, 0.36), tr_)
+            trunk_boxes["floor2"] = dict(x=(xr2, xr2 + b2["len"]), y=(ya, ya + b2["width"]), h=ytop - z2, z0=z2, pull=pull)
+        for nm_ in ("Trunk1_Box", "Trunk1_Box_Front", "Trunk2_Box", "Trunk2_Box_Out"):
+            if nm_ in tparts:
+                for lab, pref in (("бак", "WaterTank_"), ("туалет", "Toilet_"), ("локер", "Propane_Locker"),
+                                  ("батареи", "Battery_"), ("стойки", "BankPost_"), ("P3m/Post3W", "Trunk2_Post"),
+                                  ("брусок бака", "TankFloor_Cleat"), ("насос", "Water_Pump"), ("газ", "Gas_"),
+                                  ("поперечины 2-го эт.", "Trunk2_Cross"), ("поперечины кровати", "BedCross_"),
+                                  ("арка", "WheelArch_"), ("пластины стоек", "BankPostPlate")):
+                    v = mind([tparts[nm_]], pref)
+                    if v is not None and v < 60:
+                        tch.append(("%s ↔ %s" % (nm_, lab), v))
         tch.append(("за край щита (макс X)", max(tparts[n_].BoundBox.XMax for n_ in tparts) - dx1))
         rb = doc.getObject("BankRail_Inner").Shape.BoundBox
         cl_ = doc.getObject("TankFloor_Cleat_Aisle")
@@ -3123,7 +3196,7 @@ def build():
                              x_rear=dx0, x_lock=lk_.Shape.BoundBox.XMin if lk_ is not None else dx1,
                              y_lock=lk_.Shape.BoundBox.YMin if lk_ is not None else None, x_deck=dx1,
                              h2_cross=z_cr - z_c1, h2_deck=doc.getObject("BedDeck").Shape.BoundBox.ZMin - z_c1,
-                             tank_gap=TS["tank_gap"])
+                             tank_gap=TS["tank_gap"], boxes=trunk_boxes)
         TRUNK_SHELF["_summary"] = {k: v for k, v in trunk_summary.items() if k != "checks"}
 
     # ═══════ ШКАФЧИКИ ПОД ПОТОЛКОМ по бортам (проект 2026-11-07) ═══════
@@ -3529,6 +3602,18 @@ def build():
         print("  1-й этаж: ширина %.0f мм (%.1f″); под поперечинами 2-го этажа %.0f мм (%.1f″), между ними до поперечин "
               "кровати %.0f мм (%.1f″)" % (t["w1"], t["w1"] / 25.4, t["h1_under"], t["h1_under"] / 25.4, t["h1_open"],
                                          t["h1_open"] / 25.4))
+        b_ = t.get("boxes") or {}
+        if "floor1" in b_:
+            q = b_["floor1"]
+            print("  Ящик 1-го этажа: %.1f″ вдоль × %.1f″ поперёк × %.1f″ (корпус %.1f″ + колёсики); у двери X %.0f..%.0f, "
+                  "впереди X %.0f..%.0f — ход %.1f″" % ((q["x"][1] - q["x"][0]) / 25.4, (q["y"][1] - q["y"][0]) / 25.4,
+                  q["h_total"] / 25.4, q["h_body"] / 25.4, q["x"][0], q["x"][1], q["x_front"][0], q["x_front"][1],
+                  q["travel"] / 25.4))
+        if "floor2" in b_:
+            q = b_["floor2"]
+            print("  Ящик 2-го этажа: %.1f″ × %.1f″ × %.1f″, низ %.1f″ над полом; X %.0f..%.0f; выдвигается назад на %.1f″ "
+                  "(пока лежит на обеих поперечинах)" % ((q["x"][1] - q["x"][0]) / 25.4, (q["y"][1] - q["y"][0]) / 25.4,
+                  q["h"] / 25.4, (q["z0"] - f0) / 25.4, q["x"][0], q["x"][1], q["pull"] / 25.4))
         print("  Зазоры: " + "; ".join("%s %.1f" % (n, v) for n, v in t["checks"]))
     print("-" * 70)
     if bb:

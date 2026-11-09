@@ -57,7 +57,9 @@ STY = [("WheelArch_", dict(fc="#bdbdbd", ec="#9e9e9e")), ("BedSideRail", dict(fc
        ("Battery_B", dict(fc=C_BAT, ec="#bf360c", alpha=0.85)), ("WaterTank_", dict(fc=C_T, alpha=0.55, ec="#1f5f8b", lw=1.4)),
        ("TankFloor_", dict(fc="#a1887f", ec="#5d4037")), ("Trunk2_Pad", dict(fc="#212121")),
        ("Trunk2_Angle", dict(fc=C_ST)), ("Trunk2_Cross", dict(fc=C_ST, ec="#37474f")),
-       ("Trunk2_Sheet", dict(fc="#90a4ae", ec="#263238", lw=1.2))]
+       ("Trunk2_Sheet", dict(fc="#90a4ae", ec="#263238", lw=1.2)), ("Trunk2_UHMW", dict(fc="#ffffff", ec="#424242")),
+       ("Trunk1_Box", dict(fc="#d4a373", alpha=0.75, ec="#8d6e63", lw=1.2)), ("Trunk1_Caster", dict(fc="#212121")),
+       ("Trunk2_Box", dict(fc="#c9a27e", alpha=0.75, ec="#6d4c41", lw=1.2))]
 for pref, kw in STY:
     for n in sorted(SEC):
         if n.startswith(pref) and n != "x":
@@ -189,6 +191,22 @@ for n in sorted(B):
     if n.startswith("Trunk2_Cross_"):
         r(n, fc=C_ST, ec="#37474f", zorder=6)
 r("Trunk2_Sheet", fc="#90a4ae", alpha=0.35, ec="#263238", lw=1.5, hatch="..", zorder=5)
+r("Trunk1_Box", fc="#d4a373", alpha=0.55, ec="#8d6e63", lw=1.5, zorder=6)
+r("Trunk1_Box_Front", fill=False, ec="#8d6e63", ls="--", lw=1.5, zorder=6)
+r("Trunk2_Box", fill=False, ec="#6d4c41", ls="-.", lw=1.8, zorder=6)
+if has("Trunk1_Box"):
+    b = B["Trunk1_Box"]
+    ax.text(px((b[0] + b[1]) / 2), py(b[2]) + 2.0, "ящик 1-го эт.\n(у двери)", ha="center", fontsize=9, zorder=9,
+            color="#5d4037", weight="bold")
+    bf = B["Trunk1_Box_Front"]
+    ax.text(px((bf[0] + bf[1]) / 2), py(bf[2]) + 2.0, "он же — выкачен\nвперёд (пунктир)", ha="center", fontsize=8.5,
+            zorder=9, color="#5d4037")
+    ax.annotate("", xy=(px(bf[0]) + 2, py(b[2]) + 7), xytext=(px(b[1]) - 2, py(b[2]) + 7),
+                arrowprops=dict(arrowstyle="<->", lw=1.6, color="#5d4037"), zorder=9)
+if has("Trunk2_Box"):
+    b = B["Trunk2_Box"]
+    ax.text(px(b[1]) - 0.5, py(b[3]) - 1.5, "ящик 2-го эт. (штрихпунктир)", ha="right", fontsize=8.5, zorder=9,
+            color="#6d4c41")
 for n in ("Trunk2_PostP3m", "Trunk2_Post3W", "Trunk2_TankSpacer"):
     r(n, fc="#26a69a", ec="#00695c", zorder=7)
 if has("Trunk2_Cross_3"):
