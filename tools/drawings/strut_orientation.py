@@ -13,7 +13,7 @@ if "strut" not in d:
 B, S, RULES = d["boxes"], d["strut"], d["STRUT_BACK"]
 FF = d["geo"]["floor_top"]
 AX = {"x": 0, "y": 1, "z": 2}
-WORD = {"aisle": "в проход", "wall": "к борту", "+X": "вперёд", "-X": "назад (к задним дверям)", "+Z": "вверх", "-Z": "вниз"}
+WORD = {"aisle": "в проход", "wall": "к борту", "+Y": "к водит. борту", "-Y": "к пасс. борту", "+X": "вперёд", "-X": "назад (к задним дверям)", "+Z": "вверх", "-Z": "вниз"}
 COL = {"Battery_B": dict(fc="#ef6c00", alpha=0.35, ec="none"), "BankShelf": dict(fc="#d7b98e", alpha=0.7, ec="#8d6e63"),
        "BedDeck": dict(fc="#d7ccc8", alpha=0.7, ec="#8d6e63"), "BankRailBolt": dict(fc="#f9a825", ec="#795548")}
 

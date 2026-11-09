@@ -579,16 +579,19 @@ TRUNK_SHELF = {
     # назад, в задние двери (вперёд — душ). Пассажирская направляющая — на пазах ножек P3 и P3m; водительская — на
     # продольной рейке над баком (зеркально P3-линии), рейка держится на поперечинах к стойке кровати pY rear и к
     # подвесу у борта от продольной рейки кровати (у борта, над аркой — проход не занимает).
-    "slide": {"L": 1117.6, "H": 76.2, "T": 19.3, "title": "SLIDEWAY 500 lb Locking 44″ Full Extension"},
-    "opening_gap": 15.0,              # направляющие и поддон — внутри проёма задних дверей (|Y| < стойки проёма)
+    # 2026-11-08 (ночь, Dimitri): поддон делим на 2 ящика + хребет посередине (2 стойки «как Post3W»): передний
+    # (пасс. половина) выдвигается ВПЕРЁД в салон, задний (водит. половина) — НАЗАД (вперёд — душ); 1-й этаж — тоже
+    # на направляющих, назад. У SLIDEWAY ход только в одну сторону.
+    "slide": {"L": 1117.6, "H": 76.2, "T": 19.3, "title": "SLIDEWAY 500 lb Locking 44″"},
+    "slide1": {"L": 914.4, "H": 76.2, "T": 19.3, "title": "SLIDEWAY 500 lb Locking 36″"},
+    "spine": {"locker_gap": 10.0},    # хребет: до дверцы локера пропана
+    "front_gap": 15.0,                # передний ящик (закрыт) — до края щита
+    "opening_gap": 15.0,              # задние ящики и направляющие — внутри проёма задних дверей (|Y| < стойки)
     "x_rear": 30.0,                   # задний торец направляющих (закрыто) — от порога
-    "p3_shim": 4.0,                   # P3 — проставка 4 мм (как у P3m) → обе направляющие в одной плоскости
+    "p3_shim": 4.0,                   # P3 — проставка 4 мм (как у P3m) → направляющие на P3 и P3m в одной плоскости
     "tray": {"base": 12.7, "wall": 12.7, "z_gap": 10.0, "top_gap": 15.0},   # фанера 1/2″
     "p3m_shim": 4.0,                  # P3m отодвинута от рейки на 4 мм (арка) — проставка/шайбы в болте
-    "boxes": {
-        "floor1": {"len": 609.6, "caster_h": 64.0, "caster_inset": 100.0, "top_gap": 15.0, "side_gap": 15.0,
-                   "wall": 12.7, "x_rear": 20.0},
-    },
+    "boxes": {"floor1": {"z_gap": 15.0, "top_gap": 15.0, "base": 12.7}},   # над пластинами стоек / под 2-м этажом
     "sheet": (609.6, 1219.2, 0.95),   # перфолист — заменён поддоном (не строится)
     "title": "Перфолист 304 48×24″ 19 ga, отв. 0.32″ (8 мм), 40%",
 }
@@ -641,6 +644,10 @@ STRUT_BACK = [
     (r"Trunk2_DrvRail$", "wall"),                   # паз в проход — направляющая поддона на гайках-канал
     (r"Trunk2_DrvHanger$", "wall"),                 # спинкой к пазу рейки кровати, паз в проход
     (r"Trunk2_DrvCross_\d$", "-X"),                # на ребре
+    (r"Trunk2_SpinePost_\d$", "-Y"),               # хребет: спинкой к пассажирским рейкам (спинка к спинке)
+    (r"Trunk2_SpineRail_P$", "+Y"),                 # спинкой к стойкам, паз — к направляющей переднего ящика
+    (r"Trunk1_SpineRail$", "+Y"),                   # то же, 1-й этаж
+    (r"Trunk2_SpineRail_D$", "-Y"),                 # спинкой к пазу стоек, паз — к направляющей заднего ящика
 ]
 
 
@@ -717,7 +724,8 @@ def apply_strut_profiles(doc):
         grp = o.getParentGroup()
         doc.removeObject(name)
         add_shape(doc, name, label + "; спинка (отверстия 2″) → %s" % {"aisle": "в проход", "wall": "к борту",
-                  "+X": "вперёд", "-X": "назад", "+Z": "вверх", "-Z": "вниз"}[back], shp,
+                  "+X": "вперёд", "-X": "назад", "+Z": "вверх", "-Z": "вниз",
+                  "+Y": "к водит. борту", "-Y": "к пасс. борту"}[back], shp,
                   color=(0.90, 0.25, 0.20) if "⚠️" in label else COL_STRUT, transparency=55 if "⚠️" in label else None,
                   group=grp)
         done.append(name)
@@ -3019,14 +3027,14 @@ def build():
             seat_gap=3190.0 - kx1, aisle_sh=aisle_sh, aisle_k=aisle_k, checks=checks,
             floor_top=floor_top, wall_y=y_at_z(half, 900.0), arch_ywall=arch_ywall)
 
-    # ═══════ 2-Й ЭТАЖ БАГАЖНИКА — выдвижной поддон на направляющих 44″ (2026-11-08, Dimitri) ═══════
+    # ═══════ БАГАЖНИК — 3 выдвижных ящика на направляющих SLIDEWAY + хребет посередине (2026-11-08, Dimitri) ═══════
     trunk_summary = None
     trunk_boxes = {}
     TS = TRUNK_SHELF
     tank_o = doc.getObject("WaterTank_T4320") if WATER_VARIANT == "T4320_floor" else None
     if TS.get("enable") and doc.getObject("BankPost_P3") is not None and B.get("enable") and tank_o is not None:
         tg = doc.addObject("App::DocumentObjectGroup", "TrunkShelf")
-        tg.Label = "2-й этаж багажника — выдвижной поддон на направляющих 44″ + ящик 1-го этажа (проект 2026-11-08)"
+        tg.Label = "Багажник — 3 выдвижных ящика на направляющих SLIDEWAY + хребет посередине (проект 2026-11-08)"
         tparts = {}
 
         def tput(name, label, shape, color, tr=0):
@@ -3055,30 +3063,94 @@ def build():
         tput("Trunk2_PostP3mBolt", "Болт 3/8″: P3m ↔ рейка со стороны прохода (через овалы спинок + проставка)",
              Part.makeCylinder(4.75, 2 * sd + ysh + 16.0, App.Vector(x3, rbi.YMin - 8.0, (rbi.ZMin + rbi.ZMax) / 2.0),
                                App.Vector(0, 1, 0)), (0.85, 0.85, 0.20))
-        # высоты: поддон — над баком/туалетом/локером; верх — под поперечинами кровати
+        # высоты: ящики 2-го этажа — над баком/туалетом/локером; верх — под поперечинами кровати
         lk_ = doc.getObject("Propane_Locker")
         to_ = doc.getObject("Toilet_Camco")
+        lkb = lk_.Shape.BoundBox
         z_under = max([tb.ZMax] + [o.Shape.BoundBox.ZMax for o in (lk_, to_) if o is not None])
-        z_t0 = z_under + TR["z_gap"]                                 # низ поддона
+        z_t0 = z_under + TR["z_gap"]                                 # низ ящиков 2-го этажа
         z_top = doc.getObject("BedCross_1").Shape.BoundBox.ZMin - TR["top_gap"]
-        z_s0 = z_t0 + TR["base"] + 8.0                               # низ направляющей (на боковине поддона)
+        z_s0 = z_t0 + TR["base"] + 8.0                               # низ направляющей (на боковине ящика)
         z_s1 = z_s0 + SL["H"]
-        # плоскость направляющих: пассажирская — паз P3/P3m (+проставка); водительская — зеркально
-        y_p = rbi.YMax + ysh + sd                                    # пазовая грань P3m (P3 — с проставкой 4 мм)
+        zr0 = (z_s0 + z_s1) / 2.0 - sw / 2.0                         # рейки под направляющими 2-го этажа
+        # плоскость пассажирских направляющих — паз P3m (P3 — с проставкой 4 мм); водительская — зеркально
+        y_p = rbi.YMax + ysh + sd
         rp_ = doc.getObject("Pillar_Rear_pY").Shape.BoundBox
         xs0, xs1 = TS["x_rear"], TS["x_rear"] + SL["L"]
         assert -y_p <= rp_.YMin - TS["opening_gap"], "направляющие шире проёма задних дверей"
-        tput("Trunk2_SlidePass", "Направляющая поддона %s (пассажирская), на пазах P3 и P3m (гайки-канал)" % SL["title"],
-             Part.makeBox(SL["L"], SL["T"], SL["H"], App.Vector(xs0, y_p, z_s0)), (0.80, 0.82, 0.86))
-        tput("Trunk2_SlideDrv", "Направляющая поддона %s (водительская), на продольной рейке над баком" % SL["title"],
-             Part.makeBox(SL["L"], SL["T"], SL["H"], App.Vector(xs0, -y_p - SL["T"], z_s0)), (0.80, 0.82, 0.86))
-        y_dr0 = -y_p                                                 # грань рейки к проходу (под направляющей)
+        # ── ХРЕБЕТ посередине (между ящиками): 2 стойки под поперечинами кровати #1 и #2 + рейки ──
+        # Dimitri 2026-11-08: «ножку Post3W — справа от бака и справа от баллона + ещё одну такую же». Справа от
+        # локера пропана — нельзя: его дверца смотрит в багажник (X 980..1310) и открывается туда; а впереди локера
+        # стойка вылезла бы за край щита. Поэтому стойки — в X поперечин кровати #1 (справа от бака) и #2 (между баком
+        # и локером), вверху упираются в поперечины (подпирают их посередине, как Post3W).
+        SP = TS["spine"]
+        yc1 = lkb.YMin - SP["locker_gap"]                            # водительская грань стоек хребта
+        yc0 = yc1 - sd                                               # пассажирская грань (спинка)
+        y_rp = (yc0 - sd, yc0)                                       # слой пассажирских реек (спинка к спинке стоек)
+        y_rd = (yc1, yc1 + sd)                                       # слой водительской рейки (на пазу стоек)
+        y_scp = (y_rp[0] - SL["T"], y_rp[0])                         # направляющие у хребта
+        y_scd = (y_rd[1], y_rd[1] + SL["T"])
+        posts_x = []
+        for i_, cn in enumerate(("BedCross_1", "BedCross_2")):
+            cb = doc.getObject(cn).Shape.BoundBox
+            xc_ = (cb.XMin + cb.XMax) / 2.0
+            posts_x.append(xc_)
+            tput("Trunk2_SpinePlate_%d" % (i_ + 1), "Пластина под стойку хребта %d (как под P3), 4 болта в пол" % (i_ + 1),
+                 Part.makeBox(76.0, 127.0, 3.0, App.Vector(xc_ - 38.0, (yc0 + yc1) / 2.0 - 63.5, floor_top)), COL_STRUT)
+            tput("Trunk2_SpinePost_%d" % (i_ + 1), "Стойка хребта %d strut L=%.0f — посередине между ящиками, от пола до "
+                 "поперечины кровати #%d (упирается, подпирает её посередине); спинкой к пассажирским рейкам" % (
+                     i_ + 1, cb.ZMin - (floor_top + 3.0), i_ + 1),
+                 Part.makeBox(sw, sd, cb.ZMin - (floor_top + 3.0), App.Vector(xc_ - sw / 2.0, yc0, floor_top + 3.0)),
+                 COL_STRUT)
+        tput("Trunk2_SpineRail_P", "Рейка хребта 2-го этажа (пасс. сторона) strut L=%.0f: спинка к спинке со стойками "
+             "хребта; в пазу (гайки-канал 1/4″) — направляющая переднего ящика" % (xs1 - xs0),
+             Part.makeBox(xs1 - xs0, sd, sw, App.Vector(xs0, y_rp[0], zr0)), COL_STRUT)
+        tput("Trunk2_SpineRail_D", "Рейка хребта 2-го этажа (водит. сторона) strut L=%.0f: спинкой к пазу стоек хребта "
+             "(болт в гайку-канал); в пазу — направляющая заднего ящика" % (xs1 - xs0),
+             Part.makeBox(xs1 - xs0, sd, sw, App.Vector(xs0, y_rd[0], zr0)), COL_STRUT)
+        # 1-й этаж: ящик на направляющих 36″ (44″ не влезают: впереди — дверца локера пропана)
+        S1, BX = TS["slide1"], TS.get("boxes", {})
+        b1 = BX["floor1"]
+        z10, z11 = floor_top + b1["z_gap"], z_t0 - b1["top_gap"]
+        z1s0 = z10 + b1["base"] + 8.0
+        zr1 = z1s0 + S1["H"] / 2.0 - sw / 2.0
+        x1s0, x1s1 = TS["x_rear"], TS["x_rear"] + S1["L"]
+        tput("Trunk1_SpineRail", "Рейка хребта 1-го этажа strut L=%.0f: спинка к спинке со стойками хребта; в пазу — "
+             "направляющая ящика 1-го этажа (кончается до дверцы локера)" % (x1s1 - x1s0),
+             Part.makeBox(x1s1 - x1s0, sd, sw, App.Vector(x1s0, y_rp[0], zr1)), COL_STRUT)
+        for i_, xc_ in enumerate(posts_x):
+            for sfx, zc_, y0_, ln_ in (("2", zr0 + sw / 2.0, y_rp[0] - 8.0, 3 * sd + 16.0),
+                                       ("1", zr1 + sw / 2.0, y_rp[0] - 8.0, 2 * sd + 16.0)):
+                tput("Trunk2_SpineBolt_%d_%s" % (i_ + 1, sfx), "Болт 3/8″: рейки хребта ↔ стойка %d (спинка к спинке, "
+                     "овалы 2″)" % (i_ + 1), Part.makeCylinder(4.75, ln_, App.Vector(xc_, y0_, zc_), App.Vector(0, 1, 0)),
+                     (0.85, 0.85, 0.20))
+        # совпадение овалов спинка-к-спинке (рейка: от её начала 1″ + 2″·k; стойка: от низа 1″ + 2″·k)
+        P0, P1 = STRUT["hole0"], STRUT["pitch"]
+        hole_off = []
+        for xc_ in posts_x:
+            for x_r0 in (xs0, x1s0):
+                k_ = round((xc_ - x_r0 - P0) / P1)
+                hole_off.append(abs(xc_ - (x_r0 + P0 + k_ * P1)))
+        for zc_ in (zr0 + sw / 2.0, zr1 + sw / 2.0):
+            k_ = round((zc_ - (floor_top + 3.0) - P0) / P1)
+            hole_off.append(abs(zc_ - (floor_top + 3.0 + P0 + k_ * P1)))
+        # направляющие
+        for nm_, lab, x0_, ln_, y0_, z0_, ttl in (
+                ("Trunk2_SlidePass", "переднего ящика (пасс.), на пазах P3 и P3m", xs0, SL["L"], y_p, z_s0, SL["title"]),
+                ("Trunk2_SlideSpineP", "переднего ящика, на рейке хребта", xs0, SL["L"], y_scp[0], z_s0, SL["title"]),
+                ("Trunk2_SlideSpineD", "заднего ящика, на рейке хребта", xs0, SL["L"], y_scd[0], z_s0, SL["title"]),
+                ("Trunk2_SlideDrv", "заднего ящика (водит.), на рейке над баком", xs0, SL["L"], -y_p - SL["T"], z_s0,
+                 SL["title"]),
+                ("Trunk1_SlidePass", "ящика 1-го этажа (пасс.), на пазах P3 и P3m", x1s0, S1["L"], y_p, z1s0, S1["title"]),
+                ("Trunk1_SlideSpine", "ящика 1-го этажа, на рейке хребта", x1s0, S1["L"], y_scp[0], z1s0, S1["title"])):
+            tput(nm_, "Направляющая %s — %s" % (ttl, lab),
+                 Part.makeBox(ln_, SL["T"], SL["H"], App.Vector(x0_, y0_, z0_)), (0.80, 0.82, 0.86))
         # водительская продольная рейка над баком — пазом в проход (направляющая на гайках-канал), спинкой к борту
-        zr0 = (z_s0 + z_s1) / 2.0 - sw / 2.0
+        y_dr0 = -y_p
         xr0_ = rp_.XMax + 5.0
-        x_dr1 = xs1
-        tput("Trunk2_DrvRail", "Продольная рейка над баком (водит.) strut L=%.0f — под направляющую поддона, зеркально "
-             "линии P3/P3m" % (x_dr1 - xr0_), Part.makeBox(x_dr1 - xr0_, sd, sw, App.Vector(xr0_, y_dr0, zr0)), COL_STRUT)
+        tput("Trunk2_DrvRail", "Продольная рейка над баком (водит.) strut L=%.0f — под направляющую заднего ящика, "
+             "зеркально линии P3/P3m" % (xs1 - xr0_), Part.makeBox(xs1 - xr0_, sd, sw, App.Vector(xr0_, y_dr0, zr0)),
+             COL_STRUT)
         bpr = doc.getObject("BedPost_pY_rear").Shape.BoundBox
         srp = doc.getObject("BedSideRail_pY").Shape.BoundBox
         cr2 = doc.getObject("BedCross_2").Shape.BoundBox
@@ -3091,52 +3163,33 @@ def build():
             tput("Trunk2_DrvCross_%d" % (i_ + 1), "Поперечина рейки над баком %d strut L=%.0f (на ребре): рейка ↔ %s, "
                  "на язычке" % (i_ + 1, y_end - (y_dr0 + sd), lab),
                  Part.makeBox(sd, y_end - (y_dr0 + sd), sw, App.Vector(xc_ - sd / 2.0, y_dr0 + sd, zr0)), COL_STRUT)
-        tput("Trunk2_P3Shim", "Проставка 4 мм под направляющую на P3 (P3 и P3m — в одной плоскости)",
-             Part.makeBox(p3b_.XLength, TS.get("p3_shim", 4.0), SL["H"], App.Vector(p3b_.XMin, p3b_.YMax, z_s0)),
-             (0.25, 0.25, 0.25))
-        # поддон между направляющими (закрыт) и выдвинут целиком назад (призрак)
-        ty0, ty1 = y_p + SL["T"], -y_p - SL["T"]
-        tl_ = SL["L"]
-        for pos, dx_, tr_, lab in (("", 0.0, 0, "задвинут (по-походному, на фиксаторе)"),
-                                   ("_Out", -SL["L"], 80, "выдвинут целиком назад, в задние двери")):
-            tray = Part.makeBox(tl_, ty1 - ty0, z_top - z_t0, App.Vector(xs0 + dx_, ty0, z_t0)).cut(
-                Part.makeBox(tl_ - 2 * TR["wall"], ty1 - ty0 - 2 * TR["wall"], z_top - z_t0,
-                             App.Vector(xs0 + dx_ + TR["wall"], ty0 + TR["wall"], z_t0 + TR["base"])))
-            tput("Trunk2_Tray" + pos, "Поддон 2-го этажа %.0f×%.1f×%.1f″ (фанера 1/2″) — %s" % (
-                tl_ / 25.4, (ty1 - ty0) / 25.4, (z_top - z_t0) / 25.4, lab), tray, (0.78, 0.60, 0.40), tr_)
-        # ящик 1-го этажа на колёсиках по полу (под поддоном)
-        BX = TS.get("boxes", {})
+        for nm_, z0_ in (("Trunk2_P3Shim", z_s0), ("Trunk1_P3Shim", z1s0)):
+            tput(nm_, "Проставка 4 мм под направляющую на P3 (P3 и P3m — в одной плоскости)",
+                 Part.makeBox(p3b_.XLength, TS.get("p3_shim", 4.0), SL["H"], App.Vector(p3b_.XMin, p3b_.YMax, z0_)),
+                 (0.25, 0.25, 0.25))
 
-        def open_box(x0, y0, z0, lx, ly, lz, w):
+        def drawer(x0, y0, z0, lx, ly, lz, w, base):
             return Part.makeBox(lx, ly, lz, App.Vector(x0, y0, z0)).cut(
-                Part.makeBox(lx - 2 * w, ly - 2 * w, lz, App.Vector(x0 + w, y0 + w, z0 + w)))
-        if "floor1" in BX:
-            b1 = BX["floor1"]
-            y0 = rbi.YMax + ysh + sd + b1["side_gap"] + 8.0          # мимо гаек P3m
-            y1 = (lk_.Shape.BoundBox.YMin if lk_ is not None else 0.0) - b1["side_gap"]
-            zt = z_t0 - b1["top_gap"]
-            ch = b1["caster_h"]
-            for pos, x0, tr_, lab in (("Rear", b1["x_rear"], 0, "у задней двери (по-походному)"),
-                                      ("Front", dx1 - 5.0 - b1["len"], 80, "выкачен вперёд к краю щита")):
-                sfx = "" if pos == "Rear" else "_Front"
-                tput("Trunk1_Box" + sfx, "Ящик 1-го этажа %.0f×%.0f×%.0f″ на колёсиках — %s" % (
-                    b1["len"] / 25.4, (y1 - y0) / 25.4, (zt - floor_top) / 25.4, lab),
-                     open_box(x0, y0, floor_top + ch, b1["len"], y1 - y0, zt - floor_top - ch, b1["wall"]),
-                     (0.80, 0.62, 0.40), tr_)
-                for i_, (dx_, dy_) in enumerate(((1, 0), (1, 1), (0, 0), (0, 1))):
-                    cx_ = x0 + (b1["caster_inset"] if dx_ == 0 else b1["len"] - b1["caster_inset"])
-                    cy_ = (y0 + b1["caster_inset"]) if dy_ == 0 else (y1 - b1["caster_inset"])
-                    tput("Trunk1_Caster%s_%d" % (sfx, i_ + 1), "Колёсико 2″ неповоротное (резина) — катится по фанере пола",
-                         Part.makeCylinder(25.0, 22.0, App.Vector(cx_, cy_ - 11.0, floor_top + 25.0),
-                                           App.Vector(0, 1, 0)).fuse(
-                             Part.makeBox(40.0, 30.0, ch - 50.0, App.Vector(cx_ - 20.0, cy_ - 15.0, floor_top + 50.0))),
-                         (0.20, 0.20, 0.20), tr_)
-                tput("Trunk1_Latch" + sfx, "Фиксатор — шпингалет в отверстие в полу (по-походному / выкачен)",
-                     Part.makeCylinder(6.0, ch + 40.0, App.Vector(x0 + b1["len"] / 2.0, y0 + 30.0, floor_top - 10.0)),
-                     (0.85, 0.85, 0.20), tr_)
-            trunk_boxes["floor1"] = dict(x=(b1["x_rear"], b1["x_rear"] + b1["len"]),
-                                         x_front=(dx1 - 5.0 - b1["len"], dx1 - 5.0), y=(y0, y1), h_total=zt - floor_top,
-                                         h_body=zt - floor_top - ch, travel=(dx1 - 5.0 - b1["len"]) - b1["x_rear"])
+                Part.makeBox(lx - 2 * w, ly - 2 * w, lz, App.Vector(x0 + w, y0 + w, z0 + base)))
+        x_fr = dx1 - TS["front_gap"]                                 # передний торец переднего ящика (закрыт)
+        dr = {}
+        for key, nm_, x0_, x1_, y0_, y1_, za, zb, out, lab in (
+                ("fwd", "Trunk2_TrayFwd", xs0, x_fr, y_p + SL["T"], y_scp[0], z_t0, z_top, SL["L"],
+                 "2-й этаж, пасс. половина — выдвигается ВПЕРЁД, в салон"),
+                ("rear", "Trunk2_TrayRear", xs0, xs1, y_scd[1], -y_p - SL["T"], z_t0, z_top, -SL["L"],
+                 "2-й этаж, водит. половина — выдвигается НАЗАД, в задние двери"),
+                ("floor1", "Trunk1_Drawer", x1s0, x1s1, y_p + SL["T"], y_scp[0], z10, z11, -S1["L"],
+                 "1-й этаж — выдвигается НАЗАД, в задние двери")):
+            dr[key] = dict(x=(x0_, x1_), y=(y0_, y1_), z=(za, zb), out=out,
+                           inside=((x1_ - x0_ - 2 * TR["wall"]) / 25.4, (y1_ - y0_ - 2 * TR["wall"]) / 25.4,
+                                   (zb - za - TR["base"]) / 25.4))
+            for pos, dx_, tr_, lab2 in (("", 0.0, 0, "закрыт (по-походному)"),
+                                        ("_Out", out, 80, "выдвинут целиком")):
+                tput(nm_ + pos, "Ящик %.1f×%.1f×%.1f″ (фанера 1/2″) — %s; %s" % (
+                    (x1_ - x0_) / 25.4, (y1_ - y0_) / 25.4, (zb - za) / 25.4, lab, lab2),
+                     drawer(x0_ + dx_, y0_, za, x1_ - x0_, y1_ - y0_, zb - za, TR["wall"], TR["base"]),
+                     (0.78, 0.60, 0.40) if key != "floor1" else (0.80, 0.66, 0.46), tr_)
+        trunk_boxes = dr
         # проверки
         tch = []
         for nm_ in sorted(tparts):
@@ -3149,16 +3202,28 @@ def build():
                 v = mind([tparts[nm_]], pref)
                 if v is not None and v < 25:
                     tch.append(("%s ↔ %s" % (nm_.replace("Trunk2_", "").replace("Trunk1_", ""), lab), v))
-        tch.append(("за край щита (макс X, закрыто)", max(tparts[n_].BoundBox.XMax for n_ in tparts) - dx1))
-        cl_ = doc.getObject("TankFloor_Cleat_Aisle")
-        y_tr1 = cl_.Shape.BoundBox.YMin if cl_ is not None else tb.YMin
-        trunk_summary = dict(floor_top=floor_top, checks=tch, w1=y_tr1 - rbi.YMax, y1=(rbi.YMax, y_tr1),
-                             h1_under=z_t0 - floor_top, x_rear=dx0,
-                             x_lock=lk_.Shape.BoundBox.XMin if lk_ is not None else dx1,
-                             y_lock=lk_.Shape.BoundBox.YMin if lk_ is not None else None, x_deck=dx1,
-                             tray=dict(x=(xs0, xs1), y=(ty0, ty1), z=(z_t0, z_top), slide_z=(z_s0, z_s1),
-                                       width_in=(ty1 - ty0 - 2 * TR["wall"]) / 25.4, out=SL["L"]),
-                             opening=rp_.YMin, x_p3m=x3, x_hanger=xh, boxes=trunk_boxes)
+        tch.append(("за край щита (макс X, закрыто)", max(tparts[n_].BoundBox.XMax for n_ in tparts
+                                                         if not n_.endswith("_Out")) - dx1))
+        # дверца локера пропана (в багажник, X %.0f..%.0f) открывается на 90° — в зоне ничего неподвижного
+        ldb = doc.getObject("Propane_LockerDoor").Shape.BoundBox
+        swing = Part.makeBox(ldb.XLength, ldb.XLength, ldb.ZLength, App.Vector(ldb.XMin, ldb.YMin - ldb.XLength, ldb.ZMin))
+        fixed = [tparts[n_] for n_ in tparts if not n_.startswith(("Trunk2_Tray", "Trunk1_Drawer"))]
+        tch.append(("дверца локера (90°) ↔ неподвижное", min(swing.distToShape(f_)[0] for f_ in fixed)))
+        # передний ящик, выдвинутый в салон — мимо душа, кухни, электрики
+        fo_ = [tparts["Trunk2_TrayFwd_Out"]]
+        for lab, pref in (("душ", "Shower_"), ("кухня", "Kitchen_"), ("P3f", "BankPost_P3f"), ("электрика", "Elec_"),
+                          ("стойки кровати", "BedPost_"), ("поперечины кровати", "BedCross_")):
+            v = mind(fo_, pref)
+            if v is not None:
+                tch.append(("передний ящик выдвинут ↔ %s" % lab, v))
+        y_out = max(max(abs(tparts[n_].BoundBox.YMin), abs(tparts[n_].BoundBox.YMax))
+                    for n_ in ("Trunk2_TrayRear_Out", "Trunk1_Drawer_Out"))
+        tch.append(("задние ящики ↔ проём дверей (по Y)", rp_.YMin - y_out))
+        tch.append(("овалы спинка-к-спинке: макс. смещение", max(hole_off)))
+        trunk_summary = dict(floor_top=floor_top, checks=tch, h1_under=z_t0 - floor_top, x_rear=dx0, x_deck=dx1,
+                             opening=rp_.YMin, x_p3m=x3, x_hanger=xh, posts_x=posts_x, y_spine=(y_scp[0], y_scd[1]),
+                             slide_z=(z_s0, z_s1), slide1_z=(z1s0, z1s0 + S1["H"]), drawers=trunk_boxes,
+                             locker_door=(ldb.XMin, ldb.XMax, ldb.YMin), slide_L=SL["L"], slide1_L=S1["L"])
         TRUNK_SHELF["_summary"] = {k: v for k, v in trunk_summary.items() if k != "checks"}
 
     # ═══════ ШКАФЧИКИ ПОД ПОТОЛКОМ по бортам (проект 2026-11-07) ═══════
@@ -3555,23 +3620,19 @@ def build():
     if trunk_summary:
         t = trunk_summary
         f0 = t["floor_top"]
-        q = t["tray"]
-        print("[2-й этаж багажника — выдвижной поддон на направляющих 44″ — ПРОЕКТ 2026-11-08]")
-        print("  Поддон X %.0f..%.0f, Y %.0f..%.0f (внутри %.1f″ шириной, проём задних дверей |Y|<%.0f), низ/верх %.1f″/%.1f″ "
-              "над полом; выдвигается назад на %.0f″ целиком" % (q["x"][0], q["x"][1], q["y"][0], q["y"][1], q["width_in"],
-              t["opening"], (q["z"][0] - f0) / 25.4, (q["z"][1] - f0) / 25.4, q["out"] / 25.4))
-        print("  Направляющие: Z %.0f..%.0f; пассажирская — на P3 и P3m (X %.0f), водительская — на рейке над баком, рейка — "
-              "на поперечинах к стойке кровати и к подвесу у борта (X %.0f)" % (q["slide_z"][0], q["slide_z"][1],
+        print("[Багажник — 3 выдвижных ящика на SLIDEWAY + хребет посередине — ПРОЕКТ 2026-11-08]")
+        for k_, ttl in (("fwd", "2-й этаж, передний (пасс.)"), ("rear", "2-й этаж, задний (водит.)"),
+                        ("floor1", "1-й этаж")):
+            q = t["drawers"][k_]
+            print("  %s: X %.0f..%.0f, Y %.0f..%.0f, низ/верх %.1f″/%.1f″; снаружи %.1f × %.1f × %.1f″, внутри %.1f × %.1f × "
+                  "%.1f″; выдвигается %s на %.0f″" % (ttl, q["x"][0], q["x"][1], q["y"][0], q["y"][1], (q["z"][0] - f0) / 25.4,
+                  (q["z"][1] - f0) / 25.4, (q["x"][1] - q["x"][0]) / 25.4, (q["y"][1] - q["y"][0]) / 25.4,
+                  (q["z"][1] - q["z"][0]) / 25.4, q["inside"][0], q["inside"][1], q["inside"][2],
+                  "вперёд" if q["out"] > 0 else "назад", abs(q["out"]) / 25.4))
+        print("  Хребет: стойки X %s, направляющие у хребта Y %.0f / %.0f; направляющие 2-го этажа Z %.0f..%.0f, 1-го — Z "
+              "%.0f..%.0f; P3m X %.0f, подвес у борта X %.0f" % (", ".join("%.0f" % x_ for x_ in t["posts_x"]),
+              t["y_spine"][0], t["y_spine"][1], t["slide_z"][0], t["slide_z"][1], t["slide1_z"][0], t["slide1_z"][1],
               t["x_p3m"], t["x_hanger"]))
-        print("  1-й этаж: ширина %.0f мм (%.1f″), высота до поддона %.0f мм (%.1f″)" % (t["w1"], t["w1"] / 25.4,
-              t["h1_under"], t["h1_under"] / 25.4))
-        b_ = t.get("boxes") or {}
-        if "floor1" in b_:
-            q = b_["floor1"]
-            print("  Ящик 1-го этажа: %.1f″ вдоль × %.1f″ поперёк × %.1f″ (корпус %.1f″ + колёсики); у двери X %.0f..%.0f, "
-                  "впереди X %.0f..%.0f — ход %.1f″" % ((q["x"][1] - q["x"][0]) / 25.4, (q["y"][1] - q["y"][0]) / 25.4,
-                  q["h_total"] / 25.4, q["h_body"] / 25.4, q["x"][0], q["x"][1], q["x_front"][0], q["x_front"][1],
-                  q["travel"] / 25.4))
         print("  Зазоры: " + "; ".join("%s %.1f" % (n, v) for n, v in t["checks"]))
     print("-" * 70)
     if bb:

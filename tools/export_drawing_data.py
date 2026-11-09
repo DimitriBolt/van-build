@@ -123,13 +123,13 @@ try:
         sec["gas_pts"] = g["SHOWER_KITCHEN"].get("_gas_pts")
         res["galley"] = sec
 
-    # — 2-й этаж багажника (выдвижной поддон): разрезы по P3 (X 377) и по подвесу/P3m; вид сбоку вдоль водит. рейки —
-    if doc.getObject("Trunk2_Tray") is not None:
+    # — багажник (3 ящика + хребет): разрезы по P3/стойке хребта 1 (X 395) и по подвесу/P3m/стойке хребта 2 (X 848) —
+    if doc.getObject("Trunk2_TrayRear") is not None:
         TSS = g["TRUNK_SHELF"]["_summary"]
         pref = ("Battery_B", "BankShelf", "BankRail", "BankPost", "BankCross", "WaterTank_", "TankFloor_", "Trunk2_",
                 "Trunk1_", "BedDeck", "BedMattress", "BedSideRail", "WheelArch_", "BedPost_", "BedCross_", "Toilet_",
                 "Propane_", "Water_Pump")
-        for key, xs_ in (("trunk", 377.3), ("trunk3", TSS["x_hanger"])):
+        for key, xs_ in (("trunk", 395.0), ("trunk3", 848.0)):
             tr = {"x": xs_}
             for o in doc.Objects:
                 if o.isDerivedFrom("Part::Feature") and o.Name.startswith(pref) and not o.Name.endswith(("_Out", "_Front")):

@@ -115,7 +115,9 @@ VIEWS += [
         "Gas_", "Safety_", "DPillar", "Rail_", "FloorRib", "Thread", "Kitchen_Flap$", "Kitchen_FlapBracket1$",
         "Kitchen_FlapBracket2$")),
     ("trunk_from_rear.png", "viewLeft", _TRUNK_HIDE),
-    ("trunk_3d.png", (0.75, 0.55, -0.6), _TRUNK_HIDE + ("BedDeck", "BedWall")),
+    ("trunk_3d.png", (0.75, 0.55, -0.6, "cam"), _TRUNK_HIDE + ("BedDeck", "BedWall")),
+    # 2026-11-08: передний ящик 2-го этажа выдвинут в салон — вид из салона назад, со стороны сдвижной двери
+    ("trunk_fwd_3d.png", (-0.75, 0.55, -0.6, "cam"), _TRUNK_HIDE + ("BedDeck", "BedWall", "Gas_", "Safety_")),
 ]
 
 
@@ -146,9 +148,18 @@ def _shot(log, name, view, hide):
             vo.Visibility = False
             hidden.append(o)
     v = Gui.ActiveDocument.ActiveView
-    if isinstance(view, tuple):
+    if isinstance(view, tuple) and len(view) == 4 and view[3] == "cam":
+        # 2026-11-08: setViewDirection под xvfb не работает (такие виды выходят изометрией) — для видов с меткой "cam"
+        # ставим ориентацию камеры сами: камера смотрит вдоль view, «верх» кадра — к +Z. Старые виды не трогаем.
+        d = App.Vector(*view[:3]).normalize()
+        zc = d * -1.0
+        xc = App.Vector(0, 0, 1).cross(zc).normalize()
+        yc = zc.cross(xc)
+        m = App.Matrix(xc.x, yc.x, zc.x, 0, xc.y, yc.y, zc.y, 0, xc.z, yc.z, zc.z, 0, 0, 0, 0, 1)
+        v.setCameraOrientation(App.Rotation(m))
+    elif isinstance(view, tuple):
         v.viewIsometric()
-        v.setViewDirection(view)          # куда смотрит камера
+        v.setViewDirection(view)          # куда смотрит камера (под xvfb фактически — изометрия)
     else:
         getattr(v, view)()
     for _ in range(3):
