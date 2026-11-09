@@ -53,21 +53,83 @@ try:
 except Exception:
     _HAVE_NP = False
 
+# ═══════════════ ANCHORS — ЯКОРНЫЕ РАЗМЕРЫ (2026-11-09, Dimitri) ═══════════════
+# Принцип: якорные элементы ставятся первыми и промеряются до мм; модель уточняется под факт. Здесь — ВСЕ размеры,
+# которые станут известны только при установке/замере; остальное в модели считается от них. После замера меняются
+# только эти числа (+ "status" группы: «оценка» → «промерено»). None = «пока считает модель» — фактическое значение
+# печатается при сборке в разделе [ANCHORS] (подставить замер вместо None).
+# Порядок сборки (FURNITURE_MEMORY §0, REQUIREMENTS §0): 0) стойки кровати — стоят всегда (база);
+# 1) рейка у борта → рейка прохода → полка → батареи → электрика; 2) поддон душа → плита → платформа + туалет → локер
+# пропана; 3) бак T-4320; 4) кровать: рейки, поперечины, щит, матрас; 5) багажник — последним.
+KERF = 2.5                                   # пропил отрезной пилы, мм
+ANCHORS = {
+    # 0) 4 стойки кровати — база, не демонтируются. X — центр стойки по X; wall_gap — проставка стойка ↔ ребро кузова
+    #    (Y стойки — от борта на высоте болта). hole0_z — центр НИЖНЕГО овала спинки над чистовым полом (у всех 4 —
+    #    пока одинаково); по нему проверяется, попадают ли рейки на овалы стоек.
+    "bed_posts": {"status": "оценка (фото 2026-11-06)",
+                  "x": {"nY_rear": 377.287, "pY_rear": 377.287, "nY_front": 1551.59, "pY_front": 1551.59},
+                  "wall_gap": {"nY": 8.0, "pY": 8.0},
+                  "hole0_z": 26.3,
+                  "len": 1257.0},
+    # колёсные арки (каждый борт отдельно): центр по X, верх над чистовым полом, выступ от стены у пола, длины по полу
+    "arch": {"status": "оценка (фото 2026-11-05…07, Upfit 35×17″)",
+             "nY": {"center_x": 1000.0, "height": 390.0, "protrusion": 239.0, "len_x": 757.0, "len_x_wall": 900.0},
+             "pY": {"center_x": 1000.0, "height": 390.0, "protrusion": 239.0, "len_x": 757.0, "len_x_wall": 900.0}},
+    # D-стойки у пола: передняя грань короба ↔ задняя грань арки (по полу у края фанеры), выступ и высота короба
+    "dpillar": {"status": "оценка (фото сверху 2026-11-06; высота короба — не промерена)",
+                "nY": {"to_arch": 268.5, "box_depth": 132.0, "box_h": 100.0},
+                "pY": {"to_arch": 268.5, "box_depth": 132.0, "box_h": 100.0}},
+    # клапан сброса давления кузова (чёрная решётка с жалюзи у пола, пасс. борт, между аркой и D-стойкой; фото 1 и 4
+    # 2026-11-09): X торцов, низ/верх над чистовым полом, выступ решётки от стены
+    "relief_valve": {"status": "оценка по фото 2026-11-09",
+                     "side": -1, "x0": 425.0, "x1": 545.0, "z0": 90.0, "z1": 240.0, "proud": 30.0,
+                     "free_min": 25.0},           # сколько свободного места перед решёткой считаем «не закрыта»
+    # 1) рейки этажерки батарей — обе из одного 10′ strut (3048 мм): у борта 58″, у прохода 62″ − пропил; укорачиваются
+    #    СПЕРЕДИ. x_rear None — сзади как сейчас (у борта — до D-стойки, у прохода — до задней двери); z_bottom None —
+    #    низ рейки у борта = верх арки + резина
+    "bank_rails": {"status": "оценка",
+                   "wall_len": 58 * 25.4, "inner_len": 62 * 25.4 - KERF,
+                   "wall_x_rear": None, "inner_x_rear": None, "z_bottom": None},
+    # 2) поддон душа: стоит прямо на полу; x_rear — X заднего (прямого) края, y_wall — |Y| края поддона у борта;
+    #    rim_t — толщина бортика по прямой стороне к кровати (через неё переезжает платформа туалета); base_th — дно
+    #    поддона внутри над полом (None = высота поддона − бортик); drain — центр слива от прямых сторон (назад, к борту)
+    "shower_pan": {"status": "оценка",
+                   "on_floor": True, "x_rear": None, "y_wall": None, "rim_t": 25.0, "base_th": None,
+                   "drain": (254.0, 254.0)},
+    # туалет Camco на платформе с колёсами: плита на месте транспортного положения (верх = дно поддона у бортика),
+    # передние колёса всегда в поддоне, задние всегда на плите; бортик — упор в обе стороны
+    "toilet": {"status": "оценка",
+               "plate_th": None,           # None = дно поддона над полом (base_th)
+               "wheel_d": 50.8, "wheel_w": 22.0,   # колёса 2″
+               "caster_h": 76.2,           # от плиты до низа платформы (ролик + крепление/проставка)
+               "platform_th": 19.05,       # фанера 3/4″
+               "toilet_h": 431.8,          # Camco 17″
+               "rim_clear": 6.0,           # низ платформы над бортиком поддона
+               "aisle_margin": 10.0,       # платформа шире туалета к проходу (к борту — вровень: там арка)
+               "wheel_inset": 8.0,         # колёса от боковых кромок платформы
+               "front_over": 15.0,         # платформа впереди передних колёс
+               "rear_over": 5.0,           # … позади задних
+               "toilet_in": 5.0,           # туалет в душе — за бортиком на столько
+               "rear_gap": 3.0},           # задние колёса ↔ задний край плиты (у бруска бака) в транспортном
+    # 3) локер пропана — после туалета. x0 — X задней грани, y1 — |Y| грани к борту; None = от насоса/туалета
+    "propane_locker": {"status": "оценка", "x0": None, "y1": None, "door": "aisle"},
+}
+
 # ─────────────── КОЛЁСНЫЕ АРКИ (внутренние кожухи) — по фото 2026-11-05 ───────────────
 WHEEL_ARCH = {
     "enable":     True,
-    "center_x":   1000,   # центр колеса: по скану вырез колеса в обшивке X≈700..1300 (на Z=100).
+    "center_x":   ANCHORS["arch"]["nY"]["center_x"],   # центр колеса (ANCHORS; ниже — история оценки): по скану вырез колеса в обшивке X≈700..1300 (на Z=100).
                           # ⚠️ абсолютный X не промерен: по фото 5 задняя стойка ближе к двери → центр может быть ~800
-    "len_x":       757,   # длина по полу по ВНУТРЕННЕЙ грани (до острых углов, без скруглений в плане):
+    "len_x":       ANCHORS["arch"]["nY"]["len_x"],   # длина по полу по ВНУТРЕННЕЙ грани (до острых углов, без скруглений в плане):
                           # рулетка фото 2 (2026-11-05) — 29.8″
-    "len_x_wall":  900,   # длина у СТЕНЫ у пола: 35.4″ (Upfit Supply «Wheel Well 35″ W × 17″ H × 9″ D» — 35″).
+    "len_x_wall":  ANCHORS["arch"]["nY"]["len_x_wall"],   # длина у СТЕНЫ у пола: 35.4″ (Upfit Supply «Wheel Well 35″ W × 17″ H × 9″ D» — 35″).
                           # Фото сверху 2026-11-06: задняя грань арки к центру уходит ВПЕРЁД 0.30″ на 1″
                           # (4 фото: 0.24–0.34) → (900 − 757)/2/239 = 0.30 ✓ (было 879 — от старого зазора 7.4″)
-    "protrusion":  239,   # выступ от стены (скан) у пола: фото сверху 2026-11-06 — 8.78″ (223 мм) от края
+    "protrusion":  ANCHORS["arch"]["nY"]["protrusion"],   # выступ от стены (скан) у пола: фото сверху 2026-11-06 — 8.78″ (223 мм) от края
                           # фанеры (пасс. 8.89″, вод. 8.66″) + 16 мм край фанеры ↔ стена. Upfit: «9″ D» ✓.
                           # (было 270 — рулетка 2026-11-05, 10-5/8″, база не та)
     "plan_round":   58,   # скругление углов арки в плане у пола: задний внутренний угол по фото — R≈2.3″
-    "height":      390,   # верх над чистовым полом (фанерой): 15.35″ — фото сбоку 2026-11-07 (рулетка на полу +
+    "height":      ANCHORS["arch"]["nY"]["height"],   # верх над чистовым полом (фанерой): 15.35″ — фото сбоку 2026-11-07 (рулетка на полу +
                           # шаг прорезей стоек кровати 2″ на стене; проверка: верх рейки кровати вышел 27.7″ при
                           # замеренных 27.6″). Upfit «17″ H» — от стального пола: 15.35 + 1.78 (пол) = 17.1 ✓.
                           # Ровный верх ~19″ вдоль борта по центру арки. (было 432 = 17″ от фанеры — неверно)
@@ -86,12 +148,12 @@ WHEEL_ARCH = {
 # Пиксельные точки и расчёт: tools/photo_corners_2026-11-06.py → docs/rear_corners_points.json.
 # Проверка: уплотнитель двери выходит на X≈144 — рядом с задней рамой по скану (X≈160).
 DPILLAR = {
-    "to_arch":     268.5,   # 10.57″: передняя грань короба ↔ задняя грань арки, по полу у края фанеры
+    "to_arch":     ANCHORS["dpillar"]["nY"]["to_arch"],   # 10.57″: передняя грань короба ↔ задняя грань арки, по полу у края фанеры
     "photo_wall":   16.0,   # край фанеры («стена» на фото) — на 16 мм внутрь от стены скана у пола
-    "box_depth":   132.0,   # короб выступает от края фанеры на 5.2″ (4 фото: 4.9–5.5″)
+    "box_depth":   ANCHORS["dpillar"]["nY"]["box_depth"],   # короб выступает от края фанеры на 5.2″ (4 фото: 4.9–5.5″)
     "box_slant":    26.0,   # его передняя грань к центру уходит НАЗАД 0.20″ на 1″ (−0.18…−0.22) → 26 мм
     "box_len":     142.0,   # от передней грани назад до уплотнителя задней двери ~5.6″ (фото 1, 3)
-    "box_h":       100.0,   # ⚠️ высота короба над чистовым полом — ОЦЕНКА (~4″), промерить
+    "box_h":       ANCHORS["dpillar"]["nY"]["box_h"],   # ⚠️ высота короба над чистовым полом — ОЦЕНКА (~4″), промерить
     "body_depth":  157.0,   # сама стойка выше короба: выступ ~6.2″ (проём 1562 при полу ~1880)
     "body_slant":  125.0,   # её передняя грань к центру уходит назад ~5″ на 6.2″ (оценка по фото 2026-11-05)
     "ref_top":     850.0,   # реф в модели — до уровня настила кровати (выше не мешает и закрывает виды)
@@ -190,8 +252,8 @@ BED = {
     "post_front_x":  None,   # None = post_rear_x + post_spacing
     "post_from_dpillar": 91.0,
     "post_spacing":  1174.3, # = 1220 (лист настила) − 41 (ширина стойки): настил перекрывает обе стойки
-    "post_len":      1257,   # ≈49.5″ — грубо (фото 3, 9), уточнить
-    "post_wall_gap":    8,   # зелёная проставка между стойкой и ребром кузова
+    "post_len":      ANCHORS["bed_posts"]["len"],   # ≈49.5″ — грубо (фото 3, 9), уточнить
+    "post_wall_gap":    ANCHORS["bed_posts"]["wall_gap"]["nY"],   # (по бортам — ANCHORS) зелёная проставка между стойкой и ребром кузова
     "plate":   (79.4, 127, 0.9),  # пластина под стойкой — Simpson TP35 3-1/8×5″, 20 ga (опознана и промерена
                                   # на фото сверху 2026-11-06), длинной стороной поперёк, шурупы в фанеру
     "body_bolt_h":    762,   # болт стойки в заводское ребро: ~30″ над чистовым полом (фото 2, 3, 4)
@@ -519,9 +581,9 @@ SHOWER_KITCHEN = {
     "pan_r": 813.0,                 # 32″
     "pan_h": 102.0,                 # 4″
     "pan_rim": 64.0,                # бортик 2.5″
-    "pan_drain": (254.0, 44.5),     # слив: в 10″ от обеих прямых сторон, ⌀3.5″
+    "pan_drain": (ANCHORS["shower_pan"]["drain"][0], 44.5),   # слив (ANCHORS: от прямых сторон): в 10″ от обеих прямых сторон, ⌀3.5″
     "pan_arch_gap": 10.0,           # поддон ↔ арка
-    "pan_recess": True,             # поддон утоплен в пол: под ним вырезаны фанера+XPS, стоит на железе (+1.5″ высоты)
+    "pan_recess": not ANCHORS["shower_pan"]["on_floor"],   # 2026-11-09 (Dimitri): поддон стоит прямо на полу; было: утоплен в пол: под ним вырезаны фанера+XPS, стоит на железе (+1.5″ высоты)
     "ledge_in": 70.0,               # козырёк под задней стенкой: до 70 мм внутрь поддона (за бортик) — стёк в поддон
     "shower_in": (813.0, 813.0),    # (старый квадратный поддон — для справки)
     "roof_clear": 55.0,             # потолок душа ниже железа крыши (под дугами крыши + утеплитель)
@@ -651,7 +713,10 @@ STRUT_BACK = [
 ]
 
 
-def strut_shape(bb, back, side_sign):
+STRUT_HOLE0 = {}     # имя детали → от начала (меньшей координаты) до центра первого овала, мм (по умолчанию STRUT["hole0"])
+
+
+def strut_shape(bb, back, side_sign, hole0=None):
     """C-профиль в габарите bb (BoundBox): длина — по наибольшему размеру, глубина — по оси нормали спинки."""
     W, D, t = STRUT["W"], STRUT["D"], STRUT["t"]
     ext = {"X": (bb.XMin, bb.XMax), "Y": (bb.YMin, bb.YMax), "Z": (bb.ZMin, bb.ZMax)}
@@ -677,7 +742,9 @@ def strut_shape(bb, back, side_sign):
         sh = sh.fuse(Part.makeBox(L, t, STRUT["lip_ret"], App.Vector(0, y0, D - STRUT["lip_ret"])))
     hl, hw = STRUT["hole"]
     holes = []
-    x = STRUT["hole0"]
+    x = STRUT["hole0"] if hole0 is None else hole0
+    while x - hl / 2.0 < 0:
+        x += STRUT["pitch"]
     while x + hl / 2.0 < L:
         r_ = hw / 2.0
         hs = Part.makeBox(hl - hw, hw, 3 * t, App.Vector(x - (hl - hw) / 2.0, W / 2.0 - r_, -t)).fuse(
@@ -714,7 +781,7 @@ def apply_strut_profiles(doc):
         bb = o.Shape.BoundBox
         side = 1 if (bb.YMin + bb.YMax) > 0 else -1
         try:
-            shp = strut_shape(bb, back, side)
+            shp = strut_shape(bb, back, side, STRUT_HOLE0.get(o.Name))
         except Exception as e:
             shp = None
         if shp is None:
@@ -1220,32 +1287,40 @@ def build():
 
     # ═══════ ПОЛ: XPS + фанера (чистовой пол) ═══════
     floor_top = P["floor_corrugation_height"]          # верх гребней железного пола
-    W = WHEEL_ARCH
+    W = WHEEL_ARCH                                     # = пассажирская арка (nY); по бортам — WA[+1] / WA[-1]
+    # 2026-11-09: арки и D-стойки — каждый борт по своим ANCHORS (после замера могут различаться)
+    WA = {sg_: dict(WHEEL_ARCH, **ANCHORS["arch"][tg_]) for sg_, tg_ in ((+1, "pY"), (-1, "nY"))}
+    DPs = {sg_: dict(DPILLAR, **ANCHORS["dpillar"][tg_]) for sg_, tg_ in ((+1, "pY"), (-1, "nY"))}
     arch_ywall = y_at_z(half, 0.0)                     # стена у пола (внутр. поверхность)
     arch_x0 = W["center_x"] - W["len_x_wall"] / 2.0
     arch_x1 = W["center_x"] + W["len_x_wall"] / 2.0
 
-    def arch_a_lin(d):
-        """Полудлина арки у пола на расстоянии d от стены (грани скошены, без скругления углов)."""
-        return (W["len_x_wall"] - (W["len_x_wall"] - W["len_x"]) * d / W["protrusion"]) / 2.0
+    def arch_a_lin(d, sgn=-1):
+        """Полудлина арки борта sgn у пола на расстоянии d от стены (грани скошены, без скругления углов)."""
+        Ws = WA[sgn]
+        return (Ws["len_x_wall"] - (Ws["len_x_wall"] - Ws["len_x"]) * d / Ws["protrusion"]) / 2.0
 
     # D-стойки у пола: передняя грань короба (X) у края фанеры — от задней грани арки (фото сверху 2026-11-06)
     DP = DPILLAR
-    x_dp = W["center_x"] - arch_a_lin(DP["photo_wall"]) - DP["to_arch"]
+    x_dp_s = {sg_: WA[sg_]["center_x"] - arch_a_lin(DPs[sg_]["photo_wall"], sg_) - DPs[sg_]["to_arch"] for sg_ in (1, -1)}
+    x_dp = x_dp_s[-1]
 
-    def dp_box_x(d):
-        """X передней грани короба D-стойки на расстоянии d от стены (у пола, до box_h)."""
-        return x_dp - DP["box_slant"] * (d - DP["photo_wall"]) / DP["box_depth"]
+    def dp_box_x(d, sgn=-1):
+        """X передней грани короба D-стойки борта sgn на расстоянии d от стены (у пола, до box_h)."""
+        D_ = DPs[sgn]
+        return x_dp_s[sgn] - D_["box_slant"] * (d - D_["photo_wall"]) / D_["box_depth"]
 
-    def dp_body_x(d):
+    def dp_body_x(d, sgn=-1):
         """X передней грани самой D-стойки (выше короба) на расстоянии d от стены."""
-        return x_dp - DP["body_slant"] * d / DP["body_depth"]
+        D_ = DPs[sgn]
+        return x_dp_s[sgn] - D_["body_slant"] * d / D_["body_depth"]
 
     def _arch_footprint(sgn, zh):
         """Коробка-габарит арки на борту sgn (для вырезов в полу)."""
-        y0 = arch_ywall - W["protrusion"] if sgn > 0 else -arch_ywall
-        return Part.makeBox(arch_x1 - arch_x0, W["protrusion"], zh,
-                            App.Vector(arch_x0, y0, -1.0))
+        Ws = WA[sgn]
+        y0 = arch_ywall - Ws["protrusion"] if sgn > 0 else -arch_ywall
+        ax0 = Ws["center_x"] - Ws["len_x_wall"] / 2.0
+        return Part.makeBox(Ws["len_x_wall"], Ws["protrusion"], zh, App.Vector(ax0, y0, -1.0))
 
     if FLOOR.get("enable"):
         fl_g = doc.addObject("App::DocumentObjectGroup", "FloorBuildup")
@@ -1273,19 +1348,17 @@ def build():
         arch_g = doc.addObject("App::DocumentObjectGroup", "WheelArches")
         arch_g.Label = "Колёсные арки (рулетка на фото + Upfit Supply 35×17″)"
         frame.addObject(arch_g)
-        b_top = floor_top + W["height"]
         n_seg = 72
         n_exp = float(W.get("profile_n", 2.0))
         r_top = float(W.get("top_round", 0.0))
-        prot = W["protrusion"]
 
-        def _half_super(a_half, y, b):
+        def _half_super(a_half, y, b, cx):
             """Сечение арки в плоскости |Y|=const: суперэллипс от пола (Z=0) до b."""
             pts = []
             for i in range(n_seg + 1):
                 t = math.pi * i / n_seg
                 c, s_ = math.cos(t), math.sin(t)
-                pts.append(App.Vector(W["center_x"] + a_half * math.copysign(abs(c) ** (2.0 / n_exp), c), y,
+                pts.append(App.Vector(cx + a_half * math.copysign(abs(c) ** (2.0 / n_exp), c), y,
                                       b * abs(s_) ** (2.0 / n_exp)))
             return Part.makePolygon(pts + [pts[0]])
 
@@ -1293,34 +1366,36 @@ def build():
         # грани скошены), у внутренней грани углы в плане скруглены r_pl; высота — постоянна до начала
         # скругления верхней внутренней кромки, дальше — по дуге r_top
         r_pl = float(W.get("plan_round", 0.0))
-        ds = [0.0, prot]
-        for r_ in (r_top, r_pl):
-            if r_ > 0:
-                ds += [prot - r_ + r_ * math.sin(math.radians(ph)) for ph in (0.0, 30.0, 55.0, 75.0)]
-        ds = sorted(ds)
-        ds = [d for i, d in enumerate(ds) if i == 0 or d - ds[i - 1] > 1.5]
-
-        def _b_at(d):
-            if r_top > 0 and d > prot - r_top:
-                return b_top - r_top + math.sqrt(max(0.0, r_top ** 2 - (d - (prot - r_top)) ** 2))
-            return b_top
-
-        def _a_at(d):
-            a = arch_a_lin(d)
-            if r_pl > 0 and d > prot - r_pl:
-                a -= r_pl - math.sqrt(max(0.0, r_pl ** 2 - (d - (prot - r_pl)) ** 2))
-            return a
-
-        secs = [(d, _b_at(d)) for d in ds]
 
         for sgn, tag in ((+1, "pY"), (-1, "nY")):
-            wires = [_half_super(_a_at(d), sgn * (arch_ywall - d), b) for d, b in secs]
+            Ws = WA[sgn]
+            b_top = floor_top + Ws["height"]
+            prot = Ws["protrusion"]
+            ds = [0.0, prot]
+            for r_ in (r_top, r_pl):
+                if r_ > 0:
+                    ds += [prot - r_ + r_ * math.sin(math.radians(ph)) for ph in (0.0, 30.0, 55.0, 75.0)]
+            ds = sorted(ds)
+            ds = [d for i, d in enumerate(ds) if i == 0 or d - ds[i - 1] > 1.5]
+
+            def _b_at(d):
+                if r_top > 0 and d > prot - r_top:
+                    return b_top - r_top + math.sqrt(max(0.0, r_top ** 2 - (d - (prot - r_top)) ** 2))
+                return b_top
+
+            def _a_at(d):
+                a = arch_a_lin(d, sgn)
+                if r_pl > 0 and d > prot - r_pl:
+                    a -= r_pl - math.sqrt(max(0.0, r_pl ** 2 - (d - (prot - r_pl)) ** 2))
+                return a
+
+            wires = [_half_super(_a_at(d), sgn * (arch_ywall - d), _b_at(d), Ws["center_x"]) for d in ds]
             arch_shapes[sgn] = Part.makeLoft(wires, True, True)
             add_shape(doc, "WheelArch_%s" % tag,
                       "Колёсная арка %s: у стены %g, по внутр. грани %g, выступ %g, верх Z=%.0f; "
                       "сбоку суперэллипс n=%g, скругление верхней внутр. кромки R%g, углов в плане R%g "
-                      "(фото сверху 2026-11-06)" % (
-                          tag, W["len_x_wall"], W["len_x"], W["protrusion"], b_top, n_exp, r_top, r_pl),
+                      "(ANCHORS: %s)" % (
+                          tag, Ws["len_x_wall"], Ws["len_x"], prot, b_top, n_exp, r_top, r_pl, ANCHORS["arch"]["status"]),
                       arch_shapes[sgn], color=COL_ARCH, transparency=15, group=arch_g)
 
     # ═══════ D-СТОЙКИ у пола (реф): короб у основания + передняя грань стойки выше него ═══════
@@ -1328,23 +1403,42 @@ def build():
     dp_g = doc.addObject("App::DocumentObjectGroup", "DPillars")
     dp_g.Label = "D-стойки у пола (реф): короб + грань стойки — фото сверху 2026-11-06"
     frame.addObject(dp_g)
-    z_box = floor_top + DP["box_h"]
-    d_box = DP["photo_wall"] + DP["box_depth"]
     for sgn, tag in ((+1, "pY"), (-1, "nY")):
+        DP_ = DPs[sgn]
+        z_box = floor_top + DP_["box_h"]
+        d_box = DP_["photo_wall"] + DP_["box_depth"]
+
         def _prism(pts_xd, z0, z1):
             v = [App.Vector(x, sgn * (arch_ywall - d), z0) for x, d in pts_xd]
             return Part.Face(Part.makePolygon(v + [v[0]])).extrude(App.Vector(0, 0, z1 - z0))
-        box_ = _prism([(dp_box_x(0.0), 0.0), (dp_box_x(d_box), d_box),
-                       (x_dp - DP["box_len"], d_box), (x_dp - DP["box_len"], 0.0)], 0.0, z_box)
-        body_ = _prism([(dp_body_x(0.0), 0.0), (dp_body_x(DP["body_depth"]), DP["body_depth"]),
-                        (dp_body_x(DP["body_depth"]) - 40.0, DP["body_depth"]), (dp_body_x(0.0) - 40.0, 0.0)],
-                       z_box, DP["ref_top"])
+        box_ = _prism([(dp_box_x(0.0, sgn), 0.0), (dp_box_x(d_box, sgn), d_box),
+                       (x_dp_s[sgn] - DP_["box_len"], d_box), (x_dp_s[sgn] - DP_["box_len"], 0.0)], 0.0, z_box)
+        body_ = _prism([(dp_body_x(0.0, sgn), 0.0), (dp_body_x(DP_["body_depth"], sgn), DP_["body_depth"]),
+                        (dp_body_x(DP_["body_depth"], sgn) - 40.0, DP_["body_depth"]),
+                        (dp_body_x(0.0, sgn) - 40.0, 0.0)], z_box, DP_["ref_top"])
         dp_shapes[sgn] = box_.fuse(body_).removeSplitter()
         add_shape(doc, "DPillarFace_%s_ref" % tag,
                   "D-стойка %s (реф): короб у пола %.1f″ от края фанеры, грань скошена назад 0.2″/1″, высота "
                   "~%.0f″ (оценка); выше — грань стойки (уходит назад ~%.0f мм на выступе %.0f)" % (
-                      tag, DP["box_depth"] / 25.4, DP["box_h"] / 25.4, DP["body_slant"], DP["body_depth"]),
+                      tag, DP_["box_depth"] / 25.4, DP_["box_h"] / 25.4, DP_["body_slant"], DP_["body_depth"]),
                   dp_shapes[sgn], color=COL_DPILLAR, transparency=40, group=dp_g)
+
+    # ═══════ КЛАПАН СБРОСА ДАВЛЕНИЯ КУЗОВА (решётка с жалюзи у пола, пасс. борт) — 2026-11-09, ANCHORS ═══════
+    RV = ANCHORS.get("relief_valve")
+    relief = None
+    if RV:
+        rvg = doc.addObject("App::DocumentObjectGroup", "BodyReliefValves")
+        rvg.Label = "Клапан сброса давления кузова"
+        rvs = RV["side"]
+        rz0, rz1 = floor_top + RV["z0"], floor_top + RV["z1"]
+        y_wall_rv = y_at_z(half, (rz0 + rz1) / 2.0)                  # стена (обшивка) на высоте решётки
+        relief = Part.makeBox(RV["x1"] - RV["x0"], RV["proud"], rz1 - rz0,
+                              App.Vector(RV["x0"], (y_wall_rv - RV["proud"]) if rvs > 0 else -y_wall_rv, rz0))
+        add_shape(doc, "BodyReliefValve_%s" % ("pY" if rvs > 0 else "nY"),
+                  "Клапан сброса давления — решётка с жалюзи %.1f×%.1f″, %.1f..%.1f″ над полом, выступ %.1f″ (%s); "
+                  "вплотную не закрывать" % ((RV["x1"] - RV["x0"]) / 25.4, (rz1 - rz0) / 25.4, RV["z0"] / 25.4,
+                                             RV["z1"] / 25.4, RV["proud"] / 25.4, RV["status"]),
+                  relief, color=(0.08, 0.08, 0.08), group=rvg)
 
     # ═══════ КРОВАТЬ — как построена (strut SC14-10-EG), реконструкция по фото ═══════
     bed_summary = None
@@ -1353,19 +1447,21 @@ def build():
         bed_g = doc.addObject("App::DocumentObjectGroup", "Bed_StrutFrame")
         bed_g.Label = "Кровать (построена) — strut SC14-10-EG, реконструкция по фото 2026-11-05/06"
         sw, sd = B["strut_w"], B["strut_d"]
-        xr, xf = B["post_rear_x"], B["post_front_x"]
-        if xr is None:
-            xr = x_dp + B["post_from_dpillar"]
-        if xf is None:
-            xf = xr + B["post_spacing"]
+        # 2026-11-09: 4 стойки кровати — база (ANCHORS["bed_posts"]), каждая со своим X; по бортам — свой зазор к ребру
+        AP = ANCHORS["bed_posts"]
+        xr_s = {+1: AP["x"]["pY_rear"], -1: AP["x"]["nY_rear"]}
+        xf_s = {+1: AP["x"]["pY_front"], -1: AP["x"]["nY_front"]}
+        xr, xf = xr_s[-1], xf_s[-1]                    # пассажирский борт (этажерка батарей и т.п.)
         z_bolt = floor_top + B["body_bolt_h"]
         z_rail_top = floor_top + B["rail_top_h"] + B.get("rail_raise", 0.0)
         z_deck_top = z_rail_top + B["deck_th"]
         z_deck_top_photo = floor_top + B["rail_top_h"] + B["deck_th"]   # брус 2×4 на стойках — не двигается
         yw_post = y_at_z(half, z_bolt)                 # стена (рёбра) на высоте болта
-        post_out = yw_post - B["post_wall_gap"]        # грань стойки к стене (|Y|)
+        post_out_s = {sg_: yw_post - AP["wall_gap"]["pY" if sg_ > 0 else "nY"] for sg_ in (1, -1)}
+        post_in_s = {sg_: post_out_s[sg_] - sd for sg_ in (1, -1)}
+        post_out = post_out_s[-1]                      # грань стойки к стене (|Y|) — пасс. борт
         post_in = post_out - sd                        # грань стойки в салон
-        rail_in = post_in - sd                         # грань продольной рейки в салон
+        rail_in = min(post_in_s.values()) - sd         # грань продольной рейки в салон
 
         def ybase(sgn, y_outer, depth):
             """Y-начало коробки толщиной depth, прижатой к |Y|=y_outer изнутри."""
@@ -1380,8 +1476,10 @@ def build():
         # стойки + пластины + болты в кузов
         px, py, pt = B["plate"]
         post_solids = []
-        for x, xtag in ((xr, "rear"), (xf, "front")):
+        for xtag in ("rear", "front"):
             for sgn, tag in ((+1, "pY"), (-1, "nY")):
+                x = (xr_s if xtag == "rear" else xf_s)[sgn]
+                post_out = post_out_s[sgn]
                 add_box(doc, "BedPostPlate_%s_%s" % (tag, xtag),
                         "Пластина под стойкой %s %s (~4×5″, шурупы в фанеру пола)" % (tag, xtag),
                         (px, py, pt), (x - px / 2.0, ybase(sgn, post_out, py), floor_top),
@@ -1395,26 +1493,30 @@ def build():
                                                 App.Vector(base[0] - 3, base[1] - 3, base[2])))
                 add_sphere(doc, "BedPostBodyBolt_%s_%s" % (tag, xtag),
                            "Болт стойки %s %s в заводское ребро, Z=%.0f (~30″ над полом)" % (tag, xtag, z_bolt),
-                           9, (x, sgn * (post_out + B["post_wall_gap"] / 2.0), z_bolt),
+                           9, (x, sgn * (post_out + AP["wall_gap"][tag] / 2.0), z_bolt),
                            color=COL_BOLT, group=bed_g)
+                STRUT_HOLE0["BedPost_%s_%s" % (tag, xtag)] = AP["hole0_z"] - B["plate"][2]
+        post_out = post_out_s[-1]
 
         # продольные рейки по бортам (1-5/8″ по вертикали, открытой стороной в салон)
-        rx0, rx1 = xr - sw / 2.0, xf + sw / 2.0
         for sgn, tag in ((+1, "pY"), (-1, "nY")):
+            rx0, rx1 = xr_s[sgn] - sw / 2.0, xf_s[sgn] + sw / 2.0
+            post_in = post_in_s[sgn]
             strut("BedSideRail_%s" % tag,
                   "Продольная рейка %s X %.0f..%.0f, верх Z=%.0f" % (tag, rx0, rx1, z_rail_top),
                   (rx1 - rx0, sd, sw), (rx0, ybase(sgn, post_in, sd), z_rail_top - sw), "продольная")
+        post_in = post_in_s[-1]
 
         # продольный размер щита: перед — в deck_front_gap позади передних стоек, зад — до задних дверей
-        dx0 = (x_dp - DP["box_len"]) if B.get("deck_rear") == "doors" else xr - sw / 2.0
+        dx0 = (min(x_dp_s.values()) - DP["box_len"]) if B.get("deck_rear") == "doors" else max(xr_s.values()) - sw / 2.0
         if B.get("deck_front_gap") is not None:
-            dx1 = xf - sw / 2.0 - B["deck_front_gap"]
+            dx1 = min(xf_s.values()) - sw / 2.0 - B["deck_front_gap"]
         else:
-            dx1 = xf + sw / 2.0 if not B.get("deck_len") else dx0 + B["deck_len"]
+            dx1 = max(xf_s.values()) + sw / 2.0 if not B.get("deck_len") else dx0 + B["deck_len"]
 
         # 3 съёмные поперечины между рейками: #1 у задних стоек, последняя — под передним краем щита
         nC = max(2, int(B["cross_n"]))
-        cx0, cx1 = xr + sw / 2.0 + sd / 2.0, min(xf - sw / 2.0, dx1) - sd / 2.0
+        cx0, cx1 = max(xr_s.values()) + sw / 2.0 + sd / 2.0, min(min(xf_s.values()) - sw / 2.0, dx1) - sd / 2.0
         for i in range(nC):
             cx = cx0 + (cx1 - cx0) * i / (nC - 1)
             strut("BedCross_%d" % (i + 1),
@@ -1429,8 +1531,8 @@ def build():
             y_dp_in = arch_ywall - DP["body_depth"]
             for sgn in (+1, -1):
                 ya = dhw + 30.0
-                pts = [(dx0 - 10.0, y_dp_in), (dp_body_x(DP["body_depth"]), y_dp_in),
-                       (dp_body_x(arch_ywall - ya), ya), (dx0 - 10.0, ya)]
+                pts = [(dx0 - 10.0, y_dp_in), (dp_body_x(DP["body_depth"], sgn), y_dp_in),
+                       (dp_body_x(arch_ywall - ya, sgn), ya), (dx0 - 10.0, ya)]
                 v = [App.Vector(x, sgn * y, z_rail_top - 5.0) for x, y in pts]
                 nt = Part.Face(Part.makePolygon(v + [v[0]])).extrude(
                     App.Vector(0, 0, B["deck_th"] + B["mattress_th"] + 10.0))
@@ -1465,7 +1567,8 @@ def build():
 
         bed_summary = dict(
             floor_top=floor_top, z_rail_top=z_rail_top, z_deck_top=z_deck_top, z_bolt=z_bolt,
-            posts=(xr, xf), post_y=post_out - sd / 2.0, deck=(dx0, dx1), deck_w=2 * dhw,
+            posts=(xr, xf), posts_s={"pY": (xr_s[1], xf_s[1]), "nY": (xr_s[-1], xf_s[-1])},
+            post_y=post_out - sd / 2.0, deck=(dx0, dx1), deck_w=2 * dhw,
             cross_x=[cx0 + (cx1 - cx0) * i / (nC - 1) for i in range(nC)],
             garage=z_rail_top - sw - floor_top, arch_top=floor_top + W["height"],
             cutlist=cutlist)
@@ -1776,8 +1879,17 @@ def build():
         b1 = bk_box("Battery_B1", "Батарея B1 (нижняя, на полу) Buknuwo 12.8V 150Ah — 10.07″ вдоль борта",
                     (bxl, byl, bz), (X0, ybase(ps, y_w, byl), z_b1), COL_BATTERY)
         # уровень лестницы: низ реек — над верхом арки через резину
+        # 2026-11-09 (ANCHORS): рейка у борта на сквозных болтах через овалы стоек P1/Pf → её центр — на овале стойки:
+        # от «верх арки + резина (мин.)» вверх до ближайшего овала (резину/проставку добрать по месту)
+        AR = ANCHORS["bank_rails"]
         z_arch = floor_top + W["height"]
-        z_l0 = z_arch + BK["pad"]
+        hz0 = floor_top + ANCHORS["bed_posts"]["hole0_z"]                # центр нижнего овала стоек кровати
+        if AR.get("z_bottom") is not None:
+            z_l0 = floor_top + AR["z_bottom"]
+        else:
+            k_ = math.ceil((z_arch + BK["pad"] + sw / 2.0 - hz0) / STRUT["pitch"] - 1e-9)
+            z_l0 = hz0 + k_ * STRUT["pitch"] - sw / 2.0
+        pad_real = z_l0 - z_arch                                         # фактическая резина/проставка на арке
         z_l1 = z_l0 + sw
         z_s1 = z_l1 + BK["shelf_th"]                     # верх фанеры = низ батарей B2..B4
         # стойки: у борта — стойки кровати P1 (задняя) и Pf (передняя), они уже есть, с M8 в кузов;
@@ -1813,11 +1925,16 @@ def build():
                 else:
                     lo = mid
             return hi
-        xw0, xw1 = x_from_dp(post_in, sd, z_l0, sw, x_rear_frame), x_front
-        xi0, xi1 = x_from_dp(y_i + sd, sd, z_l0, sw, x_rear_frame), x_front
+        # 2026-11-09 (Dimitri): обе рейки — из одного 10′ strut: у борта 58″, у прохода 62″ − пропил; сзади — как было
+        # (у борта — до D-стойки, у прохода — до задней двери), укорачиваются СПЕРЕДИ
+        xw0 = AR["wall_x_rear"] if AR.get("wall_x_rear") is not None else x_from_dp(post_in, sd, z_l0, sw, x_rear_frame)
+        xi0 = AR["inner_x_rear"] if AR.get("inner_x_rear") is not None else x_from_dp(y_i + sd, sd, z_l0, sw,
+                                                                                      x_rear_frame)
+        xw1, xi1 = xw0 + AR["wall_len"], xi0 + AR["inner_len"]
+        xw1_old, xi1_old = x_front, x_front                                # было: обе — до проёма сдвижной двери
         bk_box("BankRail_Wall", "Продольная рейка у борта strut, L=%.0f: по грани стоек кровати P1 и Pf со стороны "
                "салона, сквозной болт 3/8″ через стойку (как продольная рейка кровати); посередине — на верх арки через "
-               "резину; назад — до D-стойки, вперёд — до проёма сдвижной двери" % (xw1 - xw0),
+               "резину %.0f мм; назад — до D-стойки; 58″ из 10′ strut (вместе с рейкой прохода)" % (xw1 - xw0, pad_real),
                (xw1 - xw0, sd, sw), (xw0, ybase(ps, post_in, sd), z_l0), COL_STRUT)
         for nm, xc in (("P1", xr), ("Pf", xf)):
             bk_box("BankRailBolt_%s" % nm, "Болт 3/8″ с шайбами: рейка у борта ↔ стойка кровати %s" % nm,
@@ -1825,8 +1942,8 @@ def build():
                    (xc - 4.75, ybase(ps, post_out + 8.0, sd + (post_out - post_in) + 16.0), z_l0 + sw / 2.0 - 4.75),
                    (0.85, 0.85, 0.20))
         bk_box("BankRail_Inner", "Продольная рейка со стороны прохода strut, L=%.0f: по грани P3 и P3f со стороны "
-               "борта, сквозной болт 3/8″ (как рейка кровати) — под гранью батарей; назад — до задней рамы, вперёд — до "
-               "проёма сдвижной двери" % (xi1 - xi0),
+               "борта, сквозной болт 3/8″ (как рейка кровати) — под гранью батарей; назад — до задней рамы; 62″ − пропил "
+               "из 10′ strut (вместе с рейкой у борта)" % (xi1 - xi0),
                (xi1 - xi0, sd, sw), (xi0, ybase(ps, y_i + sd, sd), z_l0), COL_STRUT)
         for nm, xc in (("P3", xr), ("P3f", xf)):
             bk_box("BankRailBolt_%s" % nm, "Болт 3/8″ с шайбами: рейка со стороны прохода ↔ стойка %s" % nm,
@@ -1839,7 +1956,8 @@ def build():
         # фанера полки: поверх обеих реек, по грань батарей к проходу; 2026-11-07 — назад до D-стойки/задней рамы
         # (полочка за B2), вперёд до проёма сдвижной двери (полочка под бельё); вырезы под стойки кровати P1, Pf
         x_ply1 = xf - sw / 2.0                           # электрика на полке — до передней стойки кровати (как было)
-        xp0_, xp1_ = min(xw0, xi0), x_front
+        # 2026-11-09: полка спереди — до конца рейки у борта (длиннее); у прохода за концом своей рейки — свес
+        xp0_, xp1_ = min(xw0, xi0), (xw1 if BK.get("shelf_front", "wall") == "wall" else min(xw1, xi1))
         ply = Part.makeBox(xp1_ - xp0_, post_out - y_i, BK["shelf_th"],
                            App.Vector(xp0_, ybase(ps, post_out, post_out - y_i), z_l1))
         for pn_ in ("BedPost_%s_rear" % ("nY" if ps < 0 else "pY"), "BedPost_%s_front" % ("nY" if ps < 0 else "pY")):
@@ -1876,8 +1994,9 @@ def build():
             bk_box("BankHolddown_B1", "Прижимная планка strut над B1 (между P1 и P3, резина %.0f мм)" % BK["holddown_gap"],
                    (sd, byl, sw), (xr - sd / 2.0, ybase(ps, y_w, byl), zh0), COL_STRUT)
         for i, dx in enumerate(BK["arch_pads_dx"]):
-            bk_box("BankArchPad_%d" % (i + 1), "Резина %.0f мм: рейка у борта ↔ верх арки" % BK["pad"],
-                   (100.0, sd, BK["pad"]), (W["center_x"] + dx - 50.0, ybase(ps, post_in, sd), z_arch), (0.15, 0.15, 0.15))
+            bk_box("BankArchPad_%d" % (i + 1), "Резина/проставка %.0f мм: рейка у борта ↔ верх арки (рейка — на овалах "
+                   "стоек кровати)" % pad_real,
+                   (100.0, sd, pad_real), (W["center_x"] + dx - 50.0, ybase(ps, post_in, sd), z_arch), (0.15, 0.15, 0.15))
         L_p = z_p3t - floor_top - qt
         cutlist += [("рейка этажерки", float(xw1 - xw0)), ("рейка этажерки", float(xi1 - xi0)),
                     ("поперечина этажерки", float(byl - sd)), ("поперечина этажерки", float(byl - sd)),
@@ -1898,6 +2017,42 @@ def build():
                   ("батареи ↔ поперечины кровати", min(near(bats, n) for n in ("BedCross_1", "BedCross_2", "BedCross_3"))),
                   ("батареи ↔ продольная рейка кровати", near(bats, "BedSideRail_nY")),
                   ("батареи ↔ щит", near(bats, "BedDeck"))]
+        # 2026-11-09: рейки 58″ / 62″ − пропил — что перекрывают и попадают ли болты в овалы (допуск овала ±9.5 мм)
+        tol_ = (STRUT["hole"][0] - 9.5) / 2.0
+        def _hoff(x_start, x_bolt):
+            k_ = round((x_bolt - x_start - STRUT["hole0"]) / STRUT["pitch"])
+            return abs(x_bolt - (x_start + STRUT["hole0"] + k_ * STRUT["pitch"]))
+        zc_ = z_l0 + sw / 2.0
+        z_off = abs(zc_ - (hz0 + round((zc_ - hz0) / STRUT["pitch"]) * STRUT["pitch"]))
+        p3f_ = doc.getObject("BankPost_P3f").Shape.BoundBox
+        rails_fit = dict(
+            wall_over_Pf=xw1 - (xf + sw / 2.0),               # > 0 — рейка у борта перекрывает стойку nY front целиком
+            inner_over_P3f=xi1 - p3f_.XMax,                   # > 0 — рейка прохода перекрывает P3f
+            holes_x={"P1": _hoff(xw0, xr), "Pf": _hoff(xw0, xf), "P3": _hoff(xi0, xr), "P3f": _hoff(xi0, xf)},
+            hole_z=z_off, tol=tol_, pad=pad_real,
+            old=(xw1_old - xw0, xi1_old - xi0), new=(xw1 - xw0, xi1 - xi0),
+            shelf_front=(xp1_, x_front), linen=(xp1_ - (xf + sw / 2.0), x_front - (xf + sw / 2.0)),
+            stick=(AR["wall_len"] + AR["inner_len"] + KERF))
+        checks += [("рейка у борта за стойку nY front (сквозной болт)", rails_fit["wall_over_Pf"]),
+                   ("рейка прохода за P3f", rails_fit["inner_over_P3f"]),
+                   ("ряд батарей на полке ↔ край полки", xp1_ - (xs[-1] + bxl + st)),
+                   ("овал рейки у борта ↔ болт P1/Pf: запас по X", tol_ - max(rails_fit["holes_x"]["P1"], rails_fit["holes_x"]["Pf"])),
+                   ("овал рейки прохода ↔ болт P3/P3f: запас по X", tol_ - max(rails_fit["holes_x"]["P3"], rails_fit["holes_x"]["P3f"])),
+                   ("овал стойки кровати ↔ рейка у борта: запас по Z", tol_ - z_off)]
+        # клапан сброса давления (ANCHORS) ↔ B1: свободное место перед решёткой
+        valve_fit = None
+        if relief is not None and RV["side"] == ps:
+            rb_ = relief.BoundBox
+            face_y = rb_.YMax if ps < 0 else rb_.YMin                      # лицевая плоскость решётки
+            zone = Part.makeBox(rb_.XLength, RV["free_min"], rb_.ZLength,
+                                App.Vector(rb_.XMin, face_y if ps < 0 else face_y - RV["free_min"], rb_.ZMin))
+            g_ = relief.distToShape(b1)[0]
+            ov_ = zone.common(b1)
+            x_cov = max(0.0, min(rb_.XMax, X1) - max(rb_.XMin, X0))           # перекрытие по X решётки и B1
+            valve_fit = dict(gap=g_, cover_x=x_cov, w=rb_.XLength, zone_vol=ov_.Volume if not ov_.isNull() else 0.0,
+                             need=RV["free_min"] - g_, b1_x=(X0, X1), valve_x=(rb_.XMin, rb_.XMax),
+                             b1_arch=g_b1)
+            checks.append(("B1 ↔ клапан сброса давления (свободно перед решёткой)", g_))
         # ── электрика на полке перед B4 (раскладка) ──
         EL = ELECTRICAL
         elec = None
@@ -1966,13 +2121,17 @@ def build():
             EL["_routes"] = {k: [list(q) for q in v_] for k, v_ in routes.items()}
             EL["_ground"] = [gx, ps * gy, gz]
             obj = lambda n: doc.getObject(n).Shape
+            checks.append(("шины электрики ↔ край полки", xp1_ - max(eboxes[n_][1] for n_ in ("Elec_BusPos", "Elec_BusNeg"))))
+            checks.append(("шины электрики ↔ край рейки прохода (опора)", xi1 - max(eboxes[n_][1] for n_ in ("Elec_BusPos",
+                                                                                                    "Elec_BusNeg"))))
             elec = dict(board=(bx0, bx1, bz0 - ft, bz1 - ft), boxes=eboxes,
                         clear_rail=z_rail_b - max(eboxes[n][5] for n in eboxes), ground=(gx, gz - ft),
                         free_x=bx1 - bx0)
         bank_summary = dict(X1=(X0, X1), xs=xs, bx=bxl, z_b1=(z_b1, z_b1 + bz), z_arch=z_arch, z_l=(z_l0, z_l1),
                             z_s1=z_s1, top=top, floor_top=floor_top, rails=(xw1 - xw0, xi1 - xi0), cross=byl - sd,
                             posts=(L_p, L_p), free=x_ply1 - (xs[-1] + bxl + st), checks=checks,
-                            inner=arch_ywall - y_i, under_cross=(z_rail_top - sw) - top, elec=elec)
+                            inner=arch_ywall - y_i, under_cross=(z_rail_top - sw) - top, elec=elec, rails_fit=rails_fit,
+                            rails_x=((xw0, xw1), (xi0, xi1)), valve=valve_fit)
 
     # ═══════ БАК ДЛЯ ВОДЫ у водительской арки (D-стойка ↔ арка), на подставке ═══════
     tank_summary = None
@@ -2376,6 +2535,7 @@ def build():
     TF = TANK_FLOOR
     if B.get("enable") and TF.get("enable") and W.get("enable"):
         ts = TF["side"]
+        Wt = WA[ts]                                      # арка этого борта (ANCHORS)
         ttag = "pY" if ts > 0 else "nY"
         fg = doc.addObject("App::DocumentObjectGroup", "TankFloor")
         fg.Label = "Бак для воды %s на полу рядом с водительской аркой — ВАРИАНТ 2026-11-07" % TF["title"]
@@ -2392,7 +2552,7 @@ def build():
         TLx, TWy, THz = TF["tank"]
         cw, ch = TF["cleat"]
         pallet = TF.get("base") == "pallet"
-        y_w = arch_ywall - W["protrusion"] - TF["arch_gap"]   # грань бака к борту (|Y|)
+        y_w = arch_ywall - Wt["protrusion"] - TF["arch_gap"]   # грань бака к борту (|Y|)
         y_i = y_w - TWy                                         # грань бака к проходу
         x_t0 = dx0 + TF["rear_clear"]                           # задний торец: от линии заднего края щита (двери)
         x_t1 = x_t0 + TLx
@@ -2462,10 +2622,10 @@ def build():
             tf_box("TankFloor_Cleat_%s" % nm, "Брусок 2×2 у %s торца бака, L=%.0f" % (
                        "переднего" if nm == "Front" else "заднего", s1 - s0), (cw, s1 - s0, ch), (xc0, s0, z_c), COL_WOOD)
         # проставки к внутренней грани арки — там, где арка рядом с баком (прямой участок её грани)
-        xa0 = W["center_x"] - W["len_x"] / 2.0 + W.get("plan_round", 0.0)
-        xa1 = W["center_x"] + W["len_x"] / 2.0 - W.get("plan_round", 0.0)
+        xa0 = Wt["center_x"] - Wt["len_x"] / 2.0 + Wt.get("plan_round", 0.0)
+        xa1 = Wt["center_x"] + Wt["len_x"] / 2.0 - Wt.get("plan_round", 0.0)
         o0, o1 = max(x_t0, xa0), min(x_t1, xa1)
-        sp_x = [W["center_x"] - 200.0, W["center_x"] + 200.0] if pallet else \
+        sp_x = [Wt["center_x"] - 200.0, Wt["center_x"] + 200.0] if pallet else \
             ([(o0 + o1) / 2.0] if o1 - o0 < 400.0 else [o0 + 100.0, o1 - 100.0])
         for k, xs_ in enumerate(sp_x):
             tf_box("TankFloor_ArchSpacer_%d" % (k + 1), "Проставка (резина/брусок) %.0f мм: бак ↔ внутренняя грань арки" %
@@ -2489,7 +2649,7 @@ def build():
             ax_, ay_, az_ = TF["anchor"]
             yw_a0 = y_w + 6.0                                   # анкер у борта — за гранью бака (там, где нет арки)
             d_a = arch_ywall - (yw_a0 + ay_)
-            x_lim = W["center_x"] - arch_a_lin(max(0.0, min(d_a, W["protrusion"]))) - 15.0 - ax_ / 2.0
+            x_lim = Wt["center_x"] - arch_a_lin(max(0.0, min(d_a, Wt["protrusion"])), ts) - 15.0 - ax_ / 2.0
             lo, hi = x_t0 + 60.0, min(x_t1 - 60.0, x_lim)
             strap_x = (lo + (hi - lo) * 0.2, lo + (hi - lo) * 0.85)
             ya_o, yw_o = y_i - cw - 4.0, y_w + 4.0
@@ -2525,7 +2685,8 @@ def build():
                    (pX, pY_, pZ), (pl_bb.XMax + 5.0, ybase(ts, arch_ywall - 45.0, pY_), floor_top), (0.20, 0.35, 0.75))
         # туалет перед баком (по линии грани бака к борту), выезжает потом вперёд в душ
         toilet = None
-        if TF.get("toilet"):
+        # 2026-11-09: туалет — на платформе с колёсами (ANCHORS["toilet"]); строится в разделе душа (от поддона)
+        if TF.get("toilet") and not ANCHORS.get("toilet"):
             TT = TF["toilet"]
             tlx, tly, tlz = TT["dims"]
             tx0 = x_t1 + TT["gap_rear"]
@@ -2577,6 +2738,7 @@ def build():
                            under_cross=(z_rail_top - sw) - z_t1, fittings=fit_pts, straps=strap_x, checks=checks,
                            runner_len=rlen, n_runner=n_r, fittings_end=TF["fittings_end"], tank_name=tank_name,
                            base_mode=TF.get("base"), title=TF["title"], name=TF["name"], anchors=anchors,
+                           toilet_y=(y_w - TF["toilet"]["dims"][1], y_w) if TF.get("toilet") else None,
                            toilet=None if toilet is None else dict(
                                x=(toilet.BoundBox.XMin, toilet.BoundBox.XMax), y=(y_w - TF["toilet"]["dims"][1], y_w),
                                z=(toilet.BoundBox.ZMin, toilet.BoundBox.ZMax), in_deck=dx1 - toilet.BoundBox.XMax,
@@ -2630,9 +2792,14 @@ def build():
 
         # — душ: поддон-сектор 32″ в углу «край щита кровати × борт», задняя стенка — только сверху —
         R_ = K["pan_r"]
+        AS = ANCHORS["shower_pan"]
         z_pan0 = P["floor_corrugation_height"] if K.get("pan_recess") else floor_top
         z_pan = z_pan0 + K["pan_h"]
-        y_back_pan = yw(z_pan) - 12.0                                # поддон упирается в панель у борта (12 мм)
+        base_th = AS["base_th"] if AS.get("base_th") is not None else K["pan_h"] - K["pan_rim"]
+        z_pin = z_pan0 + base_th                                     # дно поддона внутри
+        t_rim = AS["rim_t"]
+        y_back_pan = (AS["y_wall"] if AS.get("y_wall") is not None else
+                      yw(z_pan) - 12.0)                              # поддон упирается в панель у борта (12 мм)
         y_sf = y_back_pan - R_                                       # край поддона к проходу (у задней стенки)
         x_rw = dx1                                                   # задняя стенка — по переднему краю щита
         z_rw0 = z_rail_top                                           # … от уровня щита (низ настила) до потолка
@@ -2656,15 +2823,31 @@ def build():
                     hi_ = mid
                 else:
                     lo_ = mid
-        xp0 = hi_                                                    # задний (прямой) край поддона
+        xp0 = AS["x_rear"] if AS.get("x_rear") is not None else hi_   # задний (прямой) край поддона
         sx0, sx1 = x_rw, xp0 + R_
         six, siy = R_, R_
         pan = qcyl(xp0, R_, z_pan0, K["pan_h"])
-        put("Shower_Pan", "Поддон душа — сектор 32×32×4″ (бортик 2.5″), слив ⌀3.5″ в 10″ от прямых сторон%s" % (
-                "; утоплен в пол (вырез фанеры+XPS)" if K.get("pan_recess") else ""), pan, COL_PAN)
-        dr_o, dr_r = K["pan_drain"]
-        put("Shower_Drain", "Слив поддона ⌀3.5″ → серый бак", Part.makeCylinder(
-            dr_r, 3.0, V(xp0 + dr_o, ks * (y_back_pan - dr_o), z_pan)), COL_DARK)
+        # 2026-11-09: поддон полый — дно base_th, бортик t_rim (по прямым сторонам и по дуге; передние колёса — внутри)
+        pan_in = qcyl(xp0, R_ - t_rim, z_pin, K["pan_h"]).cut(
+            Part.makeBox(t_rim, 4000.0, K["pan_h"] + 2.0, V(xp0 - 1.0, -2000.0, z_pan0 - 1.0))).cut(
+            Part.makeBox(4000.0, t_rim + 1.0, K["pan_h"] + 2.0,
+                         V(xp0 - 1.0, ks * (y_back_pan - t_rim) if ks > 0 else -y_back_pan - 1.0, z_pan0 - 1.0)))
+        pan = pan.cut(pan_in)
+        put("Shower_Pan", "Поддон душа — сектор 32×32×4″ (бортик 2.5″), слив ⌀3.5″%s" % (
+                "; утоплен в пол (вырез фанеры+XPS)" if K.get("pan_recess") else "; стоит прямо на полу"), pan, COL_PAN)
+        dr_r = K["pan_drain"][1]
+        dr_x, dr_y = xp0 + AS["drain"][0], ks * (y_back_pan - AS["drain"][1])
+        put("Shower_Drain", "Слив поддона ⌀3.5″ (ANCHORS: %.1f″ от прямой стороны, %.1f″ от борта)" % (
+            AS["drain"][0] / 25.4, AS["drain"][1] / 25.4), Part.makeCylinder(dr_r, 3.0, V(dr_x, dr_y, z_pin)), COL_DARK)
+        # обычный сифон вниз через пол → серый бак под днищем (бак пока не рисуем; место — по форме днища)
+        trap = Part.makeCylinder(24.0, z_pin + 150.0, V(dr_x, dr_y, -150.0))
+        put("Shower_DrainTrap", "Сифон слива 1-1/2″ — вниз через пол в серый бак под днищем (место — по месту)",
+            trap, COL_DARK)
+        if not K.get("pan_recess"):
+            for fn in ("Floor_XPS", "Floor_Plywood"):
+                fo = doc.getObject(fn)
+                if fo is not None:
+                    fo.Shape = fo.Shape.cut(Part.makeCylinder(32.0, floor_top + 20.0, V(dr_x, dr_y, -10.0)))
         if K.get("pan_recess"):                                      # вырез в полу под поддон
             hole = qcyl(xp0, R_, 0.5, floor_top + 1.0)
             for fn in ("Floor_XPS", "Floor_Plywood"):
@@ -2677,7 +2860,7 @@ def build():
         if pl_o is not None and pl_o.Shape.distToShape(pan)[0] < 3.0:
             pb_ = pl_o.Shape.BoundBox
             ply_, plx_ = 46.0, 127.0
-            pl_base = V((pb_.XMin + pb_.XMax) / 2.0 - plx_ / 2.0, ybase(ks, post_out, ply_), pb_.ZMin)
+            pl_base = V((pb_.XMin + pb_.XMax) / 2.0 - plx_ / 2.0, ybase(ks, post_out_s[ks], ply_), pb_.ZMin)
             if hasattr(pl_o, "Length"):                              # Part::Box — параметры (Shape перестроится)
                 pl_o.Length, pl_o.Width, pl_o.Height = plx_, ply_, pb_.ZLength
                 pl_o.Placement = App.Placement(pl_base, App.Rotation())
@@ -2685,6 +2868,140 @@ def build():
             else:
                 pl_o.Shape = Part.makeBox(plx_, ply_, pb_.ZLength, pl_base)
             plate_note = "пластина передней стойки кровати — узкая Simpson TP15 вдоль борта (широкая TP35 — под поддоном)"
+        # — ТУАЛЕТ CAMCO НА ПЛАТФОРМЕ С КОЛЁСАМИ (2026-11-09, Dimitri; ANCHORS["toilet"]) —
+        # Плита — на месте транспортного положения, верх = дно поддона у бортика. Передние колёса ВСЕГДА в поддоне, задние
+        # ВСЕГДА снаружи на плите: бортик — упор в обе стороны (транспорт: передние колёса у бортика изнутри; в душе:
+        # задние у бортика снаружи). Ход = колёсная база − бортик − ⌀ колеса. В модели — только транспортное положение;
+        # «в душе» — проверками по формам (без отдельного объекта).
+        AT = ANCHORS.get("toilet")
+        toilet_pf = None
+        toilet_moving = None
+        if AT and tfl_summary and tfl_summary.get("toilet_y") and TANK_FLOOR.get("toilet"):
+            TT = TANK_FLOOR["toilet"]
+            tlx, tly = TT["dims"][0], TT["dims"][1]
+            tlz = AT["toilet_h"]
+            ty0, ty1 = tfl_summary["toilet_y"]                         # |Y| туалета: к проходу / к борту (как раньше)
+            wd, ww = AT["wheel_d"], AT["wheel_w"]
+            wr = wd / 2.0
+            plate_th = AT["plate_th"] if AT.get("plate_th") is not None else z_pin - floor_top
+            z_pl = floor_top + plate_th                                # верх плиты = дно поддона
+            z_pf0 = z_pl + AT["caster_h"]                              # низ платформы
+            z_pf1 = z_pf0 + AT["platform_th"]                          # верх платформы = низ туалета
+            z_tt1 = z_pf1 + tlz                                        # верх туалета
+            pfy0, pfy1 = ty0 - AT["aisle_margin"], ty1                 # платформа по Y (к борту — вровень: арка)
+            f0 = xp0 + t_rim + wr                                      # передние колёса (центр) — транспорт
+            xt0 = dx1 - tlx                                            # туалет в транспорте: передом — до края щита
+            a_t = f0 - xt0                                             # от передних колёс назад до туалета
+            WB = a_t + t_rim + AT["toilet_in"] + wr                    # колёсная база: в душе туалет за бортиком
+            travel = WB - t_rim - wd
+            xw_r0 = f0 - WB                                            # задние колёса (центр) — транспорт
+            pfx0, pfx1 = xw_r0 - wr - AT["rear_over"], f0 + wr + AT["front_over"]
+            # плита: от препятствий бака (брусок/бак/штуцеры по полосе платформы) до поддона
+            band = Part.makeBox(4000.0, pfy1 - pfy0, z_pf1 - floor_top + 1.0, V(-500.0, ybase(ks, pfy1, pfy1 - pfy0),
+                                                                              floor_top))
+            obst = [o.Shape for o in doc.Objects if o.isDerivedFrom("Part::Feature") and not o.Shape.isNull()
+                    and o.Name.startswith(("TankFloor_", "WaterTank_")) and o.Shape.BoundBox.XMax < xp0]
+            x_obs = max([sh_.common(band).BoundBox.XMax for sh_ in obst if not sh_.common(band).isNull()
+                         and sh_.common(band).Volume > 1.0] or [dx0])
+            plx0, plx1 = x_obs, xp0 - 2.0
+            put_t = lambda n_, l_, sh_, c_: (add_shape(doc, n_, l_, sh_, color=c_, group=fg_t), fsh_t.__setitem__(n_, sh_))
+            fg_t = doc.getObject("TankFloor") or sg
+            fsh_t = {}
+            if plate_th > 1.0:
+                put_t("Toilet_Plate", "Плита под туалет — %.1f″ (%.0f мм): верх = дно поддона у бортика; X %.0f..%.0f — "
+                      "задние колёса по ней (ANCHORS)" % (plate_th / 25.4, plate_th, plx0, plx1),
+                      Part.makeBox(plx1 - plx0, pfy1 - pfy0, plate_th, V(plx0, ybase(ks, pfy1, pfy1 - pfy0), floor_top)),
+                      (0.55, 0.45, 0.35))
+            f1 = f0 + travel                                           # передние колёса (центр) — в душе
+            # передний край платформы скруглён по дуге (в душе — внутри линии шторки = вогнутого торца кухни)
+            pf_box = Part.makeBox(pfx1 - pfx0, pfy1 - pfy0, AT["platform_th"], V(pfx0, ybase(ks, pfy1, pfy1 - pfy0), z_pf0))
+            r_lim = min(R_ - AT.get("arc_gap", 5.0), R_ - K.get("curtain_in", 50.0) - 5.0)   # вогнутый торец кухни (по шторке)
+            pf_box = pf_box.common(Part.makeCylinder(r_lim, 500.0,
+                                                     V(xp0 - travel, ks * y_back_pan, z_pf0 - 100.0)))
+            put_t("Toilet_Platform", "Платформа туалета — фанера %.2f″ %.1f×%.1f″ на 4 колёсах ⌀%.0f″, перед скруглён по "
+                  "дуге поддона; передняя часть всегда в поддоне (за краем щита, внутри душа — согласованное исключение)" % (
+                      AT["platform_th"] / 25.4, (pfx1 - pfx0) / 25.4, (pfy1 - pfy0) / 25.4, wd / 25.4),
+                  pf_box, (0.80, 0.66, 0.46))
+            # передние колёса: в душе — внутри дуги поддона → колесо к проходу смещено к борту (колея уже, чем у задних)
+            rin_w = min(R_ - t_rim - 3.0, r_lim)
+            q_ = rin_w ** 2 - (f1 + wr - xp0) ** 2
+            yF_a = max(pfy0 + AT["wheel_inset"] + ww / 2.0,
+                       (y_back_pan - math.sqrt(q_) + ww / 2.0) if q_ > 0 else pfy1 - AT["wheel_inset"] - 1.5 * ww)
+            yW = pfy1 - AT["wheel_inset"] - ww / 2.0
+            for tag_, xc_ in (("F", f0), ("R", xw_r0)):
+                for side_, yc_ in (("A", yF_a if tag_ == "F" else pfy0 + AT["wheel_inset"] + ww / 2.0), ("W", yW)):
+                    yy = ks * yc_
+                    wheel = Part.makeCylinder(wr, ww, V(xc_, yy - ww / 2.0, z_pl + wr), V(0, 1, 0)).fuse(
+                        Part.makeBox(40.0, ww + 10.0, z_pf0 - (z_pl + wd), V(xc_ - 20.0, yy - ww / 2.0 - 5.0, z_pl + wd)))
+                    put_t("Toilet_Wheel_%s%s" % (tag_, side_), "Колесо %s ⌀%.0f″ с креплением (%s)" % (
+                        "переднее — всегда в поддоне" if tag_ == "F" else "заднее — всегда на плите", wd / 25.4,
+                        "к проходу" if side_ == "A" else "к борту"), wheel, (0.15, 0.15, 0.15))
+            xl1_ = xp0 + K["ledge_in"]                                 # линия нижней шторки (козырёк)
+            put_t("Toilet_PlatformDam", "Порожек на платформе за нижней шторкой (в транспортном положении): вода с "
+                  "передней части платформы стекает в поддон, а не по платформе под кровать",
+                  Part.makeBox(10.0, pfy1 - pfy0, 10.0, V(xl1_ - 6.0 - 10.0, ybase(ks, pfy1, pfy1 - pfy0), z_pf1)),
+                  (0.25, 0.25, 0.25))
+            tsh_ = Part.makeBox(tlx, tly, tlz, V(xt0, ybase(ks, ty1, tly), z_pf1))
+            try:
+                tsh_ = tsh_.makeFillet(25.0, [e for e in tsh_.Edges if abs(e.tangentAt(0).z) > 0.9])
+            except Exception:
+                pass
+            put_t("Toilet_Camco", "%s — на платформе с колёсами, транспортное положение (под щитом); выезжает в душ "
+                  "на %.1f″" % (TT["title"], travel / 25.4), tsh_, (0.78, 0.78, 0.76))
+            # ── проверки «в душе» — по формам (сдвиг на ход) ──
+            mv = App.Vector(travel, 0, 0)
+            t_sh = tsh_.translated(mv)
+            wF = [fsh_t["Toilet_Wheel_F%s" % s_] for s_ in "AW"]
+            wR = [fsh_t["Toilet_Wheel_R%s" % s_] for s_ in "AW"]
+            pf_sh = fsh_t["Toilet_Platform"].translated(mv)
+            rin = R_ - t_rim
+
+            def _in_arc(xx, yy):                                       # запас до внутренней кромки бортика (+ — внутри)
+                return min(rin - math.hypot(xx - xp0, y_back_pan - yy), xx - (xp0 + t_rim), (y_back_pan - t_rim) - yy)
+            tb1 = t_sh.BoundBox
+            corners_t = [(x_, y_) for x_ in (tb1.XMin, tb1.XMax) for y_ in (ty0, ty1)]
+            wf1 = [w_.translated(mv).BoundBox for w_ in wF]
+            corners_w = [(x_, y_) for b_ in wf1 for x_ in (b_.XMin, b_.XMax) for y_ in (abs(b_.YMin), abs(b_.YMax))]
+            wf0 = [w_.BoundBox for w_ in wF]
+            corners_w0 = [(x_, y_) for b_ in wf0 for x_ in (b_.XMin, b_.XMax) for y_ in (abs(b_.YMin), abs(b_.YMax))]
+            pfb = fsh_t["Toilet_Platform"].BoundBox
+            fit = dict(
+                toilet_in_arc=min(_in_arc(x_, y_) for x_, y_ in corners_t),
+                front_wheels_in_pan_shower=min(_in_arc(x_, y_) for x_, y_ in corners_w),
+                front_wheels_in_pan_transport=min(_in_arc(x_, y_) for x_, y_ in corners_w0),
+                rear_wheels_out_shower=xp0 - max(w_.translated(mv).BoundBox.XMax for w_ in wR),
+                rear_wheels_on_plate=min(w_.BoundBox.XMin for w_ in wR) - (plx0 + AT["rear_gap"]),
+                toilet_under_deck=dx1 - tsh_.BoundBox.XMax,
+                platform_over_rim=z_pf0 - z_pan - AT["rim_clear"],
+                platform_front_in_pan_transport=min(_in_arc(pfb.XMax, y_) for y_ in (pfy0, pfy1)))
+            chk_t = [("туалет в душе — внутри дуги поддона (запас)", fit["toilet_in_arc"]),
+                     ("передние колёса в поддоне — в душе", fit["front_wheels_in_pan_shower"]),
+                     ("передние колёса в поддоне — в транспорте", fit["front_wheels_in_pan_transport"]),
+                     ("передний край платформы в поддоне — в транспорте", fit["platform_front_in_pan_transport"]),
+                     ("задние колёса снаружи поддона — в душе", fit["rear_wheels_out_shower"]),
+                     ("задние колёса на плите — в транспорте (до её заднего края)", fit["rear_wheels_on_plate"]),
+                     ("туалет под щитом — в транспорте", fit["toilet_under_deck"]),
+                     ("платформа над бортиком поддона (сверх %.0f мм)" % AT["rim_clear"], fit["platform_over_rim"])]
+            moving0 = [tsh_, fsh_t["Toilet_Platform"]] + wF + wR
+            moving1 = [t_sh, pf_sh] + [w_.translated(mv) for w_ in wF + wR]
+            for lab, pref in (("бак/бруски/ремни/штуцеры", ("TankFloor_", "WaterTank_")), ("насос", ("Water_Pump",)),
+                              ("арка", ("WheelArch_",)), ("стойки/пластины кровати", ("BedPost",)),
+                              ("поперечины кровати", ("BedCross_",))):
+                ss = [o.Shape for o in doc.Objects if o.isDerivedFrom("Part::Feature") and not o.Shape.isNull()
+                      and o.Name.startswith(pref)]
+                if ss:
+                    chk_t.append(("туалет/платформа/колёса ↔ %s — в транспорте" % lab,
+                                  min(m_.distToShape(s_)[0] for m_ in moving0 for s_ in ss)))
+                    chk_t.append(("туалет/платформа/колёса ↔ %s — в душе" % lab,
+                                  min(m_.distToShape(s_)[0] for m_ in moving1 for s_ in ss)))
+            toilet_pf = dict(plate=(plx0, plx1, plate_th), z=(z_pl, z_pf0, z_pf1, z_tt1), x0=(xt0, xt0 + tlx),
+                             x1=(xt0 + travel, xt0 + tlx + travel), y=(ty0, ty1), pf_x=(pfx0, pfx1), pf_y=(pfy0, pfy1),
+                             WB=WB, travel=travel, wheels_x=(f0, xw_r0), checks=chk_t, fit=fit, x_obs=x_obs,
+                             moving0=None, h_total=z_tt1 - floor_top, rim_t=t_rim, base_th=base_th)
+            toilet_moving = (moving0, moving1)
+            tfl_summary["toilet"] = dict(x=(xt0, xt0 + tlx), y=(ty0, ty1), z=(z_pf1, z_tt1), in_deck=dx1 - (xt0 + tlx),
+                                         from_wall=(arch_ywall - ty1, arch_ywall - ty0), platform=toilet_pf)
+            TANK_FLOOR["_summary"]["toilet"] = {k_: v_ for k_, v_ in tfl_summary["toilet"].items()}
         # задняя стенка (сверху) и козырёк под ней: вода со стенки стекает за бортик поддона
         put("Shower_WallRear", "Задняя стенка душа по краю щита кровати — только сверху: от уровня щита до потолка "
             "(внизу — проём: туалет выезжает в душ)", env_solid(x_rw, pt_, y_sf, z_rw0, z_ceil), COL_WALL, 10)
@@ -2692,10 +3009,14 @@ def build():
         ledge = env_solid(x_rw + pt_, xl1 - (x_rw + pt_), y_sf + 60.0, z_rw0 - 12.0, z_rw0)
         put("Shower_DripLedge", "Козырёк под задней стенкой (FRP по фанере, уклон в поддон) — до %.0f мм внутрь поддона" %
             K["ledge_in"], ledge, COL_WALL, 10)
-        put("Shower_CurtainLower", "Нижняя шторка с козырька до поддона — закрывает проём; сдвигается, когда туалет "
-            "выезжает в душ", Part.makeBox(4.0, (y_back_pan - 30.0) - (y_sf + 80.0), (z_rw0 - 14.0) - (z_pan + 25.0),
-                                           V(xl1 - 6.0, ks * (y_sf + 80.0) - (0 if ks > 0 else (y_back_pan - y_sf - 110.0)),
-                                             z_pan + 25.0)), (0.55, 0.75, 0.85), 55)
+        cur_lo = Part.makeBox(4.0, (y_back_pan - 30.0) - (y_sf + 80.0), (z_rw0 - 14.0) - (z_pan + 25.0),
+                              V(xl1 - 6.0, ks * (y_sf + 80.0) - (0 if ks > 0 else (y_back_pan - y_sf - 110.0)), z_pan + 25.0))
+        if toilet_pf:                                                # ложится на платформу (перед порожком)
+            pfy0_, pfy1_ = toilet_pf["pf_y"]
+            cur_lo = cur_lo.cut(Part.makeBox(20.0, pfy1_ - pfy0_ + 2.0, toilet_pf["z"][2] - z_pan,
+                                             V(xl1 - 16.0, ybase(ks, pfy1_ + 1.0, pfy1_ - pfy0_ + 2.0), z_pan)))
+        put("Shower_CurtainLower", "Нижняя шторка с козырька до поддона — закрывает проём; ложится на платформу туалета "
+            "перед порожком; сдвигается, когда туалет выезжает в душ", cur_lo, (0.55, 0.75, 0.85), 55)
         r_c = R_ - K.get("curtain_in", 50.0)                         # шторка (= вогнутый торец кухни)
         r_k = r_c + 0.5
         # панель по борту: над поддоном и (выше уровня щита) — от задней стенки до линии шторки (дальше — кухня)
@@ -2879,8 +3200,13 @@ def build():
             hL = inn_h + 2.0 * wl
             to_ = doc.getObject("Toilet_Camco")
             pu_ = doc.getObject("Water_Pump12V")
+            AL = ANCHORS.get("propane_locker", {})
             ly1 = (to_.Shape.BoundBox.YMin - PR["toilet_gap"]) if (to_ is not None and ks > 0) else 364.0
             lx0 = (pu_.Shape.BoundBox.XMax + PR["pump_gap"]) if pu_ is not None else dx1 - outer - 1.0
+            if AL.get("y1") is not None:                              # ANCHORS: замер после туалета
+                ly1 = AL["y1"]
+            if AL.get("x0") is not None:
+                lx0 = AL["x0"]
             lx1 = lx0 + outer
             ly0 = ly1 - outer
             z_l0 = floor_top
@@ -2922,6 +3248,8 @@ def build():
             # вверх через козырёк к штуцеру газа нагревателя (слева снизу)
             z_lt = z_l0 + hL
             z_g = min(z_lt + 50.0, (z_rail_top - sw) - 25.0)
+            if toilet_pf and toilet_pf["z"][3] + 25.0 > z_g:          # 2026-11-09: туалет на платформе выше — газ над
+                z_g = (z_rail_top - sw) - 25.0                       # полкой 2-го этажа, под поперечинами кровати
             y_gas = y_h0 + 50.0
             x_gv = x_h0 + 14.0
             pts = [V(lx1 - 40.0, ly1 - 40.0, z_lt), V(lx1 - 40.0, ly1 - 40.0, z_g), V(lx1 - 40.0, y_gas, z_g),
@@ -2961,13 +3289,26 @@ def build():
         for lab, ss in (("кровать (стойки/рейки/настил/матрас)", no_plate("Bed")), ("бак", objs("WaterTank")),
                         ("подставка бака", objs("TankRiser")), ("стойки бака", objs("TankPost")),
                         ("этажерка бака", objs("TankRail") + objs("TankCross") + objs("TankShelf") + objs("TankStop")),
-                        ("поддон бака", objs("TankFloor")), ("туалет", objs("Toilet"))):
+                        ("поддон бака", objs("TankFloor"))):
             if ss:
                 checks.append((lab, min(_dd(p, s_) for p in pall for s_ in ss)))
         pl = doc.getObject("BedPostPlate_pY_front")
         if pl is not None and min(_dd(p, pl.Shape) for p in pall) < 0.5 and not plate_note:
             checks.append(("пластина передней стойки кровати (1.6 мм) — душ заходит на её край: подложить", 0.0))
-        if tfl_summary and tfl_summary.get("toilet") and doc.getObject("Toilet_Camco") is not None:
+        if toilet_pf and toilet_moving:                          # туалет на платформе: транспорт и «в душе» ↔ душ/газ/локер
+            m0_, m1_ = toilet_moving
+            pass_ = [n_ for n_ in parts if n_ not in ("Shower_CurtainLower", "Shower_Pan", "Shower_Drain")]
+            for lab, nn in (("душ/кухня", [n_ for n_ in pass_ if not n_.startswith(("Gas_", "Propane_", "Safety_"))]),
+                            ("газ/локер/датчики", [n_ for n_ in pass_ if n_.startswith(("Gas_", "Propane_", "Safety_"))])):
+                for pos_, ms_ in (("в транспорте", m0_), ("в душе", m1_)):
+                    if nn:
+                        v_, n_min = min((_dd(m_, parts[n_]), n_) for m_ in ms_ for n_ in nn)
+                        toilet_pf["checks"].append(("туалет/платформа ↔ %s — %s (ближе всего %s)" % (lab, pos_, n_min), v_))
+            # поддон: платформа проходит над бортиком; колёса стоят на дне / на плите (0 — так задумано, не проверяем)
+            toilet_pf["checks"].append(("платформа ↔ поддон — в транспорте", _dd(m0_[1], pan)))
+            toilet_pf["checks"].append(("платформа ↔ поддон — в душе", _dd(m1_[1], pan)))
+            checks += toilet_pf["checks"]
+        if False and tfl_summary and tfl_summary.get("toilet") and doc.getObject("Toilet_Camco") is not None:
             tb_ = doc.getObject("Toilet_Camco").Shape.BoundBox     # путь туалета вперёд до задней стенки душа
             sweep = Part.makeBox(xp0 - tb_.XMax, tb_.YLength, tb_.ZLength, App.Vector(tb_.XMax, tb_.YMin, tb_.ZMin))
             path_ = [("бойлер", sweep.distToShape(parts["Water_Heater12V"])[0]) if "Water_Heater12V" in parts else None,
@@ -3005,7 +3346,7 @@ def build():
                 if ss:
                     checks.append(("локер ↔ " + lab, min(_dd(lk, s_) for s_ in ss)))
             gl_ = parts["Gas_Line"]
-            if doc.getObject("Toilet_Camco") is not None:
+            if doc.getObject("Toilet_Camco") is not None and not toilet_pf:
                 tb_ = doc.getObject("Toilet_Camco").Shape.BoundBox
                 sweep = Part.makeBox(xp0 - tb_.XMin, tb_.YLength, tb_.ZLength, App.Vector(tb_.XMin, tb_.YMin, tb_.ZMin))
                 checks.append(("газ ↔ путь туалета в душ", sweep.distToShape(gl_)[0]))
@@ -3026,7 +3367,9 @@ def build():
             pan_behind=xp0 - x_rw, rear_wall_z=z_rw0, y_pan_back=y_back_pan, pan_r=R_,
             headroom=(z_ceil - 12.0) - z_pan, kitchen_x=(kx0, kx1), kl=kl, y_kf=y_kf, counter=K["counter_h"],
             seat_gap=3190.0 - kx1, aisle_sh=aisle_sh, aisle_k=aisle_k, checks=checks,
-            floor_top=floor_top, wall_y=y_at_z(half, 900.0), arch_ywall=arch_ywall)
+            floor_top=floor_top, wall_y=y_at_z(half, 900.0), arch_ywall=arch_ywall,
+            toilet_pf={k_: v_ for k_, v_ in toilet_pf.items() if k_ != "checks"} if toilet_pf else None,
+            pan_in=dict(z_in=z_pin - floor_top, rim_t=t_rim, drain=(dr_x, abs(dr_y))))
 
     # ═══════ БАГАЖНИК — 2 выдвижных ящика на SLIDEWAY + полка + хребет посередине (2026-11-08, Dimitri) ═══════
     trunk_summary = None
@@ -3068,7 +3411,10 @@ def build():
         lk_ = doc.getObject("Propane_Locker")
         to_ = doc.getObject("Toilet_Camco")
         lkb = lk_.Shape.BoundBox
-        z_under = max([tb.ZMax] + [o.Shape.BoundBox.ZMax for o in (lk_, to_) if o is not None])
+        # 2026-11-09: ящики — над баком/локером (как были); туалет на платформе стал выше → над ним поднимаем только полку
+        z_under = max([tb.ZMax] + [o.Shape.BoundBox.ZMax for o in (lk_,) if o is not None])
+        z_under_shelf = max([z_under] + [o.Shape.BoundBox.ZMax for o in doc.Objects if o.Name.startswith("Toilet_")
+                                         and o.isDerivedFrom("Part::Feature") and not o.Shape.isNull()])
         z_t0 = z_under + TR["z_gap"]                                 # низ ящиков 2-го этажа
         z_top = doc.getObject("BedCross_1").Shape.BoundBox.ZMin - TR["top_gap"]
         z_s0 = z_t0 + TR["base"] + 8.0                               # низ направляющей (на боковине ящика)
@@ -3131,7 +3477,7 @@ def build():
         x_fr = dx1 - TS["front_gap"]                                 # передний торец переднего ящика (закрыт)
         # ── ПОЛКА 2-го этажа (водит. половина): фанера на уровне верха бака и баллона ──
         bpr = doc.getObject("BedPost_pY_rear").Shape.BoundBox
-        z_p0 = z_t0                                                  # низ фанеры: над баком/локером/туалетом + 10 мм
+        z_p0 = max(z_t0, z_under_shelf + TR["z_gap"])               # низ фанеры: над баком/локером/туалетом + 10 мм
         z_p1 = z_p0 + SH["th"]
         px0, px1, py0, py1 = rp_.XMax + SH["pillar_gap"], x_fr, yc1, bpr.YMin
         ply = Part.makeBox(px1 - px0, py1 - py0, SH["th"], App.Vector(px0, py0, z_p0))
@@ -3335,7 +3681,8 @@ def build():
                 if (c.z + bh / 2.0 > dz0 and c.z - bh / 2.0 < dz1
                         and dsh.BoundBox.XMin < c.x < dsh.BoundBox.XMax):
                     # вырез: от внутренней грани стойки (|Y|=post_in) на bd+3 в салон
-                    y0 = (post_in - bd - 3.0) if c.y > 0 else -post_in
+                    pi_ = post_in_s[1 if c.y > 0 else -1]
+                    y0 = (pi_ - bd - 3.0) if c.y > 0 else -pi_
                     cut.append(Part.makeBox(bw_, bd + 3.0, dz1 - dz0 + 2.0,
                                             App.Vector(c.x - bw_ / 2.0, y0, dz0 - 1.0)))
                     n_bolt += 1
@@ -3495,6 +3842,19 @@ def build():
         print("  Рейки L=%.0f / %.0f;  поперечины 2×%.0f;  стойки P3 L=%.0f, P3f L=%.0f;  свободно на полке перед "
               "B4 %.0f мм (%.1f″)" % (k["rails"][0], k["rails"][1], k["cross"], k["posts"][0], k["posts"][1],
                                      k["free"], k["free"] / 25.4))
+        rf = k.get("rails_fit")
+        if rf:
+            (w0_, w1_), (i0_, i1_) = k["rails_x"]
+            print("  Рейки из одного 10′ (%.0f мм с пропилом): у борта X %.0f..%.0f = %.0f мм (было %.0f), у прохода X %.0f..%.0f "
+                  "= %.0f мм (было %.0f); перекрытие стойки nY front %.0f мм, P3f %.0f мм" % (
+                      rf["stick"], w0_, w1_, rf["new"][0], rf["old"][0], i0_, i1_, rf["new"][1], rf["old"][1],
+                      rf["wall_over_Pf"], rf["inner_over_P3f"]))
+            print("  Полка — до X %.0f (было %.0f): полочка под бельё впереди Pf %.0f мм = %.1f″ (было %.0f = %.1f″); "
+                  "резина/проставка на арке %.0f мм (рейка — на овале стоек: смещение по Z %.1f, по X P1 %.1f / Pf %.1f, "
+                  "P3 %.1f / P3f %.1f; допуск ±%.1f)" % (
+                      rf["shelf_front"][0], rf["shelf_front"][1], rf["linen"][0], rf["linen"][0] / 25.4, rf["linen"][1],
+                      rf["linen"][1] / 25.4, rf["pad"], rf["hole_z"], rf["holes_x"]["P1"], rf["holes_x"]["Pf"],
+                      rf["holes_x"]["P3"], rf["holes_x"]["P3f"], rf["tol"]))
         print("  Зазоры: " + "; ".join("%s %.1f" % (a_, v) for a_, v in k["checks"]))
         if k.get("elec"):
             e = k["elec"]
@@ -3637,6 +3997,16 @@ def build():
                 q_.get("trunk") or -1, (q_.get("trunk") or 0) / 25.4, q_["gas_len"] / 1000.0))
         print("  Проход: у душа %.0f мм (%.1f″), у кухни %.0f мм (%.1f″)" % (
             k["aisle_sh"], k["aisle_sh"] / 25.4, k["aisle_k"], k["aisle_k"] / 25.4))
+        tp_ = k.get("toilet_pf")
+        if tp_:
+            print("  Туалет на платформе: плита %.1f″ (X %.0f..%.0f; от препятствия бака X %.0f), колёса ⌀%.0f″, низ платформы "
+                  "%.1f″, верх платформы %.1f″, ВЕРХ ТУАЛЕТА %.1f″ над полом (было 17.0″)" % (
+                      tp_["plate"][2] / 25.4, tp_["plate"][0], tp_["plate"][1], tp_["x_obs"], ANCHORS["toilet"]["wheel_d"] / 25.4,
+                      (tp_["z"][1] - f0) / 25.4, (tp_["z"][2] - f0) / 25.4, tp_["h_total"] / 25.4))
+            print("  Колёсная база %.0f мм (%.1f″), ход %.0f мм (%.1f″) = база − бортик %.0f − ⌀ колеса; туалет: транспорт X %.0f..%.0f "
+                  "(под щитом), в душе X %.0f..%.0f; платформа X %.0f..%.0f (транспорт), Y %.0f..%.0f" % (
+                      tp_["WB"], tp_["WB"] / 25.4, tp_["travel"], tp_["travel"] / 25.4, tp_["rim_t"], tp_["x0"][0],
+                      tp_["x0"][1], tp_["x1"][0], tp_["x1"][1], tp_["pf_x"][0], tp_["pf_x"][1], tp_["pf_y"][0], tp_["pf_y"][1]))
         print("  Зазоры: " + "; ".join("%s %.1f" % (n, v) for n, v in k["checks"]))
     for c_ in cab_summary:
         print("[%s — проект 2026-11-07]" % c_["name"])
@@ -3664,6 +4034,36 @@ def build():
         print("  Направляющие 2-го этажа Z %.0f..%.0f, 1-го — Z %.0f..%.0f; P3m X %.0f" % (
               t["slide_z"][0], t["slide_z"][1], t["slide1_z"][0], t["slide1_z"][1], t["x_p3m"]))
         print("  Зазоры: " + "; ".join("%s %.1f" % (n, v) for n, v in t["checks"]))
+    # ─── ANCHORS: якорные размеры — что сейчас в модели (None → посчитано моделью; подставить замер) ───
+    print("[ANCHORS — якорные размеры: %s]" % ", ".join("%s: %s" % (k_, v_["status"]) for k_, v_ in ANCHORS.items()
+                                                       if isinstance(v_, dict) and "status" in v_))
+    if bed_summary:
+        print("  Стойки кровати: X " + ", ".join("%s %.1f" % (k_, v_) for k_, v_ in ANCHORS["bed_posts"]["x"].items()) +
+              "; нижний овал %.1f мм над полом; рейки кровати (верх) %.0f мм над полом" % (
+                  ANCHORS["bed_posts"]["hole0_z"], bed_summary["z_rail_top"] - bed_summary["floor_top"]))
+        print("  D-стойки: передняя грань короба X — nY %.0f, pY %.0f; арки: " % (x_dp_s[-1], x_dp_s[1]) + "; ".join(
+            "%s центр X %.0f, верх %.0f, выступ %.0f" % (t_, WA[s_]["center_x"], WA[s_]["height"], WA[s_]["protrusion"])
+            for s_, t_ in ((-1, "nY"), (1, "pY"))))
+    if bank_summary and bank_summary.get("rails_fit"):
+        f0 = bank_summary["floor_top"]
+        (w0_, w1_), (i0_, i1_) = bank_summary["rails_x"]
+        print("  Рейки этажерки: у борта X %.0f..%.0f, низ %.0f мм над полом (резина на арке %.0f мм); у прохода X %.0f..%.0f" % (
+            w0_, w1_, bank_summary["z_l"][0] - f0, bank_summary["rails_fit"]["pad"], i0_, i1_))
+        vf = bank_summary.get("valve")
+        if vf:
+            print("  Клапан сброса давления: X %.0f..%.0f; B1 X %.0f..%.0f закрывает решётку по X на %.0f из %.0f мм; "
+                  "свободно перед решёткой %.0f мм (нужно ≥ %.0f → не хватает %.0f)" % (
+                      vf["valve_x"][0], vf["valve_x"][1], vf["b1_x"][0], vf["b1_x"][1], vf["cover_x"], vf["w"], vf["gap"],
+                      ANCHORS["relief_valve"]["free_min"], max(0.0, vf["need"])))
+    if galley_summary:
+        g_ = galley_summary
+        f0 = g_["floor_top"]
+        print("  Поддон: задний край X %.0f, край у борта |Y| %.0f, дно внутри %.0f мм над полом, бортик %.0f; слив X %.0f "
+              "|Y| %.0f" % (g_["pan_x0"], g_["y_pan_back"], g_["pan_in"]["z_in"], g_["pan_in"]["rim_t"],
+                            g_["pan_in"]["drain"][0], g_["pan_in"]["drain"][1]))
+        if g_.get("propane"):
+            q_ = g_["propane"]
+            print("  Локер пропана: x0 %.0f, y1 %.0f (дверца — к проходу, грань |Y| %.0f)" % (q_["x"][0], q_["y"][1], q_["y"][0]))
     print("-" * 70)
     if bb:
         print("Bounding box (вкл. обшивку): %.0f x %.0f x %.0f мм" % (
