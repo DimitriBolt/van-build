@@ -93,9 +93,12 @@ ANCHORS = {
     # 2) поддон душа: стоит прямо на полу; x_rear — X заднего (прямого) края, y_wall — |Y| края поддона у борта;
     #    rim_t — толщина бортика по прямой стороне к кровати (через неё переезжает платформа туалета); base_th — дно
     #    поддона внутри над полом (None = высота поддона − бортик); drain — центр слива от прямых сторон (назад, к борту)
-    "shower_pan": {"status": "оценка",
-                   "on_floor": True, "x_rear": None, "y_wall": None, "rim_t": 25.0, "base_th": None,
-                   "drain": (254.0, 254.0)},
+    #    Swiss Madison 32×32×4″ (чертёж продавца, 2026-11-09): квадрат 32×32″, передний угол скруглён R22″ (центр —
+    #    в 10″ от обеих прямых сторон, там же слив ⌀3.5″), бортик у стен 1″, порог спереди/к проходу 2.5″.
+    #    Dimitri 2026-11-09: поддон НЕ утапливать — ставится НА фанерный пол.
+    "shower_pan": {"status": "по чертежу Swiss Madison (дно внутри — оценка)",
+                   "on_floor": True, "x_rear": None, "y_wall": None, "rim_t": 25.4, "curb_t": 63.5,
+                   "corner_r": 558.8, "base_th": None, "drain": (254.0, 254.0)},
     # туалет Camco на платформе с колёсами: плита на месте транспортного положения (верх = дно поддона у бортика),
     # передние колёса всегда в поддоне, задние всегда на плите; бортик — упор в обе стороны
     "toilet": {"status": "оценка",
@@ -110,7 +113,7 @@ ANCHORS = {
                "front_over": 15.0,         # платформа впереди передних колёс
                "rear_over": 5.0,           # … позади задних
                "toilet_in": 5.0,           # туалет в душе — за бортиком на столько
-               "rear_gap": 3.0},           # задние колёса ↔ задний край плиты (у бруска бака) в транспортном
+               "rear_gap": 2.0},           # задние колёса ↔ задний край плиты (у бруска бака) в транспортном
     # 3) локер пропана — после туалета. x0 — X задней грани, y1 — |Y| грани к борту; None = от насоса/туалета
     "propane_locker": {"status": "оценка", "x0": None, "y1": None, "door": "aisle"},
 }
@@ -595,7 +598,7 @@ SHOWER_KITCHEN = {
     "kitchen_depth": 560.0,         # 22″ от задней панели
     "counter_h": 914.0,             # 36″ — верх столешницы над чистовым полом
     "counter_th": 25.0,             # мебельный щит/butcher block 1″
-    "sink": (305.0, 305.0, 140.0),  # барная мойка 12×12″, глубина 5.5″
+    "sink": (254.0, 254.0, 140.0),  # барная мойка 10×10″ (2026-11-09 Dimitri: 12″ не влезает с поддоном Swiss Madison), глубина 5.5″
     "sink_margin": (30.0, 30.0),    # мойка: от вогнутой кромки и от передней кромки столешницы
     "divider": 12.0,                # перегородка секций — фанера 1/2″
     # BougeRV CRX3 23 qt (сайт: 603×321×350 мм / 23.7×12.6×13.8″, 22 lb; крышка сверху, петли перекидные)
@@ -2798,8 +2801,31 @@ def build():
         base_th = AS["base_th"] if AS.get("base_th") is not None else K["pan_h"] - K["pan_rim"]
         z_pin = z_pan0 + base_th                                     # дно поддона внутри
         t_rim = AS["rim_t"]
+        t_curb = AS.get("curb_t", t_rim)
         y_back_pan = (AS["y_wall"] if AS.get("y_wall") is not None else
                       yw(z_pan) - 12.0)                              # поддон упирается в панель у борта (12 мм)
+        Rc = AS.get("corner_r", R_)                                  # 2026-11-09: передний угол R22″ (Swiss Madison)
+
+        def pshape(xc, d, z0, h):
+            """Контур поддона (квадрат R_ × R_, передний угол — R Rc с центром в (R_−Rc) от прямых сторон), смещённый
+            внутрь на d по передней стороне и стороне к проходу; задняя (к кровати) и у борта — на месте. Только ks>0."""
+            L, rc = R_ - d, Rc - d
+            cx, cy = xc + R_ - Rc, y_back_pan - (R_ - Rc)
+            y0 = y_back_pan - L
+            b = Part.makeBox(L, L, h, V(xc, y0, z0))
+            if rc > 0 and cx < xc + L and cy > y0:
+                cor = Part.makeBox(xc + L - cx + 1.0, cy - y0 + 1.0, h + 2.0, V(cx, y0 - 1.0, z0 - 1.0)).cut(
+                    Part.makeCylinder(rc, h + 4.0, V(cx, cy, z0 - 2.0)))
+                b = b.cut(cor)
+            return b
+
+        def xline(d, y):
+            """X контура pshape(xp0, d) на |Y| = y (передняя сторона / дуга)."""
+            cx, cy, rc = xp0 + R_ - Rc, y_back_pan - (R_ - Rc), Rc - d
+            if y >= cy:
+                return xp0 + R_ - d
+            q = rc ** 2 - (cy - y) ** 2
+            return cx + math.sqrt(q) if q > 0 else xp0
         y_sf = y_back_pan - R_                                       # край поддона к проходу (у задней стенки)
         x_rw = dx1                                                   # задняя стенка — по переднему краю щита
         z_rw0 = z_rail_top                                           # … от уровня щита (низ настила) до потолка
@@ -2811,29 +2837,30 @@ def build():
 
         def qcyl(xc, r, z0, h):
             return _q(Part.makeCylinder(r, h, V(xc, ks * y_back_pan, z0), V(0, 0, 1), 90.0), xc)
+        V = App.Vector
 
         arch_s = arch_shapes[ks]
         lo_, hi_ = x_rw, x_rw + 400.0                                # как можно дальше назад, но не в арку
-        if qcyl(lo_, R_, z_pan0, K["pan_h"]).distToShape(arch_s)[0] >= K["pan_arch_gap"]:
+        if pshape(lo_, 0.0, z_pan0, K["pan_h"]).distToShape(arch_s)[0] >= K["pan_arch_gap"]:
             hi_ = lo_
         else:
             for _ in range(16):
                 mid = (lo_ + hi_) / 2.0
-                if qcyl(mid, R_, z_pan0, K["pan_h"]).distToShape(arch_s)[0] >= K["pan_arch_gap"]:
+                if pshape(mid, 0.0, z_pan0, K["pan_h"]).distToShape(arch_s)[0] >= K["pan_arch_gap"]:
                     hi_ = mid
                 else:
                     lo_ = mid
         xp0 = AS["x_rear"] if AS.get("x_rear") is not None else hi_   # задний (прямой) край поддона
         sx0, sx1 = x_rw, xp0 + R_
         six, siy = R_, R_
-        pan = qcyl(xp0, R_, z_pan0, K["pan_h"])
-        # 2026-11-09: поддон полый — дно base_th, бортик t_rim (по прямым сторонам и по дуге; передние колёса — внутри)
-        pan_in = qcyl(xp0, R_ - t_rim, z_pin, K["pan_h"]).cut(
+        pan = pshape(xp0, 0.0, z_pan0, K["pan_h"])
+        # 2026-11-09: поддон полый — дно base_th, бортик t_rim у стен, порог t_curb спереди/к проходу (передние колёса — внутри)
+        pan_in = pshape(xp0, t_curb, z_pin, K["pan_h"]).cut(
             Part.makeBox(t_rim, 4000.0, K["pan_h"] + 2.0, V(xp0 - 1.0, -2000.0, z_pan0 - 1.0))).cut(
             Part.makeBox(4000.0, t_rim + 1.0, K["pan_h"] + 2.0,
                          V(xp0 - 1.0, ks * (y_back_pan - t_rim) if ks > 0 else -y_back_pan - 1.0, z_pan0 - 1.0)))
         pan = pan.cut(pan_in)
-        put("Shower_Pan", "Поддон душа — сектор 32×32×4″ (бортик 2.5″), слив ⌀3.5″%s" % (
+        put("Shower_Pan", "Поддон душа Swiss Madison 32×32×4″, передний угол R22″, слив ⌀3.5″ в центре скругления%s" % (
                 "; утоплен в пол (вырез фанеры+XPS)" if K.get("pan_recess") else "; стоит прямо на полу"), pan, COL_PAN)
         dr_r = K["pan_drain"][1]
         dr_x, dr_y = xp0 + AS["drain"][0], ks * (y_back_pan - AS["drain"][1])
@@ -2849,7 +2876,7 @@ def build():
                 if fo is not None:
                     fo.Shape = fo.Shape.cut(Part.makeCylinder(32.0, floor_top + 20.0, V(dr_x, dr_y, -10.0)))
         if K.get("pan_recess"):                                      # вырез в полу под поддон
-            hole = qcyl(xp0, R_, 0.5, floor_top + 1.0)
+            hole = pshape(xp0, 0.0, 0.5, floor_top + 1.0)
             for fn in ("Floor_XPS", "Floor_Plywood"):
                 fo = doc.getObject(fn)
                 if fo is not None:
@@ -2915,18 +2942,22 @@ def build():
             f1 = f0 + travel                                           # передние колёса (центр) — в душе
             # передний край платформы скруглён по дуге (в душе — внутри линии шторки = вогнутого торца кухни)
             pf_box = Part.makeBox(pfx1 - pfx0, pfy1 - pfy0, AT["platform_th"], V(pfx0, ybase(ks, pfy1, pfy1 - pfy0), z_pf0))
-            r_lim = min(R_ - AT.get("arc_gap", 5.0), R_ - K.get("curtain_in", 50.0) - 5.0)   # вогнутый торец кухни (по шторке)
-            pf_box = pf_box.common(Part.makeCylinder(r_lim, 500.0,
-                                                     V(xp0 - travel, ks * y_back_pan, z_pf0 - 100.0)))
+            d_lim = max(AT.get("arc_gap", 5.0), K.get("curtain_in", 50.0) + 5.0)   # вогнутый торец кухни (по шторке)
+            pf_box = pf_box.common(pshape(xp0 - travel, d_lim, z_pf0 - 100.0, 500.0))
             put_t("Toilet_Platform", "Платформа туалета — фанера %.2f″ %.1f×%.1f″ на 4 колёсах ⌀%.0f″, перед скруглён по "
                   "дуге поддона; передняя часть всегда в поддоне (за краем щита, внутри душа — согласованное исключение)" % (
                       AT["platform_th"] / 25.4, (pfx1 - pfx0) / 25.4, (pfy1 - pfy0) / 25.4, wd / 25.4),
                   pf_box, (0.80, 0.66, 0.46))
             # передние колёса: в душе — внутри дуги поддона → колесо к проходу смещено к борту (колея уже, чем у задних)
-            rin_w = min(R_ - t_rim - 3.0, r_lim)
-            q_ = rin_w ** 2 - (f1 + wr - xp0) ** 2
-            yF_a = max(pfy0 + AT["wheel_inset"] + ww / 2.0,
-                       (y_back_pan - math.sqrt(q_) + ww / 2.0) if q_ > 0 else pfy1 - AT["wheel_inset"] - 1.5 * ww)
+            d_w = max(t_curb + 3.0, d_lim)
+            cxp, cyp, rc_w = xp0 + R_ - Rc, y_back_pan - (R_ - Rc), Rc - d_w
+            xf_ = f1 + wr                                              # передний край переднего колеса в душе
+            if xf_ <= cxp:
+                y_need = y_back_pan - (R_ - d_w)
+            else:
+                q_ = rc_w ** 2 - (xf_ - cxp) ** 2
+                y_need = (cyp - math.sqrt(q_)) if q_ > 0 else pfy1 - AT["wheel_inset"] - 2.0 * ww
+            yF_a = max(pfy0 + AT["wheel_inset"] + ww / 2.0, y_need + ww / 2.0)
             yW = pfy1 - AT["wheel_inset"] - ww / 2.0
             for tag_, xc_ in (("F", f0), ("R", xw_r0)):
                 for side_, yc_ in (("A", yF_a if tag_ == "F" else pfy0 + AT["wheel_inset"] + ww / 2.0), ("W", yW)):
@@ -2954,10 +2985,13 @@ def build():
             wF = [fsh_t["Toilet_Wheel_F%s" % s_] for s_ in "AW"]
             wR = [fsh_t["Toilet_Wheel_R%s" % s_] for s_ in "AW"]
             pf_sh = fsh_t["Toilet_Platform"].translated(mv)
-            rin = R_ - t_rim
-
             def _in_arc(xx, yy):                                       # запас до внутренней кромки бортика (+ — внутри)
-                return min(rin - math.hypot(xx - xp0, y_back_pan - yy), xx - (xp0 + t_rim), (y_back_pan - t_rim) - yy)
+                cx_, cy_ = xp0 + R_ - Rc, y_back_pan - (R_ - Rc)
+                m_ = min(xx - (xp0 + t_rim), (y_back_pan - t_rim) - yy, (xp0 + R_ - t_curb) - xx,
+                         yy - (y_back_pan - R_ + t_curb))
+                if xx > cx_ and yy < cy_:
+                    m_ = min(m_, (Rc - t_curb) - math.hypot(xx - cx_, cy_ - yy))
+                return m_
             tb1 = t_sh.BoundBox
             corners_t = [(x_, y_) for x_ in (tb1.XMin, tb1.XMax) for y_ in (ty0, ty1)]
             wf1 = [w_.translated(mv).BoundBox for w_ in wF]
@@ -3061,7 +3095,7 @@ def build():
                     Part.makeCylinder(fr_ + 0.5, 50.0, V(fx_c, fy_c, z_ceil - 25.0))), (0.30, 0.30, 0.30))
         # потолок: от задней стенки до дуги шторки, по борту — до обшивки
         y_ceil_back = yw(z_ceil)
-        ceil = qcyl(xp0, r_c if K.get("kitchen_concave") else R_, z_ceil - 12.0, 12.0).fuse(
+        ceil = pshape(xp0, K.get("curtain_in", 50.0) if K.get("kitchen_concave") else 0.0, z_ceil - 12.0, 12.0).fuse(
             Part.makeBox(xp0 - (x_rw + pt_), R_, 12.0, V(x_rw + pt_, ks * y_back_pan - (R_ if ks > 0 else 0.0),
                                                            z_ceil - 12.0)))
         ceil = ceil.common(Part.makeBox(3000.0, y_ceil_back, 40.0, V(x_rw, 0.0 if ks > 0 else -y_ceil_back,
@@ -3073,15 +3107,16 @@ def build():
         # шторка по дуге (внутри бортика) + прямой участок к задней стенке
         y_c = y_back_pan - r_c                                       # линия шторки у задней стенки
         z_c0, z_c1 = z_pan + 40.0, z_ceil - 60.0
-        curt = qcyl(xp0, r_c, z_c0, z_c1 - z_c0).cut(qcyl(xp0, r_c - 3.0, z_c0 - 1.0, z_c1 - z_c0 + 2.0)).fuse(
+        ci_ = K.get("curtain_in", 50.0)
+        curt = pshape(xp0, ci_, z_c0, z_c1 - z_c0).cut(pshape(xp0, ci_ + 3.0, z_c0 - 1.0, z_c1 - z_c0 + 2.0)).fuse(
             Part.makeBox(xp0 - (x_rw + pt_ + 10.0), 3.0, z_c1 - z_c0,
                          V(x_rw + pt_ + 10.0, ks * y_c - (0 if ks > 0 else 3.0), z_c0)))
-        put("Shower_Curtain", "Шторка душа по дуге поддона (+ прямой участок до задней стенки)", curt,
+        put("Shower_Curtain", "Шторка душа по контуру поддона (прямые участки + дуга R22″) + прямой участок до задней стенки", curt,
             (0.55, 0.75, 0.85), 55)
         r_rod = r_c - 12.0                                           # карниз чуть внутри — шторка ложится на торец кухни
-        rod = _q(Part.makeTorus(r_rod, 8.0, V(xp0, ks * y_back_pan, z_ceil - 40.0), V(0, 0, 1), -180, 180, 90), xp0).fuse(
+        rod = pshape(xp0, ci_ + 4.0, z_ceil - 48.0, 16.0).cut(pshape(xp0, ci_ + 20.0, z_ceil - 49.0, 18.0)).fuse(
             Part.makeCylinder(8.0, xp0 - (x_rw + pt_), V(x_rw + pt_, ks * (y_back_pan - r_rod), z_ceil - 40.0), V(1, 0, 0)))
-        put("Shower_CurtainRod", "Карниз шторки — гнутый по дуге (под потолком)", rod, COL_STEEL)
+        put("Shower_CurtainRod", "Карниз шторки — по контуру поддона, гнутый по дуге R22″ (под потолком)", rod, COL_STEEL)
         yb_h = yw(1650.0) - 12.0
         head = Part.makeCylinder(55.0, 25.0, V(xp0 + 300.0, ks * (yb_h - 25.0), 1650.0 + floor_top), V(0, ks, 0))
         put("Shower_Head", "Лейка душа на штанге / смеситель (на стенке по борту)", head, COL_STEEL)
@@ -3089,8 +3124,9 @@ def build():
         put("Shower_ExhaustFan", "Вытяжка 12V ~4″ в потолке душа → небольшое отверстие в стене", fan, COL_DARK)
 
         # — мини-кухня: 2 секции (у душа — мойка; у сиденья — шкафчик + холодильник); торец к душу — вогнутый по дуге шторки —
-        def ccyl(r, z0, h):                                          # полный цилиндр вокруг угла сектора
-            return Part.makeCylinder(r, h, V(xp0, ks * y_back_pan, z0))
+        def ccyl(d, z0, h):                                          # область внутри контура поддона, смещённого на d
+            return pshape(xp0, d, z0, h)
+        d_k = K.get("curtain_in", 50.0) - 0.5                        # торец кухни — по линии шторки
         kx1 = K["kitchen_end_x"]
         kx0 = xp0 if K.get("kitchen_concave") else max(K.get("kitchen_x0", 0.0), sx1 + 5.0)
         kl = kx1 - kx0
@@ -3100,8 +3136,8 @@ def build():
         y_kf = yw(500.0) - K["kitchen_depth"]                        # фронт короба
         y_ctf = y_kf - 20.0                                          # передняя кромка столешницы (свес 20)
         ph, pr = K["plinth"]
-        cut_hi = ccyl(r_k, -10.0, 3000.0) if K.get("kitchen_concave") else None     # всё ближе дуги шторки — душ
-        cut_lo = ccyl(R_ + 3.0, -10.0, 3000.0) if K.get("kitchen_concave") else None  # цоколь — снаружи бортика
+        cut_hi = ccyl(d_k, -10.0, 3000.0) if K.get("kitchen_concave") else None     # всё внутри шторки — душ
+        cut_lo = ccyl(-3.0, -10.0, 3000.0) if K.get("kitchen_concave") else None    # цоколь — снаружи бортика
 
         def kcut(sh, c=None):
             c = cut_hi if c is None else c
@@ -3117,7 +3153,7 @@ def build():
         y_s0 = y_ctf + m_front
         y_s1 = y_s0 + sky
         if K.get("kitchen_concave"):
-            sk_x0 = xp0 + math.sqrt((r_k + m_arc) ** 2 - (y_back_pan - y_s1) ** 2)   # угол мойки у стены — ближе всего к дуге
+            sk_x0 = xline(d_k - m_arc, y_s1)                         # угол мойки у стены — ближе всего к контуру
         else:
             sk_x0 = kx0 + 60.0
         sink_fit = x_div0 - (sk_x0 + skx)
@@ -3125,7 +3161,7 @@ def build():
         carc = kcut(env_solid(kx0, kl, y_kf, floor_top + ph, z_cb))
         cav1 = kcut(Part.makeBox(x_div0 - kx0, (y_kb - pt_) - (y_kf - 1.0), z_cb - z_b, V(kx0, ks * (y_kf - 1.0) -
                     (0 if ks > 0 else (y_kb - pt_) - (y_kf - 1.0)), z_b)),
-                    ccyl(r_k + pt_, -10.0, 3000.0) if K.get("kitchen_concave") else None)
+                    ccyl(d_k - pt_, -10.0, 3000.0) if K.get("kitchen_concave") else None)
         z_f0 = z_b + 15.0                                            # ларь на салазках над дном короба
         z_sh = z_f0 + fz + 40.0                                      # полка над ларём (низ)
         cav_f = Part.makeBox(kx1 - pt_ - x_div1, fy + 40.0, z_sh - z_b, V(x_div1, y_kf - 1.0, z_b))
@@ -3142,7 +3178,7 @@ def build():
             "шторка прилегает" % K["counter_h"], top, COL_TOP)
         sk_o = V(sk_x0, y_s0, z_ct - skz)
         sink = Part.makeBox(skx, sky, skz, sk_o).cut(Part.makeBox(skx - 4, sky - 4, skz, V(sk_o.x + 2, sk_o.y + 2, sk_o.z + 2)))
-        put("Kitchen_Sink", "Барная мойка 12×12″ из нержавейки (секция у душа)", sink, COL_STEEL)
+        put("Kitchen_Sink", "Барная мойка 10×10″ из нержавейки (секция у душа)", sink, COL_STEEL)
         fct = V(sk_o.x + skx / 2.0, y_s1 + 30.0, z_ct)
         faucet = Part.makeCylinder(12.0, 260.0, fct).fuse(
             Part.makeCylinder(10.0, 170.0, V(fct.x, fct.y, fct.z + 250.0), V(0, -1, 0)))
@@ -3158,7 +3194,7 @@ def build():
             Part.makeBox(fx, fy, fz, V(fridge_x0, y_kf + 8.0, z_f0)), COL_FRIDGE)
         put("Kitchen_FridgeSlide", "Салазки холодильника (полного выдвижения, под ~45 кг)",
             Part.makeBox(fx, fy, 15.0, V(fridge_x0, y_kf + 8.0, z_f0 - 15.0)), COL_STEEL)
-        x_af = xp0 + math.sqrt(max(r_k ** 2 - (y_back_pan - y_kf) ** 2, 0.0)) if K.get("kitchen_concave") else kx0
+        x_af = xline(d_k, y_kf) if K.get("kitchen_concave") else kx0
         put("Kitchen_DoorSink", "Дверца под мойкой (чашки, чай, фильтр, сифон)",
             kcut(Part.makeBox(x_div0 + dvt / 2.0 - 2.0 - (x_af + 3.0), 12.0, z_cb - z_b - 6.0,
                               V(x_af + 3.0, y_kf - 12.0, z_b + 3.0))), (0.86, 0.70, 0.48))
@@ -3358,13 +3394,13 @@ def build():
         aisle_sh = y_sf + y_at_z(half, 900.0)                       # от шторки до противоположной стены
         aisle_k = (y_kf - 20.0) + y_at_z(half, 900.0)
         # вход в душ: от задней стенки (по линии шторки) до угла столешницы
-        x_ent = xp0 + math.sqrt(max(r_k ** 2 - (y_back_pan - y_ctf) ** 2, 0.0))
+        x_ent = xline(d_k, y_ctf)
         entry = math.hypot(x_ent - (x_rw + pt_), y_ctf - y_c)
         galley_summary = dict(
             gas=gas, propane=prop_summary, entry=entry, flap=flap_summary, x_div=(x_div0, x_div1), sink_x=(sk_x0, sk_x0 + skx),
             sec1_front=(x_af, x_div0), sec2=(x_div1, kx1), fridge_title=K.get("fridge_title"), r_c=r_c,
             shower_x=(sx0, sx1), shower_in=(six, siy), y_sf=y_sf, z_pan=z_pan, z_ceil=z_ceil, pan_x0=xp0,
-            pan_behind=xp0 - x_rw, rear_wall_z=z_rw0, y_pan_back=y_back_pan, pan_r=R_,
+            pan_behind=xp0 - x_rw, rear_wall_z=z_rw0, y_pan_back=y_back_pan, pan_r=R_, pan_corner_r=Rc,
             headroom=(z_ceil - 12.0) - z_pan, kitchen_x=(kx0, kx1), kl=kl, y_kf=y_kf, counter=K["counter_h"],
             seat_gap=3190.0 - kx1, aisle_sh=aisle_sh, aisle_k=aisle_k, checks=checks,
             floor_top=floor_top, wall_y=y_at_z(half, 900.0), arch_ywall=arch_ywall,
@@ -3959,16 +3995,17 @@ def build():
         k = galley_summary
         f0 = k["floor_top"]
         print("[Душ + мини-кухня — водительский борт, кровать ↔ кабина]")
-        print("  Душ: задняя стенка X %.0f (край щита), сверху от %.0f мм (%.1f″) до потолка; поддон-сектор R%.0f: X %.0f..%.0f — "
+        print("  Душ: задняя стенка X %.0f (край щита), сверху от %.0f мм (%.1f″) до потолка; поддон %.0f″ (угол R22″): X %.0f..%.0f — "
               "задний край в %.0f мм (%.1f″) впереди края щита (упёрся в арку); край поддона к проходу в %.0f мм (%.1f″) "
-              "от стены" % (k["shower_x"][0], k["rear_wall_z"] - f0, (k["rear_wall_z"] - f0) / 25.4, k["pan_r"],
+              "от стены" % (k["shower_x"][0], k["rear_wall_z"] - f0, (k["rear_wall_z"] - f0) / 25.4, k["pan_r"] / 25.4,
                             k["pan_x0"], k["shower_x"][1], k["pan_behind"], k["pan_behind"] / 25.4,
                             k["wall_y"] - k["y_sf"], (k["wall_y"] - k["y_sf"]) / 25.4))
         print("  В душе: верх поддона %.0f над полом, низ потолка %.0f → от поддона до потолка %.0f мм (%.1f″)" % (
             k["z_pan"] - f0, k["z_ceil"] - 12.0 - f0, k["headroom"], k["headroom"] / 25.4))
-        print("  Кухня до X %.0f, торец к душу вогнутый по шторке R%.0f; у прохода от X %.0f (%.1f″ длины), у стены от X %.0f; "
+        print("  Кухня до X %.0f, торец к душу — по шторке (прямо у стены, дальше дуга R%.0f); у прохода от X %.0f (%.1f″ длины), у стены от X %.0f; "
               "глубина до %.0f мм от стены, столешница %.0f (36″); до спинок сидений %.0f мм" % (
-            k["kitchen_x"][1], k["r_c"], k["sec1_front"][0], (k["kitchen_x"][1] - k["sec1_front"][0]) / 25.4,
+            k["kitchen_x"][1], k["pan_corner_r"] - SHOWER_KITCHEN.get("curtain_in", 50.0), k["sec1_front"][0],
+            (k["kitchen_x"][1] - k["sec1_front"][0]) / 25.4,
             k["pan_x0"] + k["r_c"], k["wall_y"] - k["y_kf"] + 20, k["counter"], k["seat_gap"]))
         print("  Секция 1 (мойка): по фасаду X %.0f..%.0f (%.1f″), мойка X %.0f..%.0f;  секция 2 (шкафчик + %s): X %.0f..%.0f "
               "(%.1f″);  перегородка 1/2″ X %.0f" % (

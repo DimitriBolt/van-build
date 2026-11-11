@@ -1,4 +1,4 @@
-"""Чертёж: душ (поддон-сектор 32″, задняя стенка — только сверху, на ней газовый нагреватель) + кухня в 2 секции
+"""Чертёж: душ (поддон Swiss Madison 32×32″ с углом R22″, задняя стенка — только сверху, на ней газовый нагреватель) + кухня в 2 секции
 (мойка | шкафчик + холодильник, торец к душу вогнутый по шторке) + локер пропана под кроватью.
 Дюймы. Вид на борт и план: x — вдоль борта, 0 = передний край настила кровати, + к кабине;
 план: y — от стены в салон; разрезы: y — от стены, z — от чистового пола. Данные — из модели."""
@@ -71,8 +71,33 @@ C_GAS, C_LOCK, C_ALARM = "#f9a825", "#f3d98b", "#e53935"
 SEAT = mx(3190.0)
 sx0, sx1 = bx("Shower_WallRear")[0], bx("Shower_Pan")[1]
 PB = bx("Shower_Pan")
-XP0, YPB, RP = PB[0], PB[3], PB[1] - PB[0]                   # угол сектора (у задней стенки и борта), радиус
-RC = RP - K.get("curtain_in", 50.0)                          # шторка = вогнутый торец кухни
+XP0, YPB, RP = PB[0], PB[3], PB[1] - PB[0]                   # угол поддона (у задней стенки и борта), сторона 32″
+AP_ = d.get("ANCHORS", {}).get("shower_pan", {})
+RCOR = AP_.get("corner_r", RP)                               # передний угол R22″ (Swiss Madison)
+CURB = AP_.get("curb_t", 64.0)
+CIN = K.get("curtain_in", 50.0)
+RC = RP - CIN                                                # шторка = вогнутый торец кухни (по прямой у стены)
+
+
+def outline(dd, n=48):
+    """Контур поддона, смещённый внутрь на dd по передней стороне и к проходу: от стены у передней стороны — до задней
+    стороны у прохода (модельные мм)."""
+    L, rc = RP - dd, RCOR - dd
+    cx, cy = XP0 + RP - RCOR, YPB - (RP - RCOR)
+    pts = [(XP0 + L, YPB)]
+    for i in range(n + 1):
+        t = math.pi / 2 * i / n
+        pts.append((cx + rc * math.cos(t), cy - rc * math.sin(t)))
+    pts.append((XP0, YPB - L))
+    return pts
+
+
+def xline(dd, y):
+    cx, cy, rc = XP0 + RP - RCOR, YPB - (RP - RCOR), RCOR - dd
+    if y >= cy:
+        return XP0 + RP - dd
+    q = rc ** 2 - (cy - y) ** 2
+    return cx + math.sqrt(q) if q > 0 else XP0
 TOILET = has("Toilet_Camco")
 GAS = has("Shower_GasHeater")
 PROP = has("Propane_Locker")
@@ -166,7 +191,7 @@ if GAS:
     fb = bx("Shower_Flue")
     ax.text(mx(fb[1]) + 0.4, mz(bx("Shower_FlueCap")[4]) - 0.3, "дымоход ⌀3″ — вертикально через крышу", fontsize=7.5,
             color="#546e7a")
-ax.text(mx((XP0 + sx1) / 2) + 2, mz(1100), "ДУШ\nподдон-сектор 32″\n(шторка снята)", ha="center", fontsize=11,
+ax.text(mx((XP0 + sx1) / 2) + 2, mz(1100), "ДУШ\nподдон 32×32″, R22″\n(шторка снята)", ha="center", fontsize=11,
         weight="bold", color="#37474f")
 ax.text(mx(bx("Shower_Head")[1]) + 0.3, mz(bx("Shower_Head")[5]), "лейка", fontsize=8)
 ax.text(mx(bx("Shower_ExhaustFan")[1]) + 0.3, mz(bx("Shower_ExhaustFan")[4]) - 1.2, "вытяжка 12V", fontsize=8)
@@ -197,7 +222,7 @@ r_xz(ax, "Kitchen_Outlet", fc="#ffffff", ec="#424242")
 r_xz(ax, "Kitchen_UpperCabinet", fc=C_CAB, ec="#8d6e63")
 ax.text(mx((bx("Kitchen_UpperCabinet")[0] + kx1) / 2), mz(bx("Kitchen_UpperCabinet")[4]) + 5, "верхний шкафчик",
         ha="center", fontsize=9)
-ax.text(mx((sk[0] + sk[1]) / 2), mz(sk[4]) - 1.3, "мойка 12×12″", ha="center", fontsize=7.5)
+ax.text(mx((sk[0] + sk[1]) / 2), mz(sk[4]) - 1.3, "мойка %.0f×%.0f″" % ((sk[1] - sk[0]) / IN, (sk[3] - sk[2]) / IN), ha="center", fontsize=7.5)
 ax.text(mx((bx("Kitchen_Kettle")[0] + bx("Kitchen_Kettle")[1]) / 2), mz(bx("Kitchen_Kettle")[5]) + 0.5, "чайник",
         ha="center", fontsize=8)
 # сдвижная дверь напротив
@@ -234,23 +259,26 @@ ax.text(SEAT + 2, yop / 2, "сиденья", rotation=90, ha="center", va="cente
 r_xy(ax, "BedDeck", fc="#d7ccc8", ec="#8d6e63", alpha=0.35)
 ax.text(-12, yop - 6, "кровать (щит над всем этим)", ha="center", fontsize=9)
 r_xy(ax, "BedPost_pY_front", fc="#607d8b")
-arc = lambda r, n=60: [(mx(XP0 + r * math.cos(t)), my(YPB - r * math.sin(t))) for t in [math.pi / 2 * i / n for i in range(n + 1)]]
-ax.add_patch(Polygon([(mx(XP0), my(YPB))] + arc(RP), fc=C_PAN, ec="#455a64", lw=1.2, zorder=2))
-ax.add_patch(Polygon([(mx(XP0), my(YPB))] + arc(RP - 64.0), fill=False, ec="#90a4ae", lw=0.8, ls=":", zorder=2))
+arc = lambda dd: [(mx(x_), my(y_)) for x_, y_ in outline(dd)]
+ax.add_patch(Polygon([(mx(XP0), my(YPB))] + arc(0.0), fc=C_PAN, ec="#455a64", lw=1.2, zorder=2))
+ax.add_patch(Polygon([(mx(XP0), my(YPB))] + arc(CURB), fill=False, ec="#90a4ae", lw=0.8, ls=":", zorder=2))
+for n_ in sorted(B):
+    if n_.startswith(("Toilet_Platform", "Toilet_Plate")):
+        r_xy(ax, n_, fc="#e0c9a6" if n_ == "Toilet_Platform" else "#bcaaa4", ec="#8d6e63", alpha=0.6, zorder=2)
 dr = bx("Shower_Drain")
 ax.add_patch(Circle((mx((dr[0] + dr[1]) / 2), my((dr[2] + dr[3]) / 2)), (dr[1] - dr[0]) / 2 / IN, fc="#90a4ae",
                     ec="#455a64", zorder=3))
 r_xy(ax, "Shower_WallRear", fc="#b0bec5", zorder=3)
 r_xy(ax, "Shower_DripLedge", fc="#eceff1", ec="#78909c", hatch="//", zorder=3)
-ac = arc(RC)
-ax.plot([mx(bx("Shower_WallRear")[1])] + [p[0] for p in ac], [ac[0][1]] + [p[1] for p in ac], color="#0288d1", lw=2.0,
+ac = arc(CIN)
+ax.plot([p[0] for p in ac] + [mx(bx("Shower_WallRear")[1])], [p[1] for p in ac] + [ac[-1][1]], color="#0288d1", lw=2.0,
         zorder=6)
 r_xy(ax, "Shower_CurtainLower", fc="#4fc3f7", zorder=4)
-ax.text(mx(XP0 + RP * 0.45), my(YPB - RP * 0.52), "ДУШ\nсектор 32″", ha="center", fontsize=10, weight="bold",
+ax.text(mx(XP0 + RP * 0.45), my(YPB - RP * 0.52), "ДУШ\n32×32″, R22″", ha="center", fontsize=10, weight="bold",
         color="#37474f", zorder=5)
 ax.text(mx(XP0 + RC * 0.30) - 2.5, my(YPB - RC * 0.95) + 2.2, "вход\n%.1f″" % (
-    math.hypot(mx(XP0 + math.sqrt(max((RC + 0.5) ** 2 - (YPB - bx("Kitchen_Countertop")[2]) ** 2, 0.0))) -
-               mx(bx("Shower_WallRear")[1]), my(YPB - RC) - my(bx("Kitchen_Countertop")[2]))),
+    math.hypot(mx(xline(CIN - 0.5, bx("Kitchen_Countertop")[2])) - mx(bx("Shower_WallRear")[1]),
+               my(YPB - RC) - my(bx("Kitchen_Countertop")[2]))),
         fontsize=8.5, color="#0277bd", zorder=6, ha="center")
 if TOILET:
     r_xy(ax, "Toilet_Camco", fc="#bdbdbd", ec="#424242", zorder=3)
@@ -390,7 +418,7 @@ ax.text(hx + 5.0, zp + H - 12, "рост %.0f″\n(%.0f см)\nстоит пря
 vdim(ax, 33.5, mz(z_pan), mz(z_ceil), "%.1f″" % ((z_ceil - z_pan) / IN), side=1)
 hdim(ax, mz(z_pan) + 2.2, ys_(bx("Shower_Pan")[3]), ys_(bx("Shower_Pan")[2]), "поддон 32″ (по задней стенке)", fs=8)
 ax.text(1.5, mz(crown) - 6, "борт заваливается\nк крыше", fontsize=7.5, color="#616161")
-finish(ax, "Разрез по душу через слив (взгляд к кабине, стена слева); поддон утоплен в пол")
+finish(ax, "Разрез по душу через слив (взгляд к кабине, стена слева); поддон — на фанерном полу")
 
 
 def kitchen_sec(ax, secd, title, fridge_out=False):
@@ -462,8 +490,8 @@ finish(ax, "Под кроватью по локеру пропана (взгля
 ax.set_ylim(-5, 84)
 ax.set_xlim(-2, 50)
 
-fig.suptitle("Душ (поддон-сектор 32″) с газовым нагревателем + кухня в 2 секции (вогнутый торец по шторке) + "
-             "пропан под кроватью — 2026-11-07 (из модели)\n"
+fig.suptitle("Душ (поддон Swiss Madison 32×32″, угол R22″) с газовым нагревателем + кухня в 2 секции (вогнутый торец по шторке) + "
+             "пропан под кроватью — 2026-11-11 (из модели)\n"
              "⚠️ Camplux по инструкции — только для улицы: дымоход через крышу, датчики CO и пропана, приток воздуха; "
              "локер — герметичный, вент через пол наружу",
              fontsize=13)

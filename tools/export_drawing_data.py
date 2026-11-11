@@ -37,7 +37,7 @@ try:
     doc = App.ActiveDocument
     res["summary"] = buf.getvalue()[buf.getvalue().find("[Кровать"):] if "[Кровать" in buf.getvalue() else ""
     for k in ("WHEEL_ARCH", "DPILLAR", "BED", "BATTERY_RACK", "ELECTRICAL", "WATER_TANK", "TANK_RACK", "TANK_FLOOR",
-              "WATER_VARIANT", "SHOWER_KITCHEN",
+              "WATER_VARIANT", "SHOWER_KITCHEN", "ANCHORS",
               "FLOOR", "PARAMS"):
         res[k] = json.loads(json.dumps(g[k], default=lambda o: list(o) if isinstance(o, tuple) else str(o)))
     boxes = {}
