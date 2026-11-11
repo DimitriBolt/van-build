@@ -861,6 +861,23 @@ _LABEL_SEPS = (" — ", ": ", " (", ", ", "; ")
 _INTENDED = {}           # имя объекта → полная подпись (до автопереименования FreeCAD дублей «…001»)
 
 
+# ─── Где купить (2026-11-11, Dimitri): у каждой детали — свойство BuyURL (группа «Покупка»), App::PropertyString ───
+# Ключ — obj.Name, значение — ссылка на магазин. Пустое поле = ссылки пока нет (добавлять сюда).
+BUY_URLS = {
+    "Toilet_Camco": "https://a.co/d/0fEaEKEz",        # туалет SEAFLO 2.6 gal (Amazon B07ZPC4C9N)
+}
+
+
+def apply_buy_urls(doc):
+    """Всем деталям — свойство BuyURL; заполняется из BUY_URLS."""
+    for o in doc.Objects:
+        if not o.isDerivedFrom("Part::Feature"):
+            continue
+        if "BuyURL" not in o.PropertiesList:
+            o.addProperty("App::PropertyString", "BuyURL", "Покупка", "Где купить (ссылка на магазин)")
+        o.BuyURL = BUY_URLS.get(o.Name, "")
+
+
 def short_labels(doc, max_len=45):
     used = {}
     for o in doc.Objects:
@@ -3762,6 +3779,7 @@ def build():
     apply_strut_profiles(doc)
     doc.recompute()
     short_labels(doc)
+    apply_buy_urls(doc)
     hide_default(doc)
     try:                                                      # начальный вид — «приятный угол» Dimitri
         import FreeCADGui as Gui
