@@ -451,6 +451,7 @@ TANK_FLOOR_T4320 = {
 #   "T4100_floor" — T-4100 на полу рядом с аркой, на поддоне (TANK_FLOOR_T4100), 2026-11-07
 #   "T3500_shelf" — T-3500 на полке над аркой (TANK_RACK), 2026-11-07 — коммит 50ece98
 #   "TORVA"       — TORVA 33 gal wheel-well на подставке (WATER_TANK), 2026-11-06 — коммит a2906da
+#   "none"        — бака нет (и багажника на нём: ящики/полка/хребет не строятся) — вариант van_v1_rect_pan, 2026-11-12
 WATER_VARIANT = os.environ.get("VAN_WATER_VARIANT") or "T4320_floor"   # env — для tools/save_variant.py
 TANK_FLOOR = TANK_FLOOR_T4320 if WATER_VARIANT == "T4320_floor" else TANK_FLOOR_T4100
 TANK_FLOOR["enable"] = WATER_VARIANT in ("T4100_floor", "T4320_floor")

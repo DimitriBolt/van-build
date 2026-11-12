@@ -66,6 +66,7 @@ _LABEL_SEPS = (" — ", ": ", " (", ", ", "; ")
 BUY_URLS = {
     "Toilet_Camco": "https://a.co/d/0fEaEKEz",        # туалет SEAFLO 2.6 gal (Amazon B07ZPC4C9N)
     r"Toilet_Wheel_\w+": "https://a.co/d/02nt85Aa",   # колёсики 1″ неповоротные, высота 1.15″ (Amazon B0CHFSQHRP)
+    "Shower_PanRect": "https://a.co/d/09SdfkLC",      # поддон RecPro RP-SP-3624 36×24×5″, Right Drain (Amazon B089DJX71P)
 }
 
 
@@ -132,6 +133,8 @@ EN_LABELS = [
     (r"Shower_FlueCap", "Flue roof cap"), (r"Shower_FlueThimble", "Flue ceiling thimble"),
     (r"Shower_Ceiling", "Shower ceiling"), (r"Shower_Curtain", "Shower curtain"), (r"Shower_CurtainRod", "Curtain rod"),
     (r"Shower_Head", "Shower head"), (r"Shower_ExhaustFan", "Exhaust fan 12V"),
+    (r"Shower_PanRect", "Shower pan RecPro 36x24x5″"), (r"Shower_PanCutSeal", "Pan cut seal (dam)"),
+    (r"Shower_CurtainFront", "Shower curtain (front)"), (r"Kitchen_WallPanel", "Kitchen wall panel"),
     (r"Toilet_Plate", "Toilet floor plate"), (r"Toilet_Platform", "Toilet platform"),
     (r"Toilet_Wheel_F(\w)", "Front wheel {1}"), (r"Toilet_Wheel_R(\w)", "Rear wheel {1}"),
     (r"Toilet_PlatformDam", "Platform dam"), (r"Toilet_Camco", "Toilet SEAFLO 2.6 gal"),

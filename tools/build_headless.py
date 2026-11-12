@@ -21,7 +21,7 @@ def _repo_dir():
     return os.path.expanduser("~/van-build")
 
 
-SCRIPT = os.path.join(_repo_dir(), "van_v0.py")
+SCRIPT = os.path.join(_repo_dir(), os.environ.get("VAN_ENTRY") or "van_v0.py")   # VAN_ENTRY=van_v1_rect_pan.py — вариант
 rc = 0
 try:
     g = {"__file__": SCRIPT, "__name__": "__main__"}

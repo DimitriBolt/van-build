@@ -5,7 +5,7 @@ import os
 
 import FreeCAD as App
 
-DOC_NAME    = "van_v0"
+DOC_NAME    = os.environ.get("VAN_DOC_NAME") or "van_v0"   # env — для вариантов (van_v1_rect_pan.py)
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # корень репозитория (на M6800 = ~/van-build)
 SAVE_PATH   = os.path.join(PROJECT_DIR, "van_v0.FCStd")   # рядом с van_v0.py
 if os.environ.get("VAN_SAVE_PATH"):                         # отдельный файл варианта (tools/save_variant.py)

@@ -6,7 +6,7 @@
 """
 import sys
 
-from . import body, bed, battery_bank, water_tank, shower_kitchen, trunk, wall_cabinets, finish, summary, motion
+from . import body, bed, battery_bank, water_tank, shower_kitchen, shower_rect, trunk, wall_cabinets, finish, summary, motion
 from .state import State
 
 # (функция раздела, название — для сообщения об ошибке)
@@ -35,14 +35,26 @@ STAGES = [
     (motion.report,                 "Анимации → проверки модели"),
 ]
 
+# Вариант van_v1_rect_pan (2026-11-12): прямоугольный поддон RecPro 36×24×5″ вместо сектора 32″. Тот же порядок разделов,
+# но «Душ + кухня» — shower_rect.shower_kitchen и после общей сводки — сводка по душу/туалету/кухне.
+# Бака воды, локера/баллона и багажника в нём нет: точка входа van_v1_rect_pan.py ставит WATER_VARIANT=none.
+STAGES_RECT_PAN = []
+for _f, _t in STAGES:
+    if _f is shower_kitchen.shower_kitchen:
+        STAGES_RECT_PAN.append((shower_rect.shower_kitchen, "Душ (прямоугольный поддон RecPro) + туалет + кухня 24″"))
+    else:
+        STAGES_RECT_PAN.append((_f, _t))
+    if _f is summary.print_summary:
+        STAGES_RECT_PAN.append((shower_rect.report, "Сводка: поддон RecPro, туалет, кухня"))
+
 LAST = None          # контекст последней сборки — посмотреть в консоли FreeCAD: vanmodel.build.LAST.<имя>
 
 
-def build():
-    """Собрать модель целиком; возвращает документ FreeCAD (сохранён в SAVE_PATH)."""
+def build(stages=None):
+    """Собрать модель целиком (stages — список разделов; по умолчанию STAGES); возвращает документ FreeCAD (сохранён в SAVE_PATH)."""
     global LAST
     S = LAST = State()
-    for stage, title in STAGES:
+    for stage, title in (STAGES if stages is None else stages):
         try:
             stage(S)
         except Exception as e:
