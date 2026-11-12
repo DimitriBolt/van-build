@@ -20,6 +20,8 @@ SCAN_ALIGN = (-SCAN_REAR_X, -SCAN_CENTER_Y, -SCAN_FLOOR_Z)   # (+460, −2380, �
 
 # Цвета
 COL_SKIN   = (0.80, 0.83, 0.86)   # обшивка-скан — светло-серая
+if os.environ.get("VAN_SKIN") == "bahama":   # цвет кузова: GMC Jimmy WA9656 Bahama Blue Metallic (вариант van_v1_rect_pan)
+    COL_SKIN = (0.20, 0.40, 0.60)
 COL_RIB    = (0.90, 0.10, 0.06)   # рёбра-обручи — красные
 COL_RAIL   = (0.05, 0.38, 0.95)   # продольные рейки — синие
 COL_FLOOR  = (0.34, 0.36, 0.38)   # рефлёный металлический пол

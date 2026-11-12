@@ -27,6 +27,7 @@ if _REPO_DIR not in sys.path:
 
 # Вариант: без бака (и багажника на нём), свой документ и свой файл — задаём ДО импорта vanmodel.
 os.environ["VAN_WATER_VARIANT"] = "none"
+os.environ.setdefault("VAN_SKIN", "bahama")        # обшивка — Bahama Blue Metallic
 os.environ.setdefault("VAN_DOC_NAME", "van_v1_rect_pan")
 os.environ.setdefault("VAN_SAVE_PATH", os.path.join(_REPO_DIR, "van_v1_rect_pan.FCStd"))
 

@@ -90,7 +90,9 @@ def shower_kitchen(S):
     B, P, W, WA, arch_shapes, arch_ywall, doc = S.B, S.P, S.W, S.WA, S.arch_shapes, S.arch_ywall, S.doc
     dx0, dx1, floor_top, half, post_out_s, sw = S.dx0, S.dx1, S.floor_top, S.half, S.post_out_s, S.sw
     ybase, z_rail_top = S.ybase, S.z_rail_top
-    K, R, AR, AT = SHOWER_KITCHEN_RECT, RECT_PAN, ANCHORS["rect_pan"], ANCHORS["toilet"]
+    K, R, AR = SHOWER_KITCHEN_RECT, dict(RECT_PAN), ANCHORS["rect_pan"]
+    AT = dict(ANCHORS["toilet"], **AR.get("toilet_wheels", {}))          # колёсики — как в ANCHORS["rect_pan"]
+    R["wall_clear"] = AR.get("wall_clear", R["wall_clear"])
     rect_summary = None
     galley_summary = None
     if not (B.get("enable") and K.get("enable")):
@@ -248,13 +250,14 @@ def shower_kitchen(S):
     mpx, mpy = AT.get("mount_plate", (40.0, ww + 10.0))
     wx = max(wr, mpx / 2.0)
     nF = int(AT.get("front_n", 2))
-    yF_a = pfy0 + AT["wheel_inset"] + ww / 2.0
-    yW = pfy1 - AT["wheel_inset"] - ww / 2.0
+    hw_ = max(ww, mpy) / 2.0                              # половина ширины колеса/площадки крепления
+    yF_a = pfy0 + AT["wheel_inset"] + hw_
+    yW = pfy1 - AT["wheel_inset"] - hw_
     ysF = [yF_a + (yW - yF_a) * i_ / (nF - 1) for i_ in range(nF)] if nF > 1 else [yW]
     tagsF = ["A"] + [str(i_) for i_ in range(2, nF)] + ["W"] if nF > 1 else ["W"]
     seal_t = R["seal_t"] if cut_a else 0.0
     # передние колёса в транспорте — у бортика/плотины: ближе всего к борту колесо упирается в линию среза
-    v_wheel_min = y_wall - (yW + ww / 2.0)
+    v_wheel_min = y_wall - (yW + hw_)
     f0 = x0 + max(t_end, uc(v_wheel_min) + seal_t + 4.0) + wx
     xt0 = dx1 - tlx                                                        # туалет в транспорте: передом до края щита
     v_toilet_min = y_wall - ty1
@@ -279,7 +282,7 @@ def shower_kitchen(S):
           "всегда в поддоне (за краем щита, внутри душа — согласованное исключение)" % (
               AT["platform_th"] / 25.4, (pfx1 - pfx0) / 25.4, (pfy1 - pfy0) / 25.4, wd / 25.4, nF), pf_box, (0.80, 0.66, 0.46))
     wheels = [("F", f0, t_, y_) for t_, y_ in zip(tagsF, ysF)] + [
-        ("R", xw_r0, "A", pfy0 + AT["wheel_inset"] + ww / 2.0), ("R", xw_r0, "W", yW)]
+        ("R", xw_r0, "A", yF_a), ("R", xw_r0, "W", yW)]
     for tag_, xc_, side_, yc_ in wheels:
         yy = ks * yc_
         wheel = Part.makeCylinder(wr, ww, V(xc_, yy - ww / 2.0, z_pl + wr), V(0, 1, 0)).fuse(
@@ -359,8 +362,8 @@ def shower_kitchen(S):
     put("Shower_CurtainLower", "Нижняя шторка с козырька до поддона — закрывает проём; ложится на платформу туалета перед "
         "порожком; сдвигается, когда туалет выезжает в душ", cur_lo, (0.55, 0.75, 0.85), 55)
     pw_t = K["wall_panel_t"]
-    back = env_solid(x_rw + pt_, x1 - (x_rw + pt_), y_sf, floor_top, z_ceil).cut(
-        env_solid(x_rw + pt_ - 1, x1 - x_rw + 2, y_sf - 5, floor_top - 1, z_ceil + 1, g_extra=pw_t)).cut(arch_s)
+    back = env_solid(x_rw + pt_, x1 - (x_rw + pt_), y_sf, z_pan, z_ceil).cut(
+        env_solid(x_rw + pt_ - 1, x1 - x_rw + 2, y_sf - 5, z_pan - 1, z_ceil + 1, g_extra=pw_t)).cut(arch_s)
     put("Shower_WallBack", "Стенка душа по борту (фанера 1/2″ + FRP) от задней стенки до торца кухни; у арки вырезана по её форме",
         back, COL_WALL, 10)
     GH = K.get("gas_heater")
@@ -441,8 +444,8 @@ def shower_kitchen(S):
     y_s1 = y_s0 + sky
     sink_fit = sec1_in - skx
     z_b = floor_top + ph_k + pt_
-    carc = env_solid(kx0, kl, y_kf, floor_top + ph_k, z_cb, g_extra=pw_t)
-    y_back_in = lambda z: yw(z) - pw_t                     # передняя грань стенной панели (кухня стоит перед ней)
+    carc = env_solid(kx0, kl, y_kf, floor_top + ph_k, z_cb)
+    y_back_in = lambda z: yw(z) - (0.0 if z < z_ct else pw_t)                     # передняя грань стенной панели (кухня стоит перед ней)
     y_kb = y_back_in(z_cb)
     cav1 = Part.makeBox(x_div0 - (kx0 + pt_), (y_kb - pt_) - (y_kf - 1.0), z_cb - z_b, V(kx0 + pt_, y_kf - 1.0, z_b))
     z_f0 = z_b + 15.0                                      # ларь на салазках над дном короба
@@ -453,11 +456,11 @@ def shower_kitchen(S):
     put("Kitchen_Carcass", "Короб кухни (фанера 3/4″) шириной 24″ вместе с дверцами (= поддон), 2 секции: мойка | шкафчик + "
         "холодильник; торец к душу — прямой, по краю поддона", carc, COL_CAB)
     put("Kitchen_WallPanel", "Стенная панель 1/2″ за кухней (продолжение панели душа): поддон и кухня стоят перед ней",
-        env_solid(kx0, kl, y_sf, floor_top, z_ceil).cut(env_solid(kx0 - 1, kl + 2, y_sf - 5, floor_top - 1, z_ceil + 1, g_extra=pw_t)),
+        env_solid(kx0, kl, y_sf, z_ct, z_ceil).cut(env_solid(kx0 - 1, kl + 2, y_sf - 5, z_ct - 1, z_ceil + 1, g_extra=pw_t)),
         COL_WALL, 10)
     put("Kitchen_Plinth", "Цоколь кухни", Part.makeBox(kl, (y_kb - y_kf) - pr_k, ph_k, V(kx0, y_kf + pr_k, floor_top)),
         (0.35, 0.30, 0.25))
-    top = env_solid(kx0, kl, y_ctf, z_cb, z_ct, g_extra=pw_t).cut(Part.makeBox(skx, sky, K["counter_th"] + 2, V(sk_x0, y_s0, z_cb - 1)))
+    top = env_solid(kx0, kl, y_ctf, z_cb, z_ct).cut(Part.makeBox(skx, sky, K["counter_th"] + 2, V(sk_x0, y_s0, z_cb - 1)))
     put("Kitchen_Countertop", "Столешница 1″ (мебельный щит), верх %.0f над полом (36″); передняя кромка — вровень с краем поддона"
         % K["counter_h"], top, COL_TOP)
     sk_o = V(sk_x0, y_s0, z_ct - skz)
@@ -602,7 +605,7 @@ def report(S):
               t["pf_x"][1], t["pf_y"][0], t["pf_y"][1]))
     print("  Туалет в душе: X %.0f..%.0f; ход %s, колёсная база %s; плита %.1f″ X %.0f..%.0f; колёса ⌀%.0f″ (%d спереди, 2 сзади), "
           "брусок-проставка %.0f мм" % (t["x1"][0], t["x1"][1], mm_in(t["travel"]), mm_in(t["WB"]), t["plate"][2] / 25.4, t["plate"][0],
-                                        t["plate"][1], ANCHORS["toilet"]["wheel_d"] / 25.4, t["n_front"], t["spacer"]))
+                                        t["plate"][1], dict(ANCHORS["toilet"], **ANCHORS["rect_pan"].get("toilet_wheels", {}))["wheel_d"] / 25.4, t["n_front"], t["spacer"]))
     print("  Кухня: X %.0f..%.0f (%.0f мм = %.1f″), глубина блока с дверцами и столешницей %s (= поддон), фронт |Y|=%.0f; секция "
           "мойки X %.0f..%.0f (внутри %.0f мм, мойка 10″: запас %.0f мм), секция холодильника X %.0f..%.0f; до спинок сидений %.0f мм" % (
               q["x"][0], q["x"][1], q["kl"], q["kl"] / 25.4, mm_in(q["depth"]), q["y_front"], q["sec1"][0], q["sec1"][1], q["sec1_in"],
