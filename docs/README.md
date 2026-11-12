@@ -15,7 +15,7 @@ FREECADCMD="$HOME/Applications/FreeCAD.AppImage --console" FREECAD="$HOME/Applic
 
 ## 2D-чертежи
 
-Варианты бака для воды — переключатель `WATER_VARIANT` в `van_v0.py`; чертёж и виды варианта обновляются,
+Варианты бака для воды — переключатель `WATER_VARIANT` в `vanmodel/params.py`; чертёж и виды варианта обновляются,
 только когда он включён (остальные — последняя версия). Все варианты целиком, с цветами — `van_v0_T4320.FCStd`, `van_v0_T4100.FCStd` и
 `van_v0_T3500.FCStd` в корне репозитория (открыть в FreeCAD все: File → Open — будут вкладки). Требования и результаты — `REQUIREMENTS.md`.
 

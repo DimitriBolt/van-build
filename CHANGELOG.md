@@ -4,6 +4,14 @@
 (внутренние имена `obj.Name`), смену их положения, новые последовательности анимации. Подробная история модели —
 в `git log`, решения по мебели — в `FURNITURE_MEMORY.md`.
 
+## 2026-11-11 (вечер) — Claude: код модели разделён на модули (`vanmodel/`)
+
+**Модель не менялась:** ни одного имени, подписи, размера. `van_v0.py` — теперь только точка входа (запуск прежний),
+код — в пакете `vanmodel/` по подсистемам (таблица — `README.md`, «Структура кода»). Для анимаций ничего не изменилось.
+Новые проверки: `tools/check_stages.py`, `tools/check_animation.py` (обе без FreeCAD), `tools/compare_builds.py`.
+Где что теперь лежит: `ANCHORS`, `KERF` — `vanmodel/anchors.py`; `WATER_VARIANT` и остальные параметры —
+`vanmodel/params.py`; `BUY_URLS`, `HIDE_ON_SAVE`, `VIEW_CAMERA`, `USER_NOTES` — `vanmodel/finish.py`.
+
 ## 2026-11-11 (ещё позже) — Claude: свойство BuyURL
 
 У всех деталей (`Part::Feature`) новое свойство `BuyURL` (группа «Покупка», строка). Имена и формы не менялись.
