@@ -61,3 +61,8 @@ FREECADCMD="$HOME/Applications/FreeCAD.AppImage --console" FREECAD="$HOME/Applic
 | `2026-11-07_water_tank_torva_drawing.png`, `2026-11-07_tank_torva_*.png` | бак TORVA 33 gal у водительской арки на подставке (заменён T-3500 2026-11-07; модель — git-коммит `a2906da`) |
 
 Скрипты архива — `tools/drawings/archive/`.
+
+## Анимации → модель
+
+`animation_report.md` — отчёт последней сборки: ходы деталей и порядок сборки из анимаций, проверенные на модели
+(пишет `vanmodel/motion.py` при каждой сборке; описание — `animation/README.md`).

@@ -6,7 +6,7 @@
 """
 import sys
 
-from . import body, bed, battery_bank, water_tank, shower_kitchen, trunk, wall_cabinets, finish, summary
+from . import body, bed, battery_bank, water_tank, shower_kitchen, trunk, wall_cabinets, finish, summary, motion
 from .state import State
 
 # (функция раздела, название — для сообщения об ошибке)
@@ -32,6 +32,7 @@ STAGES = [
     (body.openings,                 "Проёмы дверей"),
     (finish.finalize,               "Отделка и сохранение"),
     (summary.print_summary,         "Сводка"),
+    (motion.report,                 "Анимации → проверки модели"),
 ]
 
 LAST = None          # контекст последней сборки — посмотреть в консоли FreeCAD: vanmodel.build.LAST.<имя>

@@ -119,8 +119,9 @@ def export_ref(repo, ref, tmp):
     tree = os.path.join(tmp, "ref")
     os.makedirs(tree)
     names = ["van_v0.py"]
-    if subprocess.run(["git", "-C", repo, "cat-file", "-e", ref + ":vanmodel"], stderr=subprocess.DEVNULL).returncode == 0:
-        names.append("vanmodel")
+    for extra in ("vanmodel", "animation/sequences"):
+        if subprocess.run(["git", "-C", repo, "cat-file", "-e", ref + ":" + extra], stderr=subprocess.DEVNULL).returncode == 0:
+            names.append(extra)
     ar = subprocess.run(["git", "-C", repo, "archive", ref] + names, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if ar.returncode != 0:
         sys.exit("compare_builds: нет такого коммита или в нём нет van_v0.py: %s\n%s" % (

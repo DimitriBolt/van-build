@@ -106,8 +106,9 @@ for mod, func, title in stages:
                           "(добавить в S.put(...) того раздела, где оно создаётся)" % (where, nm))
     for nm in puts:
         provided[nm] = where
+last = "%s.%s()" % stages[-1][:2] if stages else None
 for nm, where in sorted(provided.items()):
-    if nm not in readers:
+    if nm not in readers and where != last:      # последний раздел кладёт результаты для консоли
         notes.append("«%s» (кладёт %s) никто дальше не читает" % (nm, where))
 
 print("vanmodel: модулей %d, разделов %d, имён в контексте сборки %d" % (len(modules), len(stages), len(provided)))
