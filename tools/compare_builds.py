@@ -94,7 +94,9 @@ def freecad_cmd():
 
 def build_snapshot(tree, label, tmp):
     out = os.path.join(tmp, label + ".json")
-    env = dict(os.environ, VAN_REPO=tree, VAN_SNAPSHOT_OUT=out, VAN_SAVE_PATH=os.path.join(tmp, label + ".FCStd"),
+    save_dir = os.path.join(tmp, "save_" + label)        # имя файла одинаковое: FreeCAD берёт из него подпись документа
+    os.makedirs(save_dir)
+    env = dict(os.environ, VAN_REPO=tree, VAN_SNAPSHOT_OUT=out, VAN_SAVE_PATH=os.path.join(save_dir, "van_v0.FCStd"),
                PYTHONIOENCODING="utf-8")
     print("  сборка: %s …" % label)
     sys.stdout.flush()
