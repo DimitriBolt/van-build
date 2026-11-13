@@ -12,7 +12,7 @@ import FreeCAD as App
 import Part
 
 from .common import COL_STRUT, add_shape
-from .params_rect import DRAWERS_RECT
+from .params_rect import DRAWERS_RECT, WATER_RECT
 
 V = App.Vector
 COL_PLY, COL_PLY2, COL_STEEL, COL_WHEEL = (0.80, 0.66, 0.42), (0.86, 0.74, 0.52), (0.80, 0.82, 0.86), (0.15, 0.15, 0.15)
@@ -151,12 +151,35 @@ def drawers(S):
     checks.append(("верхний ящик ↔ нижний ящик (зазор по высоте)", zu0 - zl1))
     checks.append(("верх верхнего ящика ↔ поперечины кровати", z_top_lim - zu1))
     checks.append(("нижний ящик: запас до края поддона / до ножки P3", min(pan.YMin - y_drv, y_pass - p3.YMax)))
+    # ═══════ БАК ВОДЫ (Class A Customs): сзади от туалета, водительский борт, справа от нижнего ящика, под верхним ящиком ═══════
+    WR = WATER_RECT
+    water_summary = None
+    if WR.get("enable"):
+        tl, tw_, th_ = WR["dims"]
+        tx1 = min(o.Shape.BoundBox.XMin for o in doc.Objects if o.Name.startswith("Toilet_") and o.isDerivedFrom("Part::Feature")
+                  and not o.Shape.isNull()) - WR["gap_toilet"]
+        ty0 = pan_y_lim = parts["Drawer_Lower"].BoundBox.YMax + WR["gap_drawer"]
+        tx0 = tx1 - tl
+        wg = doc.addObject("App::DocumentObjectGroup", "WaterTankRect")
+        wg.Label = "Бак воды — Class A Customs %s %d gal (проект 2026-11-12)" % (WR["model"], WR["gal"])
+        tank = Part.makeBox(tl, tw_, th_, V(tx0, ty0, floor_top))
+        add_shape(doc, "WaterTank_Rect", "Бак воды Class A Customs %s, %d gal, %.1f×%.1f×%.1f″: сзади от туалета (X %.0f..%.0f), "
+                  "справа от нижнего ящика (Y %.0f..%.0f), под верхним ящиком (верх %.0f мм над полом, зазор до ящика %.0f мм); "
+                  "штуцеры 1.5″ NPT ×2 и 0.5″ ×2 — по месту" % (WR["model"], WR["gal"], tl / 25.4, tw_ / 25.4, th_ / 25.4, tx0, tx1,
+                                                              ty0, ty0 + tw_, th_, zu0 - (floor_top + th_)),
+                  tank, color=(0.70, 0.86, 0.98), transparency=25, group=wg)
+        obst2 = [(n_, s_) for n_, s_ in obst if not n_.startswith(("Shower", "Kitchen", "Toilet_Plate"))]
+        dmin, nmin = min((tank.distToShape(s_)[0], n_) for n_, s_ in obst2 + [(n_, s_) for n_, s_ in parts.items()
+                                                                           if n_.startswith("Drawer_") and "Wheel" not in n_ or "Wheel" in n_])
+        checks.append(("бак воды: ближе всего «%s»" % nmin, dmin))
+        water_summary = dict(model=WR["model"], gal=WR["gal"], x=(tx0, tx1), y=(ty0, ty0 + tw_), h=th_, dims=WR["dims"],
+                             gap_up=zu0 - (floor_top + th_))
     drawers_summary = dict(
         upper=dict(x=(xu0, xu1), width=2 * y_box, h=zu1 - zu0, z=(zu0 - floor_top, zu1 - floor_top), y_out=y_out, travel=tr_u,
                    vol=(xu1 - xu0 - 2 * tw) * (2 * y_box - 2 * tw) * (zu1 - zu0 - tb) / 1e6, toilet_top=toilet_top - floor_top),
         lower=dict(x=(xl0, xl1), y=(y_pass, y_drv), width=y_drv - y_pass, h=zl1 - zl0, z=(zl0 - floor_top, zl1 - floor_top),
                    travel=tr_l, vol=(xl1 - xl0 - 2 * tw) * (y_drv - y_pass - 2 * tw) * (zl1 - zl0 - tb) / 1e6),
-        checks=checks, floor_top=floor_top)
+        checks=checks, floor_top=floor_top, water=water_summary)
     S.put(locals(), "drawers_summary trunk_summary")
 
 
@@ -175,5 +198,10 @@ def report(S):
           "высота %.0f мм (%.1f″), от %.0f до %.0f мм над полом (верх туалета %.0f); объём ≈ %.0f л; ход %.0f мм" % (
               u["x"][0], u["x"][1], u["width"], u["width"] / 25.4, u["y_out"], u["h"], u["h"] / 25.4, u["z"][0], u["z"][1],
               u["toilet_top"], u["vol"], u["travel"]))
+    w = k.get("water")
+    if w:
+        print("  БАК ВОДЫ Class A Customs %s (%d gal) %.1f×%.1f×%.1f″: X %.0f..%.0f (за туалетом), Y %.0f..%.0f (справа от нижнего ящика), "
+              "высота %.0f мм, до верхнего ящика %.0f мм" % (w["model"], w["gal"], w["dims"][0] / 25.4, w["dims"][1] / 25.4,
+                                                         w["dims"][2] / 25.4, w["x"][0], w["x"][1], w["y"][0], w["y"][1], w["h"], w["gap_up"]))
     print("  Зазоры/запасы: " + "; ".join("%s %.1f" % (n_, v_) for n_, v_ in k["checks"]))
     print("=" * 70)
