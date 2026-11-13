@@ -67,6 +67,10 @@ BUY_URLS = {
     "Toilet_Camco": "https://a.co/d/0fEaEKEz",        # туалет SEAFLO 2.6 gal (Amazon B07ZPC4C9N)
     r"Toilet_Wheel_\w+": "https://a.co/d/02nt85Aa",   # колёсики 1″ неповоротные, высота 1.15″ (Amazon B0CHFSQHRP)
     "WaterTank_Rect": "https://www.classacustoms.com/water-tank-list.html",   # Class A Customs T-3000 (страница списка; заказ — у производителя)
+    r"Drawer_Leg_\w+": "https://www.amazon.com/s?k=1+inch+square+steel+tube+36+inch",     # заглушка: поиск Amazon
+    "Service_Pump": "https://www.amazon.com/s?k=Shurflo+4008+12V+water+pump",              # заглушка: поиск Amazon
+    "Service_Filter": "https://www.amazon.com/s?k=inline+carbon+water+filter+RV",          # заглушка: поиск Amazon
+    "Service_Accumulator": "https://www.amazon.com/s?k=RV+water+pump+accumulator+tank",    # заглушка: поиск Amazon
     "Shower_PanRect": "https://a.co/d/09SdfkLC",      # поддон RecPro RP-SP-3624 36×24×5″, Right Drain (Amazon B089DJX71P)
 }
 
@@ -135,9 +139,13 @@ EN_LABELS = [
     (r"Shower_Ceiling", "Shower ceiling"), (r"Shower_Curtain", "Shower curtain"), (r"Shower_CurtainRod", "Curtain rod"),
     (r"Shower_Head", "Shower head"), (r"Shower_ExhaustFan", "Exhaust fan 12V"),
     (r"WaterTankRect", "Water tank"), (r"WaterTank_Fitting_(\d)", "Tank fitting {1}"), (r"WaterTank_Rect", "Water tank Class A T-3000 30 gal"),
+    (r"BedHatches", "Bed hatches"), (r"BedHatch_(\d)_Lid", "Bed hatch {1} lid"), (r"BedHatch_(\d)_Mattress", "Hatch {1} mattress flap"),
+    (r"BedHatch_(\d)_Hinge", "Hatch {1} hinge"), (r"Hatch_Bin", "Storage bin (L-shape)"), (r"Service_Shelf", "Service shelf on arch"),
+    (r"Service_Pump", "Water pump 12V (placeholder)"), (r"Service_Filter", "Water filter (placeholder)"),
+    (r"Service_Accumulator", "Pressure accumulator (placeholder)"),
     (r"Drawers", "Drawers"), (r"Drawer_Upper_Handle", "Upper drawer handle"), (r"Drawer_Lower_Handle", "Lower drawer handle"),
     (r"Drawer_Upper", "Upper drawer (slides rearward)"), (r"Drawer_Lower", "Lower drawer (rolls forward)"),
-    (r"Drawer_Slide_(\w+)", "Drawer slide {1}"), (r"Drawer_Hanger_(\w+)_(\d)", "Slide hanger {1} {2}"),
+    (r"Drawer_Slide_(\w+)", "Drawer slide {1}"), (r"Drawer_Hanger_(\w+)_(\d)", "Slide hanger {1} {2}"), (r"Drawer_Leg_(\w+)_(\d)", "Slide leg {1} {2}"),
     (r"Drawer_Wheel_(\w)(\d)", "Drawer caster {1}{2}"),
     (r"Shower_PanRect", "Shower pan RecPro 36x24x5″"), (r"Shower_PanCutSeal", "Pan cut seal (dam)"),
     (r"Shower_CurtainFront", "Shower curtain (front)"), (r"Kitchen_WallPanel", "Kitchen wall panel"),

@@ -44,6 +44,7 @@ for _f, _t in STAGES:
         STAGES_RECT_PAN.append((shower_rect.shower_kitchen, "Душ (прямоугольный поддон RecPro) + туалет + кухня 24″"))
     elif _f is trunk.trunk:
         STAGES_RECT_PAN.append((drawers_rect.drawers, "Ящики под кроватью (нижний — вперёд на колёсиках, верхний — назад)"))
+        STAGES_RECT_PAN.append((drawers_rect.hatches, "Люки в настиле кровати над аркой: контейнер + насос/фильтр"))
     else:
         STAGES_RECT_PAN.append((_f, _t))
     if _f is summary.print_summary:

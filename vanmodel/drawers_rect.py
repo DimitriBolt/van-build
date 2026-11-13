@@ -12,7 +12,7 @@ import FreeCAD as App
 import Part
 
 from .common import COL_STRUT, add_shape
-from .params_rect import DRAWERS_RECT, WATER_RECT
+from .params_rect import DRAWERS_RECT, HATCH_RECT, WATER_RECT
 
 V = App.Vector
 COL_PLY, COL_PLY2, COL_STEEL, COL_WHEEL = (0.80, 0.66, 0.42), (0.86, 0.74, 0.52), (0.80, 0.82, 0.86), (0.15, 0.15, 0.15)
@@ -60,28 +60,33 @@ def drawers(S):
     zu0 = toilet_top + U["above_toilet"]                               # низ ящика
     zu1 = z_top_lim - U["top_gap"]                                     # верх ящика (под поперечинами кровати)
     y_out = pil.YMin - U["door_gap"]                                   # наружная плоскость направляющих (|Y|) — в проёме дверей
-    y_box = y_out - SL["T"]                                            # наружная грань ящика (|Y|): между направляющими
+    y_box = y_out - SL["T"]                                            # наружная грань ящика (|Y|) пассажирской стороны: между направляющими
+    y_box_d = min(U.get("driver_y_box", y_box), y_box)                 # водительская сторона сужена — колодец над аркой (люки в кровати)
     xu0, xu1 = U["x_rear"], U["x_rear"] + SL["L"]
-    put("Drawer_Upper", "Верхний ящик (фанера 1/2″): X %.0f..%.0f, ширина %.0f мм (%.1f″) — на всю ширину проёма задних дверей, "
-        "высота %.0f мм (%.1f″), низ %.0f мм над полом (над туалетом: его верх %.0f); выезжает НАЗАД на SLIDEWAY" % (
-            xu0, xu1, 2 * y_box, 2 * y_box / 25.4, zu1 - zu0, (zu1 - zu0) / 25.4, zu0 - floor_top, toilet_top - floor_top),
-        tray(xu0, xu1, -y_box, y_box, zu0, zu1), COL_PLY)
+    put("Drawer_Upper", "Верхний ящик (фанера 1/2″): X %.0f..%.0f, Y %.0f..%.0f, ширина %.0f мм (%.1f″) — пассажирская сторона на весь проём дверей, "
+        "водительская сужена до Y %.0f (колодец над аркой), высота %.0f мм (%.1f″), низ %.0f мм над полом (над туалетом: его верх %.0f); "
+        "выезжает НАЗАД на SLIDEWAY" % (
+            xu0, xu1, -y_box, y_box_d, y_box + y_box_d, (y_box + y_box_d) / 25.4, y_box_d, zu1 - zu0, (zu1 - zu0) / 25.4,
+            zu0 - floor_top, toilet_top - floor_top),
+        tray(xu0, xu1, -y_box, y_box_d, zu0, zu1), COL_PLY)
     zs0 = zu0 + (zu1 - zu0 - SL["H"]) / 2.0                            # направляющие — на середине высоты стенки
     cb1, cb2 = bb("BedCross_1"), bb("BedCross_2")
     hang = []
     for sgn, side in ((1, "driver"), (-1, "passenger")):
-        ya, yb = (y_box, y_out) if sgn > 0 else (-y_out, -y_box)
+        yo_ = y_box_d + SL["T"] if sgn > 0 else y_out                  # наружная плоскость направляющей (|Y|)
+        ya, yb = (y_box_d, yo_) if sgn > 0 else (-y_out, -y_box)
         put("Drawer_Slide_%s" % side, "Направляющая %s (%s): рабочая часть на ящике, неподвижная — на подвесах" % (SL["title"], side),
             Part.makeBox(SL["L"], SL["T"], SL["H"], V(xu0, ya, zs0)), COL_STEEL)
-        for k, cb in ((1, cb1), (2, cb2)):                             # подвесы strut: от поперечины кровати вниз
-            xc = (cb.XMin + cb.XMax) / 2.0
-            ya_h, yb_h = (y_out, y_out + sd) if sgn > 0 else (-y_out - sd, -y_out)
-            h = Part.makeBox(sw, sd, cb.ZMin - zs0, V(xc - sw / 2.0, ya_h, zs0))
-            put("Drawer_Hanger_%s_%d" % (side, k), "Подвес направляющей %d (%s): strut от поперечины кровати #%d вниз, болтами "
-                "через овалы; направляющая — на его грани" % (k, side, k), h, COL_STRUT)
+        for k, cb in ((1, cb1), (2, cb2)):                             # стойки до пола (2026-11-12): вместо подвесов от поперечин
+            lt = U["leg"]
+            ya_h, yb_h = (yo_, yo_ + lt) if sgn > 0 else (-y_out - lt, -y_out)
+            h = Part.makeBox(lt, yb_h - ya_h, cb.ZMin - (floor_top + 2.0), V(cb.XMin + 4.0, ya_h, floor_top + 2.0))
+            put("Drawer_Leg_%s_%d" % (side, k), "Стойка направляющей %d (%s): квадратная труба 1″ от пола (над пластиной 2 мм) до поперечины "
+                "кровати #%d, к ней — крепление угольником; направляющая — болтами на грани стойки (держит и боковую нагрузку в повороте)"
+                % (k, side, k), h, COL_STRUT)
             hang.append(h)
     put("Drawer_Upper_Handle", "Ручка верхнего ящика (задний торец)",
-        Part.makeCylinder(10.0, 300.0, V(xu0 - 25.0, -150.0, zu1 - 60.0), V(0, 1, 0)), COL_STEEL)
+        Part.makeCylinder(10.0, 300.0, V(xu0 - 25.0, (y_box_d - y_box) / 2.0 - 150.0, zu1 - 60.0), V(0, 1, 0)), COL_STEEL)
 
     # ═══════ НИЖНИЙ ящик: на колёсиках, вперёд в салон ═══════
     CA = L["caster"]
@@ -125,10 +130,10 @@ def drawers(S):
                 best = (dd, n)
         return best
 
-    up = [parts[n] for n in parts if n.startswith(("Drawer_Upper", "Drawer_Slide")) or n.startswith("Drawer_Hanger")]
+    up = [parts[n] for n in parts if n.startswith(("Drawer_Upper", "Drawer_Slide")) or n.startswith("Drawer_Leg")]
     lo = [parts[n] for n in parts if n.startswith(("Drawer_Lower", "Drawer_Wheel"))]
     own_hang = ("Drawer_Hanger",)
-    # путь верхнего ящика: объём ящика + направляющих, протянутый назад на ход (без подвесов — они не движутся)
+    # путь верхнего ящика: объём ящика + направляющих, протянутый назад на ход (без стоек — они не движутся)
     tr_u, tr_l = U["travel"], L["travel"]
     ub = parts["Drawer_Upper"].BoundBox
     sw_u = Part.makeBox(ub.XLength + tr_u, ub.YLength, ub.ZLength, V(ub.XMin - tr_u, ub.YMin, ub.ZMin))
@@ -144,8 +149,11 @@ def drawers(S):
         checks.append(("%s: ближе всего «%s»" % (lab, nn), dd))
     for s_ in hang + [parts["Drawer_Slide_driver"], parts["Drawer_Slide_passenger"]]:
         pass
-    dd, nn = nearest(Part.makeCompound([parts[n] for n in parts if n.startswith(("Drawer_Slide", "Drawer_Hanger"))]), ("BedCross",))
-    checks.append(("направляющие и подвесы (кроме креплений к поперечинам): ближе всего «%s»" % nn, dd))
+    dd, nn = nearest(Part.makeCompound([parts[n] for n in parts if n.startswith(("Drawer_Slide", "Drawer_Leg"))]), ("BedCross", "BankPostPlate"))
+    checks.append(("направляющие и стойки (кроме крепления к поперечинам и пластин 2 мм): ближе всего «%s»" % nn, dd))
+    legs_c = Part.makeCompound([parts[n] for n in parts if n.startswith("Drawer_Leg")])
+    checks.append(("стойки верхнего ящика ↔ путь нижнего ящика вперёд", sw_l.distToShape(legs_c)[0]))
+    checks.append(("стойки верхнего ящика ↔ нижний ящик (закрыт)", parts["Drawer_Lower"].distToShape(legs_c)[0]))
     plates = [s_ for n_, s_ in obst if n_.startswith("BankPostPlate")]
     pw = Part.makeCompound([parts[n] for n in parts if n.startswith("Drawer_Wheel")])
     checks.append(("колёсики нижнего ящика переезжают пластины 2 мм под ножками батарей (P3 и P3f) — касание: %d шт" % len(plates),
@@ -185,8 +193,8 @@ def drawers(S):
         water_summary = dict(model=WR["model"], gal=WR["gal"], x=(tx0, tx1), y=(ty0, ty0 + tw_), h=th_, dims=WR["dims"],
                              gap_up=zu0 - (floor_top + th_))
     drawers_summary = dict(
-        upper=dict(x=(xu0, xu1), width=2 * y_box, h=zu1 - zu0, z=(zu0 - floor_top, zu1 - floor_top), y_out=y_out, travel=tr_u,
-                   vol=(xu1 - xu0 - 2 * tw) * (2 * y_box - 2 * tw) * (zu1 - zu0 - tb) / 1e6, toilet_top=toilet_top - floor_top),
+        upper=dict(x=(xu0, xu1), width=y_box + y_box_d, y_d=y_box_d, h=zu1 - zu0, z=(zu0 - floor_top, zu1 - floor_top), y_out=y_out, travel=tr_u,
+                   vol=(xu1 - xu0 - 2 * tw) * (y_box + y_box_d - 2 * tw) * (zu1 - zu0 - tb) / 1e6, toilet_top=toilet_top - floor_top),
         lower=dict(x=(xl0, xl1), y=(y_pass, y_drv), width=y_drv - y_pass, h=zl1 - zl0, z=(zl0 - floor_top, zl1 - floor_top),
                    travel=tr_l, vol=(xl1 - xl0 - 2 * tw) * (y_drv - y_pass - 2 * tw) * (zl1 - zl0 - tb) / 1e6),
         checks=checks, floor_top=floor_top, water=water_summary)
@@ -204,10 +212,15 @@ def report(S):
           "(%.1f″), от %.0f до %.0f мм над полом; объём ≈ %.0f л; ход %.0f мм" % (
               l["x"][0], l["x"][1], l["x"][1] - l["x"][0], l["y"][0], l["y"][1], l["width"], l["width"] / 25.4, l["h"], l["h"] / 25.4,
               l["z"][0], l["z"][1], l["vol"], l["travel"]))
-    print("  ВЕРХНИЙ (SLIDEWAY 44″, НАЗАД): X %.0f..%.0f, ширина %.0f мм (%.1f″) — на весь проём задних дверей (направляющие на |Y|=%.0f), "
+    print("  ВЕРХНИЙ (SLIDEWAY 44″, НАЗАД): X %.0f..%.0f, ширина %.0f мм (%.1f″) — пассажирская сторона на весь проём дверей (направляющие на |Y|=%.0f), водительская сужена до Y=%.0f; "
           "высота %.0f мм (%.1f″), от %.0f до %.0f мм над полом (верх туалета %.0f); объём ≈ %.0f л; ход %.0f мм" % (
-              u["x"][0], u["x"][1], u["width"], u["width"] / 25.4, u["y_out"], u["h"], u["h"] / 25.4, u["z"][0], u["z"][1],
+              u["x"][0], u["x"][1], u["width"], u["width"] / 25.4, u["y_out"], u["y_d"], u["h"], u["h"] / 25.4, u["z"][0], u["z"][1],
               u["toilet_top"], u["vol"], u["travel"]))
+    h = k.get("hatch")
+    if h:
+        print("  ЛЮКИ в настиле кровати у борта (Y %.0f..%.0f): №1 X %.0f..%.0f — Г-образный контейнер ≈ %.0f л (над баком от Z %.0f, над аркой — ступенька); "
+              "№2 X %.0f..%.0f — сервисная зона на арке: насос, фильтр, аккумулятор давления (габариты — заглушки)" % (
+                  h["y"][0], h["y"][1], h["x1"][0], h["x1"][1], h["bin_vol"], h["z_wide"], h["x2"][0], h["x2"][1]))
     w = k.get("water")
     if w:
         print("  БАК ВОДЫ Class A Customs %s (%d gal) %.1f×%.1f×%.1f″: X %.0f..%.0f (за туалетом), Y %.0f..%.0f (справа от нижнего ящика), "
@@ -215,3 +228,114 @@ def report(S):
                                                          w["dims"][2] / 25.4, w["x"][0], w["x"][1], w["y"][0], w["y"][1], w["h"], w["gap_up"]))
     print("  Зазоры/запасы: " + "; ".join("%s %.1f" % (n_, v_) for n_, v_ in k["checks"]))
     print("=" * 70)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════════════════════════
+# ЛЮКИ В НАСТИЛЕ КРОВАТИ над левой (водительской) аркой — 2026-11-12, Dimitri
+# ═══════════════════════════════════════════════════════════════════════════════════════════════════
+def hatches(S):
+    """Колодец над аркой: два люка в настиле у борта. Люк 1 — Г-образный контейнер; люк 2 — насос + фильтр + аккумулятор на полке над аркой."""
+    doc = S.doc
+    H = HATCH_RECT
+    k = S.drawers_summary
+    S.hatch_summary = None
+    if not H.get("enable") or not k:
+        S.put(locals(), "hatch_summary")
+        return
+    bb = lambda n: doc.getObject(n).Shape.BoundBox
+    g = doc.addObject("App::DocumentObjectGroup", "BedHatches")
+    g.Label = "Люки в настиле кровати над левой аркой: контейнер + сервисная зона (насос, фильтр) (проект 2026-11-12)"
+    parts = {}
+
+    def put(name, label, shape, color, tr=0):
+        add_shape(doc, name, label, shape, color=color, transparency=tr, group=g)
+        parts[name] = shape
+        return shape
+
+    deck, mat = doc.getObject("BedDeck"), doc.getObject("BedMattress")
+    zd0, zd1, zm1 = deck.Shape.BoundBox.ZMin, deck.Shape.BoundBox.ZMax, mat.Shape.BoundBox.ZMax
+    cb = [bb("BedCross_%d" % i) for i in (1, 2, 3)]
+    y0 = bb("Drawer_Leg_driver_1").YMax + H["gap_leg"]                  # от стойки направляющей верхнего ящика
+    y1 = bb("BedSideRail_pY").YMin - H["gap_rail"]                     # до боковой рейки кровати
+    arch, tank = bb("WheelArch_pY"), bb("WaterTank_Rect")
+    z_deck_under = cb[0].ZMax                                          # поперечины = 807..848; настил над ними
+    try:
+        mcol = tuple(mat.ViewObject.ShapeColor[:3])
+    except Exception:
+        mcol = (0.92, 0.92, 0.88)
+    try:
+        dcol = tuple(deck.ViewObject.ShapeColor[:3])
+    except Exception:
+        dcol = (0.80, 0.66, 0.42)
+    hx = []
+    for n, (ca, cbb) in enumerate(((cb[0], cb[1]), (cb[1], cb[2])), 1):
+        hx.append((n, ca.XMax + H["gap_beam"], cbb.XMin - H["gap_beam"]))
+    # ── вырезы в настиле и матрасе, крышки и откидные секции матраса ──
+    cut_all = None
+    for n, xa, xb in hx:
+        hole = Part.makeBox(xb - xa, y1 - y0, zm1 - zd0 + 2.0, V(xa, y0, zd0 - 1.0))
+        cut_all = hole if cut_all is None else cut_all.fuse(hole)
+    deck.Shape = deck.Shape.cut(cut_all)
+    mat.Shape = mat.Shape.cut(cut_all)
+    gl = H["gap_lid"]
+    for n, xa, xb in hx:
+        put("BedHatch_%d_Lid" % n, "Крышка люка %d в настиле: %.0f × %.0f мм, на рояльной петле у борта; к ней приклеена откидная секция матраса"
+            % (n, xb - xa - 2 * gl, y1 - y0 - 2 * gl), Part.makeBox(xb - xa - 2 * gl, y1 - y0 - 2 * gl, zd1 - zd0, V(xa + gl, y0 + gl, zd0)), dcol)
+        put("BedHatch_%d_Mattress" % n, "Откидная секция матраса люка %d (вместе с крышкой)" % n,
+            Part.makeBox(xb - xa - 2 * gl, y1 - y0 - 2 * gl, zm1 - zd1, V(xa + gl, y0 + gl, zd1)), mcol)
+        put("BedHatch_%d_Hinge" % n, "Рояльная петля люка %d (вдоль X, со стороны борта)" % n,
+            Part.makeBox(xb - xa - 40.0, 14.0, 3.0, V(xa + 20.0, y1 - 14.0, zd1 - 1.5)), COL_STEEL)
+    # ── люк 1: Г-образный контейнер ──
+    n, xa, xb = hx[0]
+    bw, bm = H["bin_wall"], H["bin_margin"]
+    z_wide0 = tank.ZMax + H["bin_gap_tank"]                            # широкая часть — над баком
+    z_top = z_deck_under + (zd0 - z_deck_under) - H["bin_gap_deck"]    # = низ настила − зазор
+    z_step0 = arch.ZMax + H["bin_gap_arch"]                            # ступенька — над аркой
+    x0_, x1_ = xa + bm, xb - bm
+    y_arch = arch.YMin + 8.0                                           # ступенька — только над аркой
+    yb0, yb1 = y0 + bm, y1 - bm
+    outer = Part.makeBox(x1_ - x0_, yb1 - yb0, z_top - z_wide0, V(x0_, yb0, z_wide0)).fuse(
+        Part.makeBox(x1_ - x0_, yb1 - y_arch, z_wide0 - z_step0 + 1.0, V(x0_, y_arch, z_step0)))
+    inner = Part.makeBox(x1_ - x0_ - 2 * bw, yb1 - yb0 - 2 * bw, z_top - z_wide0 - bw + 1.0, V(x0_ + bw, yb0 + bw, z_wide0 + bw)).fuse(
+        Part.makeBox(x1_ - x0_ - 2 * bw, yb1 - y_arch - 2 * bw, z_wide0 - z_step0 + 2 * bw, V(x0_ + bw, y_arch + bw, z_step0 + bw)))
+    bin_ = outer.cut(inner).removeSplitter()
+    put("Hatch_Bin", "Контейнер Г-образный (пластик 4 мм) в люке 1: %.0f × %.0f мм, глубина %.0f мм, ступенька над аркой; вынимается вверх; "
+        "≈ %.0f л" % (x1_ - x0_, yb1 - yb0, z_top - z_step0, (inner.Volume / 1e6)), bin_, (0.35, 0.55, 0.75), 30)
+    # ── люк 2: сервисная зона на арке ──
+    n, xa, xb = hx[1]
+    zs = arch.ZMax + H["shelf_gap_arch"]
+    ys0 = arch.YMin + H["shelf_gap_face"]
+    put("Service_Shelf", "Полка сервисной зоны на арке (фанера %.0f мм): X %.0f..%.0f, Y %.0f..%.0f, на крон-пластине арки" % (
+        H["shelf_t"], xa + 5, xb - 5, ys0, y1 - 5),
+        Part.makeBox(xb - xa - 10.0, y1 - 5.0 - ys0, H["shelf_t"], V(xa + 5, ys0, zs)), (0.80, 0.66, 0.42))
+    zt = zs + H["shelf_t"]
+    px, py, pz = H["pump"]
+    xp = xa + 12.0
+    yp = ys0 + 8.0
+    put("Service_Pump", "Насос воды 12 В (заглушка %.0f × %.0f × %.0f мм ≈ Shurflo 4008, проверить по купленному)" % (px, py, pz),
+        Part.makeBox(px, py, pz, V(xp, yp, zt)), (0.25, 0.45, 0.80))
+    fd, fh = H["filter"]
+    ad, ah = H["accum"]
+    xf = xp + px + 8.0 + fd / 2.0
+    put("Service_Filter", "Проточный фильтр воды (заглушка ⌀%.0f × %.0f мм), вертикально" % (fd, fh),
+        Part.makeCylinder(fd / 2.0, fh, V(xf, yp + fd / 2.0 + 10.0, zt)), (0.85, 0.85, 0.75))
+    xa2 = xf + fd / 2.0 + 8.0 + ad / 2.0
+    put("Service_Accumulator", "Аккумулятор давления 0.75 л (заглушка ⌀%.0f × %.0f мм), вертикально" % (ad, ah),
+        Part.makeCylinder(ad / 2.0, ah, V(xa2, yp + ad / 2.0 + 10.0, zt)), (0.20, 0.55, 0.30))
+    # ── проверки: ближайшие детали к контейнеру и к оборудованию ──
+    chk = []
+    obstacles = {n_: doc.getObject(n_).Shape for n_ in ("WheelArch_pY", "WaterTank_Rect", "Drawer_Upper", "Drawer_Slide_driver",
+                                                          "Drawer_Leg_driver_1", "Drawer_Leg_driver_2", "BedCross_1", "BedCross_2",
+                                                          "BedCross_3", "BedSideRail_pY", "Shower_WallRear", "BedWallPanel")
+                 if doc.getObject(n_) is not None}
+    for tag, nm in (("контейнер", "Hatch_Bin"), ("насос", "Service_Pump"), ("фильтр", "Service_Filter"), ("аккумулятор", "Service_Accumulator"),
+                    ("полка", "Service_Shelf")):
+        dmin, nmin = min((parts[nm].distToShape(s_)[0], n_) for n_, s_ in obstacles.items()
+                         if not (nm in ("Service_Shelf", "Service_Pump", "Service_Filter", "Service_Accumulator") and n_ == "WheelArch_pY"))
+        chk.append(("люки: %s — ближе всего «%s»" % (tag, nmin), dmin))
+    chk.append(("люк 1/2: запас по Y до стойки / до рейки", min(y0 - bb("Drawer_Leg_driver_1").YMax, bb("BedSideRail_pY").YMin - y1)))
+    k["checks"].extend(chk)
+    k["hatch"] = dict(x1=(hx[0][1], hx[0][2]), x2=(hx[1][1], hx[1][2]), y=(y0, y1), bin_vol=inner.Volume / 1e6, bin_x=(x0_, x1_),
+                      bin_z=(z_step0, z_top), z_wide=z_wide0)
+    S.hatch_summary = k["hatch"]
+    S.put(locals(), "hatch_summary")
