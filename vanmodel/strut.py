@@ -95,6 +95,8 @@ def apply_strut_profiles(doc):
         back = next((b for pat, b in STRUT_BACK if _re.match(pat, o.Name)), None)
         if back is None or not o.isDerivedFrom("Part::Feature"):
             continue
+        if "V-Slot" in o.Label:                      # деталь из профиля V-Slot 2020, не strut
+            continue
         bb = o.Shape.BoundBox
         side = 1 if (bb.YMin + bb.YMax) > 0 else -1
         try:

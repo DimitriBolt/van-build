@@ -60,9 +60,13 @@ def build(stages=None):
     """Собрать модель целиком (stages — список разделов; по умолчанию STAGES); возвращает документ FreeCAD (сохранён в SAVE_PATH)."""
     global LAST
     S = LAST = State()
+    import time as _t
     for stage, title in (STAGES if stages is None else stages):
+        _t0 = _t.time()
         try:
             stage(S)
+            sys.stderr.write("[build] %5.1f с — %s\n" % (_t.time() - _t0, title))
+            sys.stderr.flush()
         except Exception as e:
             note = "van_v0: ошибка в разделе «%s» — vanmodel/%s.py, функция %s()" % (
                 title, stage.__module__.rsplit(".", 1)[-1], stage.__name__)

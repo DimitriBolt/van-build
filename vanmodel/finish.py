@@ -73,6 +73,12 @@ BUY_URLS = {
     r"Shower_Door(End)?": "https://www.amazon.com/s?k=clear+acrylic+sheet+1%2F4+inch+cast",   # акрил 1/4″, резать по размеру
     r"Shower_Door(End)?Hinge_\d": "https://www.amazon.com/s?k=acrylic+glass+door+clamp+hinge+stainless",
     "Propane_LockerLid": "https://www.amazon.com/s?k=clear+acrylic+sheet+1%2F8+inch+cast",   # акрил 1/8″ — крышка локера
+    r"Bank(Rail_Wall|Rail_Inner|Post_P3f?|Cross_(Rear|Front))": "https://www.amazon.com/dp/B0F83QJV1M",   # V-Slot 2020 SeekLiny (рейки/стойки/поперечины этажерки)
+    r"BankJoinPlate_\w+": "https://www.amazon.com/s?k=2020+flat+joining+plate+80x38+8+hole+aluminum+extrusion",
+    r"BankLPlate_\w+": "https://www.amazon.com/s?k=2020+L+shape+joining+plate+5+hole+aluminum+extrusion",
+    r"BankBracket_\w+": "https://www.amazon.com/s?k=2020+aluminum+extrusion+corner+bracket+20x28+T+nut+M5+kit",
+    r"BankRailScrew_\w+": "https://www.amazon.com/s?k=M5+T+slot+drop+in+nut+M5x30+screw+2020+extrusion",
+    r"BankRailBolt_\w+": "https://www.amazon.com/s?k=M8x60+hex+bolt+nut+washer+set+stainless",
     r"Drawer_Leg_\w+": "https://www.amazon.com/dp/B0F83QJV1M",      # SeekLiny 10Pcs V Slot 2020 Aluminum Extrusion 2440mm (ASIN B0F83QJV1M), $149.99
     "Shower_PanRect": "https://a.co/d/09SdfkLC",      # поддон RecPro RP-SP-3624 36×24×5″, Right Drain (Amazon B089DJX71P)
 }
@@ -117,7 +123,9 @@ EN_LABELS = [
     # этажерка батарей и электрика
     (r"BatteryBank", "Battery rack (4 x 150 Ah)"), (r"Battery_B(\d)", "Battery B{1}"),
     (r"BankPostPlate_(\w+)", "Rack post plate {1}"), (r"BankPost_(\w+)", "Rack post {1}"),
-    (r"BankRailBolt_(\w+)", "Rail bolt 3/8″ {1}"), (r"BankRail_Wall", "Rack rail (wall side)"),
+    (r"BankRailBolt_(\w+)", "Rail bolt M8 {1}"),
+    (r"BankRailScrew_(\w+)", "Rail screw M5 {1}"), (r"BankJoinPlate_(\w+)", "Joining plate {1}"),
+    (r"BankLPlate_(\w+)", "L-plate {1}"), (r"BankBracket_(\w+)", "Corner bracket {1}"), (r"BankRail_Wall", "Rack rail (wall side)"),
     (r"BankRail_Inner", "Rack rail (aisle side)"), (r"BankCross_(Rear|Front)", "Rack crossbar {1}"),
     (r"BankShelf", "Battery shelf"), (r"BankStop_ShelfRear", "Battery stop (rear)"),
     (r"BankStop_ShelfFront", "Battery stop (front)"), (r"BankWedge_B1Arch", "Wedge B1 / arch"),

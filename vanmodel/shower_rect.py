@@ -75,8 +75,34 @@ def corner_plane(pts, gap):
     if not pts:
         return None
     best = None
+    try:
+        import numpy as np
+    except ImportError:
+        np = None
+    if np is not None:                                            # то же самое, векторно (в ~100 раз быстрее чистого Python)
+        X = np.array([p[0] for p in pts], dtype=float)
+        Y = np.array([p[1] for p in pts], dtype=float)
+        Z = np.array([p[2] for p in pts], dtype=float)
     for b in range(60, 520, 5):
         for a in range(60, 760, 5):
+            if np is not None:
+                R = 1.0 - X / b - Y / a
+                if (R <= 0.0).any():
+                    continue
+                c = float(max(0.0, (Z / R).max()))
+                ok = False
+                for _ in range(400):
+                    n = math.sqrt(1.0 / b ** 2 + 1.0 / a ** 2 + 1.0 / c ** 2)
+                    if float(((1.0 - X / b - Y / a - Z / c) / n).min()) >= gap:
+                        ok = True
+                        break
+                    c += 2.0
+                if not ok:
+                    continue
+                v = a * b * c / 6.0
+                if best is None or v < best[0]:
+                    best = (v, a, b, c)
+                continue
             c = 0.0
             ok = True
             for x, y, z in pts:
@@ -199,8 +225,30 @@ def shower_kitchen(S):
     if plane is None:
         zc0 = z_pan0
         pl_pts = []
-        for xi in range(0, 140, 4):
-            for yi in range(0, 200, 5):
+        grid = [(xi, yi) for xi in range(0, 140, 4) for yi in range(0, 200, 5)]
+        try:                                              # быстро: вертикальные лучи по триангуляции арки (раньше — 1400 булевых common, ~5 мин)
+            import numpy as np
+            vs_, ts_ = arch_s.tessellate(0.5)
+            V3 = np.array([[v_.x, v_.y, v_.z] for v_ in vs_])
+            T3 = np.array(ts_)
+            A_, B_, C_ = V3[T3[:, 0]], V3[T3[:, 1]], V3[T3[:, 2]]
+            for xi, yi in grid:
+                px_, py_ = x0 + xi, y_wall - yi
+                d_ = (B_[:, 1] - C_[:, 1]) * (A_[:, 0] - C_[:, 0]) + (C_[:, 0] - B_[:, 0]) * (A_[:, 1] - C_[:, 1])
+                ok_ = np.abs(d_) > 1e-9
+                d_ = np.where(ok_, d_, 1.0)
+                l1 = ((B_[:, 1] - C_[:, 1]) * (px_ - C_[:, 0]) + (C_[:, 0] - B_[:, 0]) * (py_ - C_[:, 1])) / d_
+                l2 = ((C_[:, 1] - A_[:, 1]) * (px_ - C_[:, 0]) + (A_[:, 0] - C_[:, 0]) * (py_ - C_[:, 1])) / d_
+                l3 = 1.0 - l1 - l2
+                ins = ok_ & (l1 >= -1e-9) & (l2 >= -1e-9) & (l3 >= -1e-9)
+                if ins.any():
+                    zz_ = l1[ins] * A_[ins, 2] + l2[ins] * B_[ins, 2] + l3[ins] * C_[ins, 2]
+                    zz_ = zz_[zz_ <= zc0 + 700.0]
+                    if zz_.size:
+                        pl_pts.append((float(xi), float(yi), float(zz_.max()) - zc0))
+        except ImportError:
+            pl_pts = []
+            for xi, yi in grid:
                 try:
                     c_ = arch_s.common(Part.makeLine(V(x0 + xi, y_wall - yi, zc0 + 700.0), V(x0 + xi, y_wall - yi, 0.0)))
                     if c_.Edges:
