@@ -252,9 +252,9 @@ def report(S):
     sh = k.get("shelf")
     if sh:
         print("  ПОЛКА над левой аркой (2 яруса на водительских стойках 2020): X %.0f..%.0f, Y %.0f..%.0f (%.0f × %.0f мм); ярусы Z %.0f..%.0f и %.0f..%.0f; "
-              "свободная высота нижнего яруса %.0f мм, верхнего %.0f мм; доступ от задних дверей" % (
+              "свободная высота нижнего яруса %.0f мм, верхнего %.0f мм; фанера на Z %.0f и %.0f; доступ от задних дверей и (при выдвинутом верхнем ящике) сбоку от салона" % (
                   sh["x"][0], sh["x"][1], sh["y"][0], sh["y"][1], sh["x"][1] - sh["x"][0], sh["y"][1] - sh["y"][0],
-                  sh["z"][0][0], sh["z"][0][1], sh["z"][1][0], sh["z"][1][1], sh["gap_between"], sh["gap_top"]))
+                  sh["z"][0][0], sh["z"][0][1], sh["z"][1][0], sh["z"][1][1], sh["gap_between"], sh["gap_top"], sh["board"][0][0], sh["board"][1][0]))
     w = k.get("water")
     if w:
         print("  БАК ВОДЫ Class A Customs %s (%d gal) %.1f×%.1f×%.1f″: X %.0f..%.0f (за туалетом), Y %.0f..%.0f (справа от нижнего ящика), "
@@ -266,7 +266,7 @@ def report(S):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════════════════════════
-# ПОЛКА НАД ЛЕВОЙ (водительской) АРКОЙ — 2026-11-12, Dimitri: два яруса на водительских стойках 2020
+# ПОЛКА НАД ЛЕВОЙ (водительской) АРКОЙ — 2026-11-12, Dimitri: два яруса на водительских стойках 2020, до задней стенки душа
 # ═══════════════════════════════════════════════════════════════════════════════════════════════════
 def shelf(S):
     doc = S.doc
@@ -290,9 +290,28 @@ def shelf(S):
     y_leg = legs[0].YMax                                               # наружная грань стойки (Y)
     y_in = y_leg + H["gap_leg"]
     y_out = bb("BedSideRail_pY").YMin - H["gap_rail"]
-    x0, x1, bt, gu = H["x0"], H["x1"], H["board_t"], H["gusset"]
+    x0, bt, gu = H["x0"], H["board_t"], H["gusset"]
+    x1 = H["x1"] if H["x1"] is not None else bb("Shower_WallRear").XMin - H["gap_wall"]
+    toilet_top = max(o.Shape.BoundBox.ZMax for o in doc.Objects if o.Name.startswith("Toilet_") and o.isDerivedFrom("Part::Feature")
+                     and not o.Shape.isNull())
+    za_list = (max(H["tiers"][0], toilet_top + H["gap_toilet"] - 20.0), H["tiers"][1])
+    # колонна у переднего наружного угла: от арки (через резину) до низа фанеры верхнего яруса; под свес 460 мм до задней стенки душа
+    yc0 = y_out - 22.0
+    xc0 = x1 - 20.0
+    arch = doc.getObject("WheelArch_pY").Shape
+    z_arch = 0.0
+    for dx_ in (0.0, 20.0):                                            # крона арки — в точке опоры, самая высокая по углам колонны
+        for dy_ in (0.0, 20.0):
+            try:
+                z_arch = max(z_arch, arch.common(Part.makeLine(V(xc0 + dx_, yc0 + dy_, 900.0), V(xc0 + dx_, yc0 + dy_, 0.0))).BoundBox.ZMax)
+            except Exception:
+                z_arch = max(z_arch, bb("WheelArch_pY").ZMax)
+    z_col0 = z_arch + H["col_pad"]
+    z_col1 = za_list[1] + 20.0
+    col = vslot_2020(xc0, yc0, z_col0, z_col1)
+    colbox = Part.makeBox(22.0, 22.0, 2000.0, V(xc0 - 1.0, yc0 - 1.0, 0.0))
     tiers = []
-    for t, za in enumerate(H["tiers"], 1):
+    for t, za in enumerate(za_list, 1):
         zb = za + 20.0                                                 # верх плеч = низ фанеры
         for n, lg in enumerate(legs, 1):
             put("Shelf_Arm_%d_%d" % (t, n), "Плечо яруса %d у стойки %d: профиль 2020, от стойки к борту, к стойке — угольником в паз" % (t, n),
@@ -302,13 +321,19 @@ def shelf(S):
                                               V(xc - 2.0, y_leg, za - gu)])).extrude(V(4.0, 0, 0))
             put("Shelf_Gusset_%d_%d" % (t, n), "Косынка %.0f мм под плечом яруса %d у стойки %d (2020 corner bracket / пластина 4 мм)" % (gu, t, n),
                 tri, PROF)
-        put("Shelf_Board_%d" % t, "Фанера 12 мм яруса %d: X %.0f..%.0f, Y %.0f..%.0f (%.0f × %.0f мм), на плечах, шурупами в T-гайки" % (
-            t, x0, x1, y_in, y_out, x1 - x0, y_out - y_in), Part.makeBox(x1 - x0, y_out - y_in, bt, V(x0, y_in, zb)), PLY)
+        board = Part.makeBox(x1 - x0, y_out - y_in, bt, V(x0, y_in, zb))
+        if t == 1:
+            board = board.cut(colbox)                                  # колонна проходит через нижнюю фанеру
+        put("Shelf_Board_%d" % t, "Фанера %.0f мм яруса %d: X %.0f..%.0f, Y %.0f..%.0f (%.0f × %.0f мм), на плечах, шурупами в T-гайки; "
+            "переднее положение — до задней стенки душа" % (bt, t, x0, x1, y_in, y_out, x1 - x0, y_out - y_in), board, PLY)
         zl = zb + bt
         put("Shelf_Lip_Inner_%d" % t, "Бортик яруса %d со стороны салона (профиль 2020 вдоль X)" % t, vslot_x(x0, x1, y_in, zl), PROF)
-        put("Shelf_Lip_Front_%d" % t, "Бортик яруса %d спереди (профиль 2020 поперёк)" % t, vslot_y(x1 - 20.0, y_in + 20.0, y_out, zl), PROF)
+        put("Shelf_Lip_Front_%d" % t, "Бортик яруса %d спереди, у стенки душа (профиль 2020 поперёк; к стенке — уголками)" % t,
+            vslot_y(x1 - 20.0, y_in + 20.0, yc0 - 1.0, zl), PROF)
         put("Shelf_Lip_Rear_%d" % t, "Бортик яруса %d сзади, у дверей (профиль 2020 поперёк)" % t, vslot_y(x0, y_in + 20.0, y_out, zl), PROF)
-        tiers.append((za, zl + 20.0))
+        tiers.append((za, zl + 20.0, zb, zl))
+    put("Shelf_Column_Front", "Колонна у переднего наружного угла: профиль 2020 от арки (резиновая прокладка %.0f мм) до низа фанеры верхнего яруса, "
+        "болтами к плечам/угольникам; держит свес 460 мм до задней стенки душа" % H["col_pad"], col, PROF)
     # ── проверки ──
     skip = ("Scan_", "Opening_", "RearDoorLeaf", "Floor_", "Shelf_", "Drawer_Leg", "Drawer_Upper", "Drawer_Slide")
     obst = [(o.Name, o.Shape) for o in doc.Objects if o.isDerivedFrom("Part::Feature") and not o.Shape.isNull() and o.Shape.Solids
@@ -320,7 +345,9 @@ def shelf(S):
     dd = min(parts["Shelf_Board_1"].distToShape(doc.getObject("Drawer_Upper").Shape)[0], parts["Shelf_Board_2"].distToShape(doc.getObject("Drawer_Upper").Shape)[0])
     k["checks"].append(("полка ↔ верхний ящик", dd))
     k["checks"].append(("верх верхнего яруса (бортики) ↔ поперечины кровати", bb("BedCross_1").ZMin - tiers[1][1]))
-    k["shelf"] = dict(x=(x0, x1), y=(y_in, y_out), z=tiers, gap_between=H["tiers"][1] - (H["tiers"][0] + 20.0 + bt + 20.0),
-                      gap_top=bb("BedCross_1").ZMin - tiers[1][1])
+    k["checks"].append(("нижний ярус над туалетом в транспорте (низ плеч/фанеры ↔ верх туалета)", tiers[0][2] - toilet_top))
+    k["shelf"] = dict(x=(x0, x1), y=(y_in, y_out), z=[(a_, b_) for a_, b_, _, _ in tiers],
+                      gap_between=za_list[1] - tiers[0][3], gap_top=bb("BedCross_1").ZMin - tiers[1][1], z_arch=z_arch,
+                      board=[(c_, d_) for _, _, c_, d_ in tiers])
     S.shelf_summary = k["shelf"]
     S.put(locals(), "shelf_summary")

@@ -68,6 +68,7 @@ BUY_URLS = {
     r"Toilet_Wheel_\w+": "https://a.co/d/02nt85Aa",   # колёсики 1″ неповоротные, высота 1.15″ (Amazon B0CHFSQHRP)
     "WaterTank_Rect": "https://www.classacustoms.com/water-tank-list.html",   # Class A Customs T-3000 (страница списка; заказ — у производителя)
     r"Shelf_(Arm|Lip)_\w+": "https://www.amazon.com/dp/B0F83QJV1M",           # тот же профиль SeekLiny 2020
+    r"Shelf_Column_Front": "https://www.amazon.com/dp/B0F83QJV1M",
     r"Shelf_Gusset_\w+": "https://www.amazon.com/s?k=2020+T+slot+corner+bracket+gusset",   # поиск Amazon
     r"Drawer_Leg_\w+": "https://www.amazon.com/dp/B0F83QJV1M",      # SeekLiny 10Pcs V Slot 2020 Aluminum Extrusion 2440mm (ASIN B0F83QJV1M), $149.99
     "Shower_PanRect": "https://a.co/d/09SdfkLC",      # поддон RecPro RP-SP-3624 36×24×5″, Right Drain (Amazon B089DJX71P)
@@ -140,7 +141,7 @@ EN_LABELS = [
     (r"WaterTankRect", "Water tank"), (r"WaterTank_Fitting_(\d)", "Tank fitting {1}"), (r"WaterTank_Rect", "Water tank Class A T-3000 30 gal"),
     (r"ArchShelf", "Arch shelf"), (r"Shelf_Arm_(\d)_(\d)", "Shelf arm {1}.{2}"), (r"Shelf_Gusset_(\d)_(\d)", "Shelf gusset {1}.{2}"),
     (r"Shelf_Board_(\d)", "Shelf board {1}"), (r"Shelf_Lip_Inner_(\d)", "Shelf lip inner {1}"), (r"Shelf_Lip_Front_(\d)", "Shelf lip front {1}"),
-    (r"Shelf_Lip_Rear_(\d)", "Shelf lip rear {1}"),
+    (r"Shelf_Lip_Rear_(\d)", "Shelf lip rear {1}"), (r"Shelf_Column_Front", "Shelf front column"),
     (r"Drawers", "Drawers"), (r"Drawer_Upper_Handle", "Upper drawer handle"), (r"Drawer_Lower_Handle", "Lower drawer handle"),
     (r"Drawer_Upper", "Upper drawer (slides rearward)"), (r"Drawer_Lower", "Lower drawer (rolls forward)"),
     (r"Drawer_Slide_(\w+)", "Drawer slide {1}"), (r"Drawer_Hanger_(\w+)_(\d)", "Slide hanger {1} {2}"), (r"Drawer_Leg_(\w+)_(\d)", "Slide leg {1} {2}"),
