@@ -65,6 +65,41 @@ def corner_cut(pts, gap, a_max, b_max):
     return best[1], best[2]
 
 
+def corner_plane(pts, gap):
+    """Одна плоскость, срезающая угол (x', y', z' от угла поддона у борта и узкой грани) — отсекается тетраэдр с катетами (b, a, c).
+
+    pts — точки арки (x', y', z'): вдоль узкой грани от кромки, вглубь от борта, вверх от дна. Плоскость x'/b + y'/a + z'/c = 1 должна оставить
+    каждую точку внутри отсекаемого тетраэдра не ближе gap. Минимальный объём тетраэдра. Возвращает (a, b, c) или None (арки в углу нет)."""
+    import math
+    pts = [p for p in pts if p[0] >= 0.0 and p[1] >= 0.0]
+    if not pts:
+        return None
+    best = None
+    for b in range(60, 520, 5):
+        for a in range(60, 760, 5):
+            c = 0.0
+            ok = True
+            for x, y, z in pts:
+                r = 1.0 - x / b - y / a
+                if r <= 0.0:
+                    ok = False
+                    break
+                c = max(c, z / r)
+            if not ok:
+                continue
+            for _ in range(400):
+                n = math.sqrt(1.0 / b ** 2 + 1.0 / a ** 2 + 1.0 / c ** 2)
+                if min((1.0 - x / b - y / a - z / c) / n for x, y, z in pts) >= gap:
+                    break
+                c += 2.0
+            else:
+                continue
+            v = a * b * c / 6.0
+            if best is None or v < best[0]:
+                best = (v, a, b, c)
+    return None if best is None else best[1:]
+
+
 def rrect_wire(xa, ya, xb, yb, r, z):
     """Контур прямоугольника со скруглёнными углами (8 рёбер, против часовой) на высоте z."""
     r = max(0.5, min(r, (xb - xa) / 2.0 - 0.01, (yb - ya) / 2.0 - 0.01))
@@ -157,48 +192,53 @@ def shower_kitchen(S):
     dr_y = y_aisle + Wp / 2.0
     body = body.cut(Part.makeCylinder(dr_r, R["base_th"] + 2.0, V(dr_x, dr_y, z_pan0 - 1.0)))
 
-    # — прямой срез угла у арки: минимальный треугольник (b, 0) — (0, a), зазор до арки cut_gap —
+    # — срез угла у арки ОДНОЙ ПЛОСКОСТЬЮ через поддон, заднюю и боковую стенки душа (Dimitri 2026-11-12): отсекается тетраэдр с вершиной в
+    #   углу (x' вдоль узкой грани, y' вглубь от борта, z' вверх от дна); на плоскость клеится фанерка (Shower_CornerPlate) —
     arch_s = arch_shapes[ks]
-    probe = Part.makeBox(700.0, 900.0, Hp - 1.0, V(x0 - 100.0, y_wall - 700.0, z_pan0 + 0.5))
-    sec = arch_s.common(probe)
-    uv_pts = []
-    if not sec.isNull():
-        for e in sec.Edges:
-            try:
-                uv_pts += [(p.x - x0, y_wall - p.y) for p in e.discretize(Distance=3.0)]
-            except Exception:
-                pass
-    cut_ab = AR.get("cut")
-    if cut_ab is None:
-        cut_ab = corner_cut(uv_pts, AR["cut_gap"] + 2.0, Wp * 0.9, Lp * 0.4)      # +2 мм — шаг дискретизации
-    cut_a = cut_b = 0.0
+    plane = AR.get("plane")
+    if plane is None:
+        zc0 = z_pan0
+        pl_pts = []
+        for xi in range(0, 140, 4):
+            for yi in range(0, 200, 5):
+                try:
+                    c_ = arch_s.common(Part.makeLine(V(x0 + xi, y_wall - yi, zc0 + 700.0), V(x0 + xi, y_wall - yi, 0.0)))
+                    if c_.Edges:
+                        pl_pts.append((float(xi), float(yi), c_.BoundBox.ZMax - zc0))
+                except Exception:
+                    pass
+        plane = corner_plane(pl_pts, AR["cut_gap"] + 12.0)         # +12 мм: фанерка лежит по плоскости с угловой стороны
+    cut_a = cut_b = 0.0                                   # прежний вертикальный срез и плотина в нём больше не нужны
     seal = None
-    if cut_ab:
-        cut_a, cut_b = cut_ab
-        ext = lambda p, q_, t: (p[0] + t * (q_[0] - p[0]), p[1] + t * (q_[1] - p[1]))
-        pa, pb = uv2xy(cut_b, 0.0), uv2xy(0.0, cut_a)                        # концы линии среза (XY)
-        a_ext, b_ext = ext(pa, pb, -0.15), ext(pb, pa, -0.15)
-        corner = (x0 - 20.0, y_wall + 20.0)
-        poly = [V(a_ext[0], a_ext[1], z_pan0 - 2.0), V(b_ext[0], b_ext[1], z_pan0 - 2.0), V(corner[0], corner[1], z_pan0 - 2.0)]
-        prism = Part.Face(Part.makePolygon(poly + [poly[0]])).extrude(V(0, 0, Hp + 4.0))
-        body = body.cut(prism)
-        # плотина в срезе: полоса вдоль линии среза (внутрь поддона) ∩ чаша
-        nu, nv = (1.0 / cut_b) / math.hypot(1.0 / cut_b, 1.0 / cut_a), (1.0 / cut_a) / math.hypot(1.0 / cut_b, 1.0 / cut_a)
-        sl = R["seal_t"]
-        a_u, a_v = cut_b * 1.15, -0.15 * cut_a                                 # A продлён за стенку (v < 0)
-        b_u, b_v = -0.15 * cut_b, cut_a * 1.15                                 # B продлён за узкую грань (u < 0)
-        pts_uv = [(a_u, a_v), (b_u, b_v), (b_u + sl * nu, b_v + sl * nv), (a_u + sl * nu, a_v + sl * nv)]
-        vec = [V(*uv2xy(u_, v_), z_in - 1.0) for u_, v_ in pts_uv]
-        strip = Part.Face(Part.makePolygon(vec + [vec[0]])).extrude(V(0, 0, z_pan - z_in + 1.0))
-        seal = strip.common(cav)
-    uc = (lambda v_: cut_b * (1.0 - v_ / cut_a) if cut_a and v_ < cut_a else 0.0)   # |u| линии среза на «глубине» v
+    tetra = None
+    plate_sh = None
+    plane_ab = None
+    if plane:
+        pa_, pb_, pc_ = plane
+        plane_ab = plane
+        P_ = lambda xp, yp, zp: V(x0 + xp, y_wall - yp, z_pan0 + zp)
+        tri = [P_(pb_, 0.0, 0.0), P_(0.0, pa_, 0.0), P_(0.0, 0.0, pc_)]
+        q_ = P_(-40.0, -40.0, -40.0)                      # вершина за углом: тетраэдр выходит за детали
+        faces = [Part.Face(Part.makePolygon(list(f_) + [f_[0]])) for f_ in (tri, [q_, tri[0], tri[1]], [q_, tri[1], tri[2]], [q_, tri[2], tri[0]])]
+        tetra = Part.Solid(Part.Shell(faces))
+        if tetra.Volume < 0:
+            tetra.reverse()
+        body = body.cut(tetra)
+        nrm = V(-1.0 / pb_, 1.0 / pa_, -1.0 / pc_)        # нормаль к плоскости — в сторону угла (в абсолютных осях)
+        nrm.normalize()
+        plate_sh = Part.Face(Part.makePolygon(tri + [tri[0]])).extrude(nrm * 12.0)
+    uc = lambda v_: 0.0
     pan = body
-    put("Shower_PanRect", "%s: на полу, узкая грань вровень с краем щита кровати (X=%.0f), слив %s, угол у арки срезан по "
-        "прямой (%.1f″ вдоль узкой грани × %.1f″ вдоль борта)" % (R["title"], x0, "у кабины" if AR.get("drain_end", "front") == "front"
-                                                            else "у кровати", cut_a / 25.4, cut_b / 25.4), pan, COL_PAN)
+    put("Shower_PanRect", "%s: на полу, узкая грань вровень с краем щита кровати (X=%.0f), слив %s, угол у арки срезан одной "
+        "плоскостью (вместе со стенками душа)" % (R["title"], x0, "у кабины" if AR.get("drain_end", "front") == "front"
+                                                else "у кровати"), pan, COL_PAN)
     if seal is not None and not seal.isNull() and seal.Volume > 1.0:
         put("Shower_PanCutSeal", "Плотина в срезе поддона (пластик/FRP %.0f мм + эпоксид/герметик по кромке): закрывает чашу "
             "по линии среза; платформа туалета проходит над ней" % R["seal_t"], seal, (0.98, 0.55, 0.20))
+    if plate_sh is not None:
+        put("Shower_CornerPlate", "Фанерка 1/2″ на плоскости среза угла у арки: клеится к поддону, задней и боковой стенкам — вода на арку не течёт; "
+            "плоскость x'/%.0f + y'/%.0f + z'/%.0f = 1 от угла поддона (x' вдоль узкой грани, y' от борта, z' от дна)" % (plane_ab[1], plane_ab[0], plane_ab[2]),
+            plate_sh, (0.80, 0.66, 0.42))
     put("Shower_Drain", "Слив поддона ⌀%.0f мм: %.1f″ от короткого края, по центру ширины (ANCHORS: drain_end)" % (
         R["drain_d"], R["drain_from_end"] / 25.4), Part.makeCylinder(dr_r, 3.0, V(dr_x, dr_y, z_in)), COL_DARK)
     trap = Part.makeCylinder(24.0, z_in + 150.0, V(dr_x, dr_y, -150.0))
@@ -358,9 +398,11 @@ def shower_kitchen(S):
     x_rw = dx1                                             # задняя стенка душа — по краю щита, от верха бортика поддона до потолка
     z_rw0 = z_pan                                          # 2026-11-12: туалет под стенкой больше не проезжает — стенка сплошная, нижней шторки нет
     put("Shower_WallRear", "Задняя стенка душа по краю щита кровати: от верха бортика поддона до потолка (сплошная; туалет живёт под раковиной)",
-        env_solid(x_rw, pt_, y_sf, z_rw0, z_ceil), COL_WALL, 10)
+        env_solid(x_rw, pt_, y_sf, z_rw0, z_ceil).cut(tetra) if tetra is not None else env_solid(x_rw, pt_, y_sf, z_rw0, z_ceil), COL_WALL, 10)
     back = env_solid(x_rw + pt_, x1 - (x_rw + pt_), y_sf, z_pan, z_ceil).cut(
         env_solid(x_rw + pt_ - 1, x1 - x_rw + 2, y_sf - 5, z_pan - 1, z_ceil + 1, g_extra=pw_t)).cut(arch_s)
+    if tetra is not None:
+        back = back.cut(tetra)
     put("Shower_WallBack", "Стенка душа по борту (фанера 1/2″ + FRP) от задней стенки до торца кухни; у арки вырезана по её форме",
         back, COL_WALL, 10)
     GH = K.get("gas_heater")
@@ -545,6 +587,9 @@ def shower_kitchen(S):
     checks += toilet_pf["checks"]
     d_arch = _dd(pan, arch_s)
     checks.append(("поддон ↔ арка", d_arch))
+    for n_ in ("Shower_WallRear", "Shower_WallBack", "Shower_CornerPlate"):
+        if n_ in parts:
+            checks.append(("%s ↔ арка (после среза плоскостью)" % n_, _dd(parts[n_], arch_s)))
     checks.append(("поддон ↔ кровать (край щита, X)", x0 - dx1))
     kpart = [parts[n_] for n_ in parts if n_.startswith("Kitchen_") and n_ != "Kitchen_WallPanel"]
     checks.append(("кухня ↔ поддон", min(_dd(k_, pan) for k_ in kpart)))
@@ -566,7 +611,7 @@ def shower_kitchen(S):
     rect_summary = dict(
         pan=dict(x=(x0, x1), y_wall=y_wall, y_aisle=y_aisle, z_pan=z_pan - floor_top, z_in=z_in - floor_top, L=Lp, W=Wp,
                  drain=(dr_x, dr_y), drain_end=AR.get("drain_end", "front"), t_end=t_end, t_side=t_side, top_in=top_in,
-                 bed_x=dx1, d_arch=d_arch, cut=(cut_a, cut_b), seal_len=(math.hypot(cut_a, cut_b) if cut_a else 0.0),
+                 bed_x=dx1, d_arch=d_arch, plane=plane_ab, cut=(cut_a, cut_b), seal_len=(math.hypot(cut_a, cut_b) if cut_a else 0.0),
                  cut_area=cut_a * cut_b / 2.0, title=R["title"]),
         toilet=toilet_pf,
         kitchen=dict(x=(kx0, kx1), kl=kl, y_front=y_wall0 - Wp, depth=Wp, sec1=(kx0, x_div0), sink_x=(sk_x0, sk_x0 + skx),
@@ -596,12 +641,12 @@ def report(S):
           "(оценка); слив ⌀2″ %s: X=%.0f, |Y|=%.0f" % (
               mm_in(p["z_pan"]), mm_in(p["z_in"]), p["t_end"], p["t_side"],
               "у кабины" if p["drain_end"] == "front" else "у кровати", p["drain"][0], p["drain"][1]))
-    a, b = p["cut"]
-    if a:
-        print("  СРЕЗ УГЛА (одна прямая): %.0f мм (%.1f″) вдоль узкой грани × %.0f мм (%.1f″) вдоль борта, линия %.0f мм (%.1f″), "
-              "отпиливается %.0f см²; зазор до арки %.1f мм; плотина %.0f мм в чаше" % (
-                  a, a / 25.4, b, b / 25.4, math.hypot(a, b), math.hypot(a, b) / 25.4, p["cut_area"] / 100.0, p["d_arch"],
-                  RECT_PAN["seal_t"]))
+    if p.get("plane"):
+        pa_, pb_, pc_ = p["plane"]
+        print("  СРЕЗ УГЛА ОДНОЙ ПЛОСКОСТЬЮ (поддон + задняя стенка + боковая стенка): катеты тетраэдра от угла поддона — %.0f мм вдоль узкой грани, "
+              "%.0f мм вглубь от борта, %.0f мм вверх от дна (вершина на Z=%.0f над полом); зазор до арки %.1f мм; по верху бортика срез поддона "
+              "%.0f × %.0f мм; фанерка 1/2″ по плоскости" % (pb_, pa_, pc_, pc_, p["d_arch"], pa_ * (1 - (p["z_pan"] - 0.0) / pc_),
+                                                        pb_ * (1 - (p["z_pan"] - 0.0) / pc_)))
     else:
         print("  Срез угла не нужен — поддон не задевает арку (зазор %.1f мм)" % p["d_arch"])
     print("  Туалет в транспорте — ПОД РАКОВИНОЙ (секция мойки): X %.0f..%.0f (выступает к поддону на %.0f мм: колёса ⌀3″ длинные), от борта %.1f″…%.1f″ (у пола), "
