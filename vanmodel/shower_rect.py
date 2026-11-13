@@ -443,17 +443,36 @@ def shower_kitchen(S):
     if flue is not None:
         ceil = ceil.cut(Part.makeCylinder(fr_ + 25.0, 60.0, V(fx_c, fy_c, z_ceil - 30.0)))
     put("Shower_Ceiling", "Потолок душа (фанера 1/2″ + FRP), Z=%.0f: прямоугольник над поддоном" % z_ceil, ceil, COL_WALL, 10)
-    # шторка — Г-образная (вдоль прохода и по торцу к кухне), на 60 мм внутрь от наружной кромки поддона
+    # 2026-11-12 (Dimitri): вместо шторок — стеклянные (акрил) двери. Дверь вдоль прохода — петли на вертикальной кромке задней стенки душа
+    # (Shower_WallRear.Edge4), открывается НАРУЖУ, в проход, и в открытом виде перекрывает «спальню». Торцевая створка — петли на вертикальной
+    # оси у торца боковой стенки (Shower_WallBack.Edge75), складывается внутрь вдоль боковой стенки; низ — выше туалета (он выезжает под ней).
+    DT = K.get("door_acrylic", 6.35)                       # акрил 1/4″
+    x_hz = x_rw + pt_                                      # ось петель прохода — внутренняя кромка задней стенки (Edge4)
+    x_ax = x1 - 3.0                                        # ось петель торцевой створки — у торца боковой стенки (Edge75)
+    z_d0, z_d1 = z_pan + 6.0, z_ceil - 60.0                # дверь прохода: от бортика поддона до потолка
+    x_d0, x_d1 = x_hz + 3.0, x_ax - DT - 4.0
+    door = Part.makeBox(x_d1 - x_d0, DT, z_d1 - z_d0, V(x_d0, y_sf, z_d0))
+    put("Shower_Door", "Стеклянная (акрил 1/4″ = 6.35 мм) дверь душа вдоль прохода: %.0f × %.0f мм, петли — на задней стенке душа (вертикальная кромка Edge4, X=%.0f); "
+        "открывается наружу, в проход, на ≥90° и перекрывает спальню" % (x_d1 - x_d0, z_d1 - z_d0, x_hz), door, (0.65, 0.82, 0.90), 65)
+    z_e0 = toilet_pf["z"][3] + 30.0                        # низ створки — над туалетом (его верх + 30 мм): под ней туалет выезжает
+    z_e1 = min(z_d1, 1700.0)                               # верх — пока стена не пошла внутрь (в сложенном виде створка вертикальна)
+    y_e0 = y_sf + DT + 3.0
+    y_e1 = min(yw(z_) - pw_t for z_ in range(int(z_e0), int(z_e1) + 1, 20)) - 4.0 - DT / 2.0     # ось петель: створка вплотную к стене по всей высоте
+    door_e = Part.makeBox(DT, y_e1 - y_e0, z_e1 - z_e0, V(x_ax - DT, y_e0, z_e0))
+    put("Shower_DoorEnd", "Торцевая створка (акрил 1/4″): %.0f × %.0f мм, низ на %.0f мм над полом (выше туалета), петли на вертикальной оси у торца боковой стенки "
+        "(Edge75, X=%.0f, |Y|=%.0f); складывается внутрь, вдоль боковой стенки" % (y_e1 - y_e0, z_e1 - z_e0, z_e0 - floor_top, x_ax, y_e1), door_e, (0.65, 0.82, 0.90), 65)
+    # открытые положения — для проверки и анимации (полупрозрачные)
+    door_open = door.copy()
+    door_open.rotate(V(x_hz, y_sf, 0.0), V(0, 0, 1), -90.0)
+    put("Shower_Door_Open", "Дверь душа открыта на 90° наружу (контрольное положение)", door_open, (0.65, 0.82, 0.90), 85)
+    door_fold = door_e.copy()
+    door_fold.rotate(V(x_ax - DT / 2.0, y_e1, 0.0), V(0, 0, 1), -90.0)
+    put("Shower_DoorEnd_Folded", "Торцевая створка сложена внутрь (вдоль боковой стенки)", door_fold, (0.65, 0.82, 0.90), 85)
+    for k_, (xh_, yh_, zl_, zh_, nm_) in enumerate(((x_hz, y_sf, z_d0, z_d1, "Door"), (x_ax - DT / 2.0, y_e1, z_e0, z_e1, "DoorEnd"))):
+        for j_, zz_ in enumerate((zl_ + 150.0, zh_ - 210.0)):
+            put("Shower_%sHinge_%d" % (nm_, j_ + 1), "Петля %s %d (нержавейка, на акрил — зажимная для стекла/акрила), вертикальная ось" % (nm_, j_ + 1),
+                Part.makeCylinder(8.0, 60.0, V(xh_, yh_, zz_)), COL_STEEL)
     ci_ = K.get("curtain_in", 60.0)
-    z_c0, z_c1 = z_pan + 40.0, z_ceil - 60.0
-    xc0, xc1 = x_rw + pt_ + 10.0, x1 - ci_
-    put("Shower_Curtain", "Шторка душа вдоль прохода (36″ поддона, на %.0f мм внутрь от кромки) — Г-образная вместе с торцевой" % ci_,
-        Part.makeBox(xc1 - xc0, 3.0, z_c1 - z_c0, V(xc0, y_sf + ci_, z_c0)), (0.55, 0.75, 0.85), 55)
-    put("Shower_CurtainFront", "Шторка душа у торца к кухне (24″), на %.0f мм внутрь от кромки поддона" % ci_,
-        Part.makeBox(3.0, (y_wall - 30.0) - (y_sf + ci_), z_c1 - z_c0, V(xc1, y_sf + ci_, z_c0)), (0.55, 0.75, 0.85), 55)
-    put("Shower_CurtainRod", "Карниз шторки (под потолком): вдоль прохода и по торцу — Г-образный",
-        Part.makeCylinder(8.0, xc1 - (x_rw + pt_), V(x_rw + pt_, y_sf + ci_ + 1.5, z_ceil - 40.0), V(1, 0, 0)).fuse(
-            Part.makeCylinder(8.0, (y_wall - 30.0) - (y_sf + ci_), V(xc1 + 1.5, y_sf + ci_, z_ceil - 40.0), V(0, 1, 0))), COL_STEEL)
     yb_h = yw(1650.0) - 12.0
     put("Shower_Head", "Лейка душа на штанге / смеситель (на стенке по борту)",
         Part.makeCylinder(55.0, 25.0, V(x0 + 300.0, ks * (yb_h - 25.0), 1650.0 + floor_top), V(0, ks, 0)), COL_STEEL)
@@ -579,7 +598,7 @@ def shower_kitchen(S):
     m0_, m1_ = moving0, moving1
     pass_ = [n_ for n_ in parts if n_.startswith(("Shower_", "Kitchen_")) and n_ not in (
         "Shower_PanRect", "Shower_PanCutSeal", "Shower_Drain")]
-    for pos_, ms_, sk_ in (("в транспорте", m0_, ()), ("в душе (торцевая шторка сдвигается)", m1_, ("Shower_CurtainFront",))):
+    for pos_, ms_, sk_ in (("в транспорте", m0_, ()), ("в душе", m1_, ())):
         v_, n_min = min((_dd(m_, parts[n_]), n_) for m_ in ms_ for n_ in pass_ if n_ not in sk_)
         toilet_pf["checks"].append(("туалет/платформа ↔ душ/кухня — %s (ближе всего %s)" % (pos_, n_min), v_))
     toilet_pf["checks"].append(("платформа ↔ поддон — в транспорте", _dd(m0_[1], pan)))
@@ -593,7 +612,7 @@ def shower_kitchen(S):
     checks.append(("поддон ↔ кровать (край щита, X)", x0 - dx1))
     kpart = [parts[n_] for n_ in parts if n_.startswith("Kitchen_") and n_ != "Kitchen_WallPanel"]
     checks.append(("кухня ↔ поддон", min(_dd(k_, pan) for k_ in kpart)))
-    checks.append(("кухня ↔ шторка", min(_dd(k_, parts[n_]) for k_ in kpart for n_ in ("Shower_Curtain", "Shower_CurtainFront"))))
+    checks.append(("кухня ↔ двери душа", min(_dd(k_, parts[n_]) for k_ in kpart for n_ in ("Shower_Door", "Shower_DoorEnd"))))
     checks.append(("мойка ↔ перегородка секций (запас)", sink_fit))
     post_f = [o.Shape for o in doc.Objects if o.Name in ("BedPost_pY_front",)]
     if post_f:
@@ -604,10 +623,17 @@ def shower_kitchen(S):
         gas.update(heater_x=(x_h0, x_h0 + ghx), heater_y=(y_h0, y_h1), heater_z=(z_h0, z_h1), over_pan=x_h0 + ghx - x0,
                    flue_c=(fx_c, abs(fy_c)), flue_top=z_fl1, top_to_ceil=(z_ceil - 12.0) - z_h1)
         checks += [("нагреватель ↔ поддон (по высоте)", _dd(hsh, pan)), ("нагреватель ↔ лейка", _dd(hsh, parts["Shower_Head"])),
-                   ("нагреватель ↔ шторка", _dd(hsh, parts["Shower_Curtain"])),
+                   ("нагреватель ↔ дверь душа", _dd(hsh, parts["Shower_Door"])),
                    ("дымоход ↔ вытяжка", _dd(flue, parts["Shower_ExhaustFan"])),
-                   ("дымоход ↔ карниз", _dd(flue, parts["Shower_CurtainRod"])),
                    ("дымоход ↔ ребро крыши", min(_dd(flue, s_) for s_ in objs("Rib")) if objs("Rib") else 999.0)]
+    arch_all = [o.Shape for o in doc.Objects if o.Name.startswith(("BedSideRail", "BedPost", "BedCross", "BedDeck", "BankPost", "Battery_"))
+                and o.isDerivedFrom("Part::Feature") and not o.Shape.isNull() and o.Shape.Solids]
+    checks.append(("дверь прохода (закрыта) ↔ поддон (над бортиком)", _dd(parts["Shower_Door"], pan)))
+    checks.append(("дверь прохода (открыта на 90°) ↔ кровать/батареи (нижний ящик вперёд при открытой двери не пройдёт)", min([_dd(parts["Shower_Door_Open"], s_) for s_ in arch_all] or [999.0])))
+    checks.append(("торцевая створка ↔ верх туалета (транспорт; низ створки − верх туалета)", z_e0 - toilet_pf["z"][3]))
+    checks.append(("торцевая створка сложена ↔ боковая стенка душа", _dd(parts["Shower_DoorEnd_Folded"], parts["Shower_WallBack"])))
+    checks.append(("торцевая створка сложена ↔ туалет в душе", min(_dd(parts["Shower_DoorEnd_Folded"], m_) for m_ in moving1)))
+    checks.append(("дверь прохода ↔ торцевая створка", _dd(parts["Shower_Door"], parts["Shower_DoorEnd"])))
     rect_summary = dict(
         pan=dict(x=(x0, x1), y_wall=y_wall, y_aisle=y_aisle, z_pan=z_pan - floor_top, z_in=z_in - floor_top, L=Lp, W=Wp,
                  drain=(dr_x, dr_y), drain_end=AR.get("drain_end", "front"), t_end=t_end, t_side=t_side, top_in=top_in,

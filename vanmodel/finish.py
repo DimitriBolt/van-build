@@ -70,6 +70,8 @@ BUY_URLS = {
     r"Shelf_(Arm|Lip)_\w+": "https://www.amazon.com/dp/B0F83QJV1M",           # тот же профиль SeekLiny 2020
     r"Shelf_Column_Front": "https://www.amazon.com/dp/B0F83QJV1M",
     r"Shelf_Gusset_\w+": "https://www.amazon.com/s?k=2020+T+slot+corner+bracket+gusset",   # поиск Amazon
+    r"Shower_Door(End)?": "https://www.amazon.com/s?k=clear+acrylic+sheet+1%2F4+inch+cast",   # акрил 1/4″, резать по размеру
+    r"Shower_Door(End)?Hinge_\d": "https://www.amazon.com/s?k=acrylic+glass+door+clamp+hinge+stainless",
     "Propane_LockerLid": "https://www.amazon.com/s?k=clear+acrylic+sheet+1%2F8+inch+cast",   # акрил 1/8″ — крышка локера
     r"Drawer_Leg_\w+": "https://www.amazon.com/dp/B0F83QJV1M",      # SeekLiny 10Pcs V Slot 2020 Aluminum Extrusion 2440mm (ASIN B0F83QJV1M), $149.99
     "Shower_PanRect": "https://a.co/d/09SdfkLC",      # поддон RecPro RP-SP-3624 36×24×5″, Right Drain (Amazon B089DJX71P)
@@ -137,7 +139,7 @@ EN_LABELS = [
     (r"Shower_WallBack", "Shower side wall"), (r"Shower_GasHeater", "Gas water heater Camplux"),
     (r"Shower_GasHeater_Knob(\d)", "Heater knob {1}"), (r"Shower_Flue", "Heater flue 3″"),
     (r"Shower_FlueCap", "Flue roof cap"), (r"Shower_FlueThimble", "Flue ceiling thimble"),
-    (r"Shower_Ceiling", "Shower ceiling"), (r"Shower_Curtain", "Shower curtain"), (r"Shower_CurtainRod", "Curtain rod"),
+    (r"Shower_Ceiling", "Shower ceiling"), (r"Shower_Door", "Shower door (acrylic, hinged on rear wall)"), (r"Shower_Door_Open", "Shower door open 90°"), (r"Shower_DoorEnd", "Shower end panel (acrylic, folds to side wall)"), (r"Shower_DoorEnd_Folded", "Shower end panel folded"), (r"Shower_(Door|DoorEnd)Hinge_(\d)", "Shower {1} hinge {2}"),
     (r"Shower_Head", "Shower head"), (r"Shower_ExhaustFan", "Exhaust fan 12V"),
     (r"WaterTankRect", "Water tank"), (r"WaterTank_Fitting_(\d)", "Tank fitting {1}"), (r"WaterTank_Rect", "Water tank Class A T-3300 33 gal"),
     (r"ArchShelf", "Arch shelf"), (r"Shelf_Arm_(\d)_(\d)", "Shelf arm {1}.{2}"), (r"Shelf_Gusset_(\d)_(\d)", "Shelf gusset {1}.{2}"),
@@ -148,7 +150,7 @@ EN_LABELS = [
     (r"Drawer_Slide_(\w+)", "Drawer slide {1}"), (r"Drawer_Hanger_(\w+)_(\d)", "Slide hanger {1} {2}"), (r"Drawer_Leg_(\w+)_(\d)", "Slide leg {1} {2}"),
     (r"Drawer_Wheel_(\w)(\d)", "Drawer caster {1}{2}"),
     (r"Shower_PanRect", "Shower pan RecPro 36x24x5″"), (r"Shower_PanCutSeal", "Pan cut seal (dam)"),
-    (r"Shower_CurtainFront", "Shower curtain (front)"), (r"Kitchen_WallPanel", "Kitchen wall panel"),
+    (r"Kitchen_WallPanel", "Kitchen wall panel"),
     (r"Toilet_Plate", "Toilet floor plate"), (r"Toilet_Platform", "Toilet platform"),
     (r"Toilet_Wheel_F(\w)", "Front wheel {1}"), (r"Toilet_Wheel_R(\w)", "Rear wheel {1}"),
     (r"Toilet_PlatformDam", "Platform dam"), (r"Toilet_Camco", "Toilet SEAFLO 2.6 gal"),
