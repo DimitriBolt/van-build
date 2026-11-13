@@ -52,7 +52,7 @@ def drawers(S):
     PS = S.propane_summary                                              # локер баллона на месте бывшего туалета: его верх задаёт низ верхнего ящика
     locker_top = PS["z_top"]
     locker_x0 = PS["x"][0]
-    p3 = bb("BankPost_P3")                                             # ножка батарей у пассажирского борта (край Y)
+    p3 = bb("BankPost_P3f")                                            # ножка батарей у пассажирского борта (край Y)
     pan = bb("Shower_PanRect")
     pil = bb("Pillar_Rear_pY")
     xb_end = S.dx1                                                      # край щита кровати
