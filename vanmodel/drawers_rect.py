@@ -12,7 +12,7 @@ import FreeCAD as App
 import Part
 
 from .common import COL_STRUT, add_shape
-from .params_rect import DRAWERS_RECT, WATER_RECT
+from .params_rect import DRAWERS_RECT, SHELF_RECT, WATER_RECT
 
 V = App.Vector
 COL_PLY, COL_PLY2, COL_STEEL, COL_WHEEL = (0.80, 0.66, 0.42), (0.86, 0.74, 0.52), (0.80, 0.82, 0.86), (0.15, 0.15, 0.15)
@@ -33,6 +33,22 @@ def vslot_2020(x0, y0, z0, z1):
         sl.rotate(V(cx, cy, z0), V(0, 0, 1), 90.0 * k)
         solid = solid.cut(sl)
     return solid
+
+
+def vslot_y(x0, y0, y1, z0):
+    """Профиль 2020 вдоль Y: X — x0..x0+20, Y — y0..y1, Z — z0..z0+20."""
+    sh = vslot_2020(0.0, 0.0, 0.0, y1 - y0)
+    sh.rotate(V(0, 0, 0), V(1, 0, 0), -90.0)                          # Z → +Y, Y → −Z
+    sh.translate(V(x0, y0, z0 + 20.0))
+    return sh
+
+
+def vslot_x(x0, x1, y0, z0):
+    """Профиль 2020 вдоль X: X — x0..x1, Y — y0..y0+20, Z — z0..z0+20."""
+    sh = vslot_2020(0.0, 0.0, 0.0, x1 - x0)
+    sh.rotate(V(0, 0, 0), V(0, 1, 0), 90.0)                           # Z → +X, X → −Z
+    sh.translate(V(x0, y0, z0 + 20.0))
+    return sh
 
 
 def drawers(S):
@@ -233,6 +249,12 @@ def report(S):
           "высота %.0f мм (%.1f″), от %.0f до %.0f мм над полом (верх туалета %.0f); объём ≈ %.0f л; ход %.0f мм" % (
               u["x"][0], u["x"][1], u["width"], u["width"] / 25.4, u["y_out"], u["y_d"], u["h"], u["h"] / 25.4, u["z"][0], u["z"][1],
               u["toilet_top"], u["vol"], u["travel"]))
+    sh = k.get("shelf")
+    if sh:
+        print("  ПОЛКА над левой аркой (2 яруса на водительских стойках 2020): X %.0f..%.0f, Y %.0f..%.0f (%.0f × %.0f мм); ярусы Z %.0f..%.0f и %.0f..%.0f; "
+              "свободная высота нижнего яруса %.0f мм, верхнего %.0f мм; доступ от задних дверей" % (
+                  sh["x"][0], sh["x"][1], sh["y"][0], sh["y"][1], sh["x"][1] - sh["x"][0], sh["y"][1] - sh["y"][0],
+                  sh["z"][0][0], sh["z"][0][1], sh["z"][1][0], sh["z"][1][1], sh["gap_between"], sh["gap_top"]))
     w = k.get("water")
     if w:
         print("  БАК ВОДЫ Class A Customs %s (%d gal) %.1f×%.1f×%.1f″: X %.0f..%.0f (за туалетом), Y %.0f..%.0f (справа от нижнего ящика), "
@@ -241,3 +263,64 @@ def report(S):
     print("  Зазоры/запасы: " + "; ".join("%s %.1f" % (n_, v_) for n_, v_ in k["checks"]))
     print("=" * 70)
 
+
+
+# ═══════════════════════════════════════════════════════════════════════════════════════════════════
+# ПОЛКА НАД ЛЕВОЙ (водительской) АРКОЙ — 2026-11-12, Dimitri: два яруса на водительских стойках 2020
+# ═══════════════════════════════════════════════════════════════════════════════════════════════════
+def shelf(S):
+    doc = S.doc
+    H = SHELF_RECT
+    k = S.drawers_summary
+    S.shelf_summary = None
+    if not H.get("enable") or not k:
+        S.put(locals(), "shelf_summary")
+        return
+    bb = lambda n: doc.getObject(n).Shape.BoundBox
+    g = doc.addObject("App::DocumentObjectGroup", "ArchShelf")
+    g.Label = "Полка над левой аркой — 2 яруса на водительских стойках 2020 (проект 2026-11-12)"
+    parts = {}
+
+    def put(name, label, shape, color):
+        add_shape(doc, name, label, shape, color=color, group=g)
+        parts[name] = shape
+
+    PROF, PLY = (0.78, 0.80, 0.84), (0.80, 0.66, 0.42)
+    legs = [bb("Drawer_Leg_driver_1"), bb("Drawer_Leg_driver_2")]
+    y_leg = legs[0].YMax                                               # наружная грань стойки (Y)
+    y_in = y_leg + H["gap_leg"]
+    y_out = bb("BedSideRail_pY").YMin - H["gap_rail"]
+    x0, x1, bt, gu = H["x0"], H["x1"], H["board_t"], H["gusset"]
+    tiers = []
+    for t, za in enumerate(H["tiers"], 1):
+        zb = za + 20.0                                                 # верх плеч = низ фанеры
+        for n, lg in enumerate(legs, 1):
+            put("Shelf_Arm_%d_%d" % (t, n), "Плечо яруса %d у стойки %d: профиль 2020, от стойки к борту, к стойке — угольником в паз" % (t, n),
+                vslot_y(lg.XMin, y_leg, y_out - 2.0, za), PROF)
+            xc = (lg.XMin + lg.XMax) / 2.0
+            tri = Part.Face(Part.makePolygon([V(xc - 2.0, y_leg, za - gu), V(xc - 2.0, y_leg, za), V(xc - 2.0, y_leg + gu, za),
+                                              V(xc - 2.0, y_leg, za - gu)])).extrude(V(4.0, 0, 0))
+            put("Shelf_Gusset_%d_%d" % (t, n), "Косынка %.0f мм под плечом яруса %d у стойки %d (2020 corner bracket / пластина 4 мм)" % (gu, t, n),
+                tri, PROF)
+        put("Shelf_Board_%d" % t, "Фанера 12 мм яруса %d: X %.0f..%.0f, Y %.0f..%.0f (%.0f × %.0f мм), на плечах, шурупами в T-гайки" % (
+            t, x0, x1, y_in, y_out, x1 - x0, y_out - y_in), Part.makeBox(x1 - x0, y_out - y_in, bt, V(x0, y_in, zb)), PLY)
+        zl = zb + bt
+        put("Shelf_Lip_Inner_%d" % t, "Бортик яруса %d со стороны салона (профиль 2020 вдоль X)" % t, vslot_x(x0, x1, y_in, zl), PROF)
+        put("Shelf_Lip_Front_%d" % t, "Бортик яруса %d спереди (профиль 2020 поперёк)" % t, vslot_y(x1 - 20.0, y_in + 20.0, y_out, zl), PROF)
+        put("Shelf_Lip_Rear_%d" % t, "Бортик яруса %d сзади, у дверей (профиль 2020 поперёк)" % t, vslot_y(x0, y_in + 20.0, y_out, zl), PROF)
+        tiers.append((za, zl + 20.0))
+    # ── проверки ──
+    skip = ("Scan_", "Opening_", "RearDoorLeaf", "Floor_", "Shelf_", "Drawer_Leg", "Drawer_Upper", "Drawer_Slide")
+    obst = [(o.Name, o.Shape) for o in doc.Objects if o.isDerivedFrom("Part::Feature") and not o.Shape.isNull() and o.Shape.Solids
+            and not o.Name.startswith(skip)]
+    for t in (1, 2):
+        comp = Part.makeCompound([sh for n_, sh in parts.items() if n_.endswith("_%d" % t) or n_.endswith("_%d_1" % t) or n_.endswith("_%d_2" % t)])
+        dmin, nmin = min((comp.distToShape(s_)[0], n_) for n_, s_ in obst)
+        k["checks"].append(("полка, ярус %d: ближе всего «%s»" % (t, nmin), dmin))
+    dd = min(parts["Shelf_Board_1"].distToShape(doc.getObject("Drawer_Upper").Shape)[0], parts["Shelf_Board_2"].distToShape(doc.getObject("Drawer_Upper").Shape)[0])
+    k["checks"].append(("полка ↔ верхний ящик", dd))
+    k["checks"].append(("верх верхнего яруса (бортики) ↔ поперечины кровати", bb("BedCross_1").ZMin - tiers[1][1]))
+    k["shelf"] = dict(x=(x0, x1), y=(y_in, y_out), z=tiers, gap_between=H["tiers"][1] - (H["tiers"][0] + 20.0 + bt + 20.0),
+                      gap_top=bb("BedCross_1").ZMin - tiers[1][1])
+    S.shelf_summary = k["shelf"]
+    S.put(locals(), "shelf_summary")
