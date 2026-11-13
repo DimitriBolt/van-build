@@ -89,7 +89,7 @@ def locker(S):
         x_gv, y_gas, z_h0 = gas["heater_x"][0] + 14.0, gas["heater_y"][0] + 50.0, gas["heater_z"][0]
         z_g = bb("BedCross_3").ZMin - 25.0
         yb = min(max(y_gas, ly0 + 40.0), ly1 - 40.0)
-        xb = lx1 - 40.0
+        xb = lx1 - 7.0                      # у самой стенки душа: в щели между верхним ящиком и стенкой
         pts = [V(xb, yb, z_top), V(xb, yb, z_g), V(xb, y_gas, z_g), V(x_gv, y_gas, z_g), V(x_gv, y_gas, z_h0)]
         gl = None
         for p0_, p1_ in zip(pts, pts[1:]):
@@ -99,7 +99,7 @@ def locker(S):
             gl = seg if gl is None else gl.fuse(seg)
         put("Gas_Line", "Газ: шланг LP 3/8″ (RV, в оплётке) из гермоввода крышки локера → под поперечины → сквозь заднюю стенку душа "
             "(проходка) → к нагревателю; без соединений в салоне", gl, (0.95, 0.75, 0.10))
-        put("Gas_Bulkhead", "Гермоввод газа в акриловой крышке локера", Part.makeCylinder(15.0, 15.0, V(xb, yb, z_top)), (0.45, 0.45, 0.45))
+        put("Gas_Bulkhead", "Гермоввод газа в акриловой крышке локера", Part.makeCylinder(10.0, 15.0, V(xb, yb, z_top)), (0.45, 0.45, 0.45))
         put("Gas_WallGrommet", "Проходка газового шланга в задней стенке душа (резиновая, с гильзой)",
             Part.makeCylinder(14.0, 40.0, V(dx1 - 10.0, y_gas, z_g), V(1, 0, 0)), (0.25, 0.25, 0.25))
     # датчик пропана + CO — низко, на дверце (рядом с ящиком), на виду
