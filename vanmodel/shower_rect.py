@@ -292,7 +292,7 @@ def shower_kitchen(S):
                                              wd / 25.4, AT["mount_h"] / 25.4, spacer,
                                              {"A": "к проходу", "W": "к борту"}.get(side_, "№%s от прохода" % side_)),
               wheel, (0.15, 0.15, 0.15))
-    xl1 = x0 + K["ledge_in"]                               # линия нижней шторки (козырёк)
+        xl1 = dx1 + pt_ + 16.0                                 # линия нижней шторки — сразу за задней стенкой душа
     put_t("Toilet_PlatformDam", "Порожек на платформе за нижней шторкой (в транспортном положении): вода с передней части "
           "платформы стекает в поддон, а не по платформе под кровать",
           Part.makeBox(10.0, pfy1 - pfy0, 10.0, V(xl1 - 6.0 - 10.0, ybase(ks, pfy1, pfy1 - pfy0), z_pf1)), (0.25, 0.25, 0.25))
@@ -356,17 +356,15 @@ def shower_kitchen(S):
                      from_wall=(y_wall - ty1, y_wall - ty0), n_front=nF)
 
     # ═══════ СТЕНКИ, ПОТОЛОК, ШТОРКА, НАГРЕВАТЕЛЬ ═══════
-    x_rw = dx1                                             # задняя стенка душа — по краю щита, только сверху
-    z_rw0 = z_rail_top
-    put("Shower_WallRear", "Задняя стенка душа по краю щита кровати — только сверху: от уровня щита до потолка (внизу — "
-        "проём: туалет выезжает в душ)", env_solid(x_rw, pt_, y_sf, z_rw0, z_ceil), COL_WALL, 10)
-    ledge = env_solid(x_rw + pt_, xl1 - (x_rw + pt_), y_sf + 60.0, z_rw0 - 12.0, z_rw0)
-    put("Shower_DripLedge", "Козырёк под задней стенкой (FRP по фанере, уклон в поддон) — до %.0f мм внутрь поддона" %
-        K["ledge_in"], ledge, COL_WALL, 10)
-    cur_lo = Part.makeBox(4.0, (y_wall - 30.0) - (y_sf + 80.0), (z_rw0 - 14.0) - (z_pan + 25.0),
+    x_rw = dx1                                             # задняя стенка душа — по краю щита, вниз — до верха туалета (+10 мм)
+    z_rw0 = z_tt1 + 10.0                                   # Dimitri 2026-11-12: козырёк не нужен — стенка продлена вниз
+    put("Shower_WallRear", "Задняя стенка душа по краю щита кровати: от потолка вниз до верха туалета + 10 мм (%.0f мм над полом) — "
+        "ниже проём, под стенкой туалет на платформе выезжает в душ" % (z_rw0 - floor_top), env_solid(x_rw, pt_, y_sf, z_rw0, z_ceil),
+        COL_WALL, 10)
+    cur_lo = Part.makeBox(4.0, (y_wall - 30.0) - (y_sf + 80.0), (z_rw0 - 4.0) - (z_pan + 25.0),
                           V(xl1 - 6.0, y_sf + 80.0, z_pan + 25.0))
     cur_lo = cur_lo.cut(Part.makeBox(20.0, pfy1 - pfy0 + 2.0, z_pf1 - z_pan, V(xl1 - 16.0, ybase(ks, pfy1 + 1.0, pfy1 - pfy0 + 2.0), z_pan)))
-    put("Shower_CurtainLower", "Нижняя шторка с козырька до поддона — закрывает проём; ложится на платформу туалета перед "
+    put("Shower_CurtainLower", "Нижняя шторка с нижнего края задней стенки до поддона — закрывает проём; ложится на платформу туалета перед "
         "порожком; сдвигается, когда туалет выезжает в душ", cur_lo, (0.55, 0.75, 0.85), 55)
     pw_t = K["wall_panel_t"]
     back = env_solid(x_rw + pt_, x1 - (x_rw + pt_), y_sf, z_pan, z_ceil).cut(
@@ -543,7 +541,7 @@ def shower_kitchen(S):
         checks.append((plate_note, 0.0))
     m0_, m1_ = moving0, moving1
     pass_ = [n_ for n_ in parts if n_.startswith(("Shower_", "Kitchen_")) and n_ not in (
-        "Shower_CurtainLower", "Shower_PanRect", "Shower_PanCutSeal", "Shower_Drain", "Shower_DripLedge")]
+        "Shower_CurtainLower", "Shower_PanRect", "Shower_PanCutSeal", "Shower_Drain")]
     for pos_, ms_ in (("в транспорте", m0_), ("в душе", m1_)):
         v_, n_min = min((_dd(m_, parts[n_]), n_) for m_ in ms_ for n_ in pass_)
         toilet_pf["checks"].append(("туалет/платформа ↔ душ/кухня — %s (ближе всего %s)" % (pos_, n_min), v_))
