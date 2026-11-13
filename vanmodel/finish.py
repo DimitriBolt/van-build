@@ -52,7 +52,7 @@ def hide_default(doc):
 
 # Заметки Dimitri в Label2 (из его .FCStd) — сохраняются при пересборке, идут в начало Label2
 USER_NOTES = {
-    "BankRail_Wall": "Резать 1-ой!! Эта рейка задаёт высоту ножек этажерки. Поесле неё можно-нужно напрезать 2(а лучше 4) "
+    "BankRail_Wall_Lower": "Резать 1-ой!! Эта рейка задаёт высоту ножек этажерки. Поесле неё можно-нужно напрезать 2(а лучше 4) "
                      "ножки. Нужно учесть высоту всего, что стоит на 1-м этаже: Wheel arc, Water tank, Propan locker, туалет! "
                      "Рейка должна выдерживать Все !! батареи: 60-80 кг!",
 }
@@ -73,7 +73,7 @@ BUY_URLS = {
     r"Shower_Door(End)?": "https://www.amazon.com/s?k=clear+acrylic+sheet+1%2F4+inch+cast",   # акрил 1/4″, резать по размеру
     r"Shower_Door(End)?Hinge_\d": "https://www.amazon.com/s?k=acrylic+glass+door+clamp+hinge+stainless",
     "Propane_LockerLid": "https://www.amazon.com/s?k=clear+acrylic+sheet+1%2F8+inch+cast",   # акрил 1/8″ — крышка локера
-    r"Bank(Rail_Wall|Rail_Inner|Post_P3f?|Cross_(Rear|Front))": "https://www.amazon.com/dp/B0F83QJV1M",   # V-Slot 2020 SeekLiny (рейки/стойки/поперечины этажерки)
+    r"Bank(Rail_(Wall|Inner)_(Lower|Upper)|Post_P3f?|Cross_(Rear|Front))": "https://www.amazon.com/dp/B0F83QJV1M",   # V-Slot 2020 SeekLiny (рейки/стойки/поперечины этажерки)
     r"BankJoinPlate_\w+": "https://www.amazon.com/s?k=2020+flat+joining+plate+80x38+8+hole+aluminum+extrusion",
     r"BankLPlate_\w+": "https://www.amazon.com/s?k=2020+L+shape+joining+plate+5+hole+aluminum+extrusion",
     r"BankBracket_\w+": "https://www.amazon.com/s?k=2020+aluminum+extrusion+corner+bracket+20x28+T+nut+M5+kit",
@@ -125,8 +125,8 @@ EN_LABELS = [
     (r"BankPostPlate_(\w+)", "Rack post plate {1}"), (r"BankPost_(\w+)", "Rack post {1}"),
     (r"BankRailBolt_(\w+)", "Rail bolt M8 {1}"),
     (r"BankRailScrew_(\w+)", "Rail screw M5 {1}"), (r"BankJoinPlate_(\w+)", "Joining plate {1}"),
-    (r"BankLPlate_(\w+)", "L-plate {1}"), (r"BankBracket_(\w+)", "Corner bracket {1}"), (r"BankRail_Wall", "Rack rail (wall side)"),
-    (r"BankRail_Inner", "Rack rail (aisle side)"), (r"BankCross_(Rear|Front)", "Rack crossbar {1}"),
+    (r"BankLPlate_(\w+)", "L-plate {1}"), (r"BankBracket_(\w+)", "Corner bracket {1}"), (r"BankRail_Wall_(Lower|Upper)", "Rack rail (wall side) {1}"),
+    (r"BankRail_Inner_(Lower|Upper)", "Rack rail (aisle side) {1}"), (r"BankCross_(Rear|Front)", "Rack crossbar {1}"),
     (r"BankShelf", "Battery shelf"), (r"BankStop_ShelfRear", "Battery stop (rear)"),
     (r"BankStop_ShelfFront", "Battery stop (front)"), (r"BankWedge_B1Arch", "Wedge B1 / arch"),
     (r"BankArchPad_(\d)", "Arch pad {1}"), (r"BankHolddown_B1", "B1 hold-down"),
