@@ -87,6 +87,10 @@ def drawers(S):
     CA = L["caster"]
     y_pass = p3.YMax + L["side_gap"]                                   # пассажирская грань (|Y| макс. к борту)
     y_drv = pan.YMin - L["side_gap"]                                   # водительская грань — до края поддона
+    WR = WATER_RECT
+    arch_y = min(bb("WheelArch_pY").YMin, pil.YMin) - WR["gap_wall"]    # бак: поперёк до арки / задней стойки
+    if WR.get("enable"):                                                # если бак не влезает — сужаем нижний ящик
+        y_drv = min(y_drv, arch_y - WR["dims"][1] - WR["gap_drawer"])
     xl0, xl1 = L["x_rear"], xb_end - L["front_gap"]
     zl0 = floor_top + CA["h"]
     zl1 = zu0 - L["top_gap"]
@@ -152,13 +156,12 @@ def drawers(S):
     checks.append(("верх верхнего ящика ↔ поперечины кровати", z_top_lim - zu1))
     checks.append(("нижний ящик: запас до края поддона / до ножки P3", min(pan.YMin - y_drv, y_pass - p3.YMax)))
     # ═══════ БАК ВОДЫ (Class A Customs): сзади от туалета, водительский борт, справа от нижнего ящика, под верхним ящиком ═══════
-    WR = WATER_RECT
     water_summary = None
     if WR.get("enable"):
         tl, tw_, th_ = WR["dims"]
         tx1 = min(o.Shape.BoundBox.XMin for o in doc.Objects if o.Name.startswith("Toilet_") and o.isDerivedFrom("Part::Feature")
                   and not o.Shape.isNull()) - WR["gap_toilet"]
-        ty0 = pan_y_lim = parts["Drawer_Lower"].BoundBox.YMax + WR["gap_drawer"]
+        ty0 = parts["Drawer_Lower"].BoundBox.YMax + WR["gap_drawer"]
         tx0 = tx1 - tl
         wg = doc.addObject("App::DocumentObjectGroup", "WaterTankRect")
         wg.Label = "Бак воды — Class A Customs %s %d gal (проект 2026-11-12)" % (WR["model"], WR["gal"])

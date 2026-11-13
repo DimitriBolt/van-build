@@ -259,7 +259,8 @@ def shower_kitchen(S):
     # передние колёса в транспорте — у бортика/плотины: ближе всего к борту колесо упирается в линию среза
     v_wheel_min = y_wall - (yW + hw_)
     f0 = x0 + max(t_end, uc(v_wheel_min) + seal_t + 4.0) + wx
-    xt0 = dx1 - tlx                                                        # туалет в транспорте: передом до края щита
+    d_fwd = AR.get("toilet_forward", 0.0)                                  # Dimitri 2026-11-12: туалет в транспорте торчит вперёд за край щита
+    xt0 = dx1 - tlx + d_fwd                                                # туалет в транспорте: передом до края щита (+ d_fwd вперёд)
     v_toilet_min = y_wall - ty1
     u_in = max(t_end, uc(v_toilet_min) + seal_t) + AT["toilet_in"]         # туалет в душе: его задняя грань за бортиком
     travel = (x0 + u_in) - xt0
@@ -293,9 +294,12 @@ def shower_kitchen(S):
                                              {"A": "к проходу", "W": "к борту"}.get(side_, "№%s от прохода" % side_)),
               wheel, (0.15, 0.15, 0.15))
         xl1 = dx1 + pt_ + 16.0                                 # линия нижней шторки — сразу за задней стенкой душа
-    put_t("Toilet_PlatformDam", "Порожек на платформе за нижней шторкой (в транспортном положении): вода с передней части "
-          "платформы стекает в поддон, а не по платформе под кровать",
-          Part.makeBox(10.0, pfy1 - pfy0, 10.0, V(xl1 - 6.0 - 10.0, ybase(ks, pfy1, pfy1 - pfy0), z_pf1)), (0.25, 0.25, 0.25))
+    xl1 = dx1 + pt_ + 16.0                                 # линия нижней шторки — сразу за задней стенкой душа
+    dam_x = max(xl1 - 16.0, xt0 + tlx + 4.0)               # порожек — за шторкой, но не под туалетом
+    if dam_x + 10.0 < pfx1 - 3.0:
+        put_t("Toilet_PlatformDam", "Порожек на платформе за нижней шторкой (в транспортном положении): вода с передней части "
+              "платформы стекает в поддон, а не по платформе под кровать",
+              Part.makeBox(10.0, pfy1 - pfy0, 10.0, V(dam_x, ybase(ks, pfy1, pfy1 - pfy0), z_pf1)), (0.25, 0.25, 0.25))
     tsh_ = Part.makeBox(tlx, tly, tlz, V(xt0, ybase(ks, ty1, tly), z_pf1))
     try:
         tsh_ = tsh_.makeFillet(25.0, [e for e in tsh_.Edges if abs(e.tangentAt(0).z) > 0.9])
@@ -335,7 +339,7 @@ def shower_kitchen(S):
              ("передний край платформы в поддоне — в душе", fit["platform_front_in_pan_shower"]),
              ("задние колёса снаружи поддона — в душе", fit["rear_wheels_out_shower"]),
              ("задние колёса на плите — в транспорте (до её заднего края)", fit["rear_wheels_on_plate"]),
-             ("туалет под щитом — в транспорте", fit["toilet_under_deck"]),
+             ("туалет под щитом — в транспорте (< 0: торчит вперёд за край щита, по решению Dimitri)", fit["toilet_under_deck"]),
              ("платформа над бортиком поддона (сверх %.0f мм)" % AT["rim_clear"], fit["platform_over_rim"])]
     moving0 = [tsh_, fsh_t["Toilet_Platform"]] + wF + wR
     moving1 = [t_sh, pf_sh] + [w_.translated(mv) for w_ in wF + wR]
@@ -364,6 +368,8 @@ def shower_kitchen(S):
     cur_lo = Part.makeBox(4.0, (y_wall - 30.0) - (y_sf + 80.0), (z_rw0 - 4.0) - (z_pan + 25.0),
                           V(xl1 - 6.0, y_sf + 80.0, z_pan + 25.0))
     cur_lo = cur_lo.cut(Part.makeBox(20.0, pfy1 - pfy0 + 2.0, z_pf1 - z_pan, V(xl1 - 16.0, ybase(ks, pfy1 + 1.0, pfy1 - pfy0 + 2.0), z_pan)))
+    if xt0 + tlx > xl1 - 6.0:                              # туалет в транспорте торчит сквозь линию шторки — вырез по его сечению
+        cur_lo = cur_lo.cut(Part.makeBox(30.0, tly + 10.0, z_tt1 - z_pan + 5.0, V(xl1 - 16.0, ybase(ks, ty1 + 5.0, tly + 10.0), z_pan)))
     put("Shower_CurtainLower", "Нижняя шторка с нижнего края задней стенки до поддона — закрывает проём; ложится на платформу туалета перед "
         "порожком; сдвигается, когда туалет выезжает в душ", cur_lo, (0.55, 0.75, 0.85), 55)
     pw_t = K["wall_panel_t"]
