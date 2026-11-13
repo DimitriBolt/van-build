@@ -64,5 +64,5 @@ FREECADCMD="$HOME/Applications/FreeCAD.AppImage --console" FREECAD="$HOME/Applic
 
 ## Анимации → модель
 
-`animation_report.md` — отчёт последней сборки: ходы деталей и порядок сборки из анимаций, проверенные на модели
+`animation_report.md` (van_v0) и `animation_report_<модель>.md` (другие модели, например `van_v1_rect_pan`) — отчёт последней сборки: ходы деталей и порядок сборки из анимаций, проверенные на модели
 (пишет `vanmodel/motion.py` при каждой сборке; описание — `animation/README.md`).

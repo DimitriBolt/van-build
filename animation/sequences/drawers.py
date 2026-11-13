@@ -13,6 +13,10 @@
 
 SEQUENCE = 'drawers'
 
+# Для каких моделей эта анимация (имя файла модели без .FCStd; 'van_v0' — это и van_v0_T4320 и т.д.).
+# Ящики Trunk1_Drawer / Trunk2_TrayFwd есть только в van_v0; в van_v1_rect_pan ящики другие — см. upper_drawer.py.
+MODELS = ['van_v0']
+
 STEPS = [
     {   # 1
         'label': 'Ящик выдвинуть',

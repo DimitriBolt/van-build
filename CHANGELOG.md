@@ -4,6 +4,20 @@
 (внутренние имена `obj.Name`), смену их положения, новые последовательности анимации. Подробная история модели —
 в `git log`, решения по мебели — в `FURNITURE_MEMORY.md`.
 
+## 2026-11-13 — Claude: анимация верхнего ящика; анимации привязаны к моделям (`MODELS`)
+
+- Новая анимация `animation/sequences/upper_drawer.py` (модель `van_v1_rect_pan`): `Drawer_Upper` и
+  `Drawer_Upper_Handle` выезжают назад (−X) на 1117.6 мм — полный ход SLIDEWAY 44″. Направляющие `Drawer_Slide_*` стоят
+  (в модели это по одному бруску на сторону). Собрать: `ea_build` → `upper_drawer.py` → `van_v1_rect_pan.FCStd`.
+- В файлах анимаций — строка `MODELS` (для каких моделей; пусто — для любой). `drawers.py` → `['van_v0']` (его ящиков
+  `Trunk1_Drawer`/`Trunk2_TrayFwd` нет в `van_v1_rect_pan`); `assembly.py` — без изменений, для любой модели.
+- `vanmodel/motion.py` проверяет при сборке только анимации своей модели и только свои файлы `<модель>_anim_*.FCStd`;
+  отчёт `van_v1_rect_pan` — в `docs/animation_report_van_v1_rect_pan.md` (van_v0 — по-прежнему `docs/animation_report.md`).
+- `ea_build`: можно выбрать несколько анимаций сразу (каждая → свой `<модель>_anim_<имя>.FCStd`); модель по умолчанию —
+  из `MODELS`; на «чужой» модели спрашивает. `ea_export` пишет `MODELS` по имени файла анимации.
+- `tools/check_animation.py <модель>.FCStd` — проверяет только анимации этой модели.
+- Модель не менялась (`.FCStd` не пересобирался).
+
 ## 2026-11-12 — Claude: Label по-английски; колёсики 1″, 6 спереди
 
 - **Все `Label` — по-английски** (таблица `EN_LABELS` в `vanmodel/finish.py`; pY/nY → driver/passenger), русское

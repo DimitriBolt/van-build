@@ -8,7 +8,8 @@
   * читает группы (траектории) из папки ExplodedAssembly — в том порядке, в каком они стоят в дереве;
   * спрашивает имя последовательности (по умолчанию из имени файла: *_drawer → drawers, *_anim → assembly);
   * пишет animation/sequences/<имя>.py — только данные: детали по внутренним именам (obj.Name),
-    направления — векторами, Distance / Steps / Step Time / Revolutions, плюс список скрытых объектов.
+    направления — векторами, Distance / Steps / Step Time / Revolutions, плюс список скрытых объектов
+    и MODELS — для каких моделей анимация (модель берётся из имени файла <модель>_anim_<имя>.FCStd).
 Положение деталей (собрано / разобрано) на результат не влияет — экспортировать можно в любом состоянии.
 Обратный макрос — ea_build.FCMacro (свежая модель + этот файл → новый файл анимации).
 """
@@ -38,15 +39,32 @@ def repo_dir(doc):
     return start or os.path.expanduser("~/van-build")
 
 
-def default_seq_name(doc):
+def split_anim_name(doc):
+    """Имя файла анимации → (модель, последовательность): van_v1_rect_pan_anim_upper_drawer → (van_v1_rect_pan, upper_drawer)."""
     stem = os.path.splitext(os.path.basename(doc.FileName or doc.Name))[0]
-    m = re.search(r"_anim_([A-Za-z0-9_]+)$", stem)
+    m = re.search(r"^(.+?)_anim_([A-Za-z0-9_]+)$", stem)
     if m:
-        return m.group(1)
+        return m.group(1), m.group(2)
     for suf, seq in (("_drawers", "drawers"), ("_drawer", "drawers"), ("_anim", "assembly")):
         if stem.endswith(suf):
-            return seq
-    return "sequence"
+            return stem[:-len(suf)], seq
+    return None, "sequence"
+
+
+def default_seq_name(doc):
+    return split_anim_name(doc)[1]
+
+
+def existing_models(path):
+    """MODELS из уже записанного файла последовательности (без выполнения файла)."""
+    import ast
+    try:
+        for node in ast.parse(open(path, encoding="utf-8").read()).body:
+            if isinstance(node, ast.Assign) and getattr(node.targets[0], "id", "") == "MODELS":
+                return [str(m) for m in ast.literal_eval(node.value)]
+    except (OSError, SyntaxError, ValueError):
+        pass
+    return []
 
 
 def num(x):
@@ -99,7 +117,7 @@ def collect(doc, ea_folder):
     return steps, hidden, warnings
 
 
-def render(seq_name, src, steps, hidden, labels):
+def render(seq_name, src, steps, hidden, labels, models=()):
     out = []
     w = out.append
     w("# -*- coding: utf-8 -*-")
@@ -116,6 +134,10 @@ def render(seq_name, src, steps, hidden, labels):
     w("# Если правите файл руками, учтите: повторный ea_export с тем же именем перезапишет его целиком.")
     w("")
     w("SEQUENCE = %r" % seq_name)
+    w("")
+    w("# Для каких моделей эта анимация (имя файла модели без .FCStd; 'van_v0' — это и van_v0_T4320 и т.д.).")
+    w("# Пустой список — для любой модели.")
+    w("MODELS = %r" % list(models))
     w("")
     w("STEPS = [")
     for i, st in enumerate(steps, 1):
@@ -176,11 +198,19 @@ def main():
     os.makedirs(os.path.dirname(path), exist_ok=True)
     labels = {o.Name: o.Label for o in doc.Objects}
     src = os.path.basename(doc.FileName) if doc.FileName else doc.Label
+    # MODELS: новый файл — модель из имени файла анимации; уже записанный — его список (+ эта модель);
+    # было пусто («для любой модели») — так и остаётся.
+    existed = os.path.exists(path)
+    models = existing_models(path) if existed else []
+    model = split_anim_name(doc)[0]
+    if model and (models or not existed) and not any(model == m or model.startswith(m + "_") for m in models):
+        models.append(model)
     with open(path, "w", encoding="utf-8") as f:
-        f.write(render(name, src, steps, hidden, labels))
+        f.write(render(name, src, steps, hidden, labels, models))
 
     lines = ["Записано: %s" % path, "Шагов: %d, деталей: %d, скрытых объектов: %d"
-             % (len(steps), sum(len(s["parts"]) for s in steps), len(hidden)), ""]
+             % (len(steps), sum(len(s["parts"]) for s in steps), len(hidden)),
+             "Для моделей: %s" % (", ".join(models) or "любой"), ""]
     lines += ["%d. %s — %d дет., Distance %s" % (i, s["label"], len(s["parts"]), num(s["distance"]))
               for i, s in enumerate(steps, 1)]
     if warnings:

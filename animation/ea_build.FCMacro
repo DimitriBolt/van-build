@@ -5,8 +5,10 @@
     Файл → Открыть… → animation/ea_build.FCMacro → Макрос → Выполнить макрос (Ctrl+F6)
 
 Что делает:
-  1. спрашивает файл последовательности (animation/sequences/*.py) и модель (по умолчанию van_v0_T4320.FCStd);
-  2. КОПИРУЕТ модель в <модель>_anim_<имя>.FCStd рядом с ней (сама модель не меняется) и открывает копию;
+  1. спрашивает файлы последовательностей (animation/sequences/*.py — можно несколько сразу) и модель
+     (по умолчанию — первая из MODELS выбранной анимации, иначе van_v0_T4320.FCStd);
+     если анимация сделана для другой модели (MODELS), спрашивает, собирать ли всё равно;
+  2. для КАЖДОЙ анимации КОПИРУЕТ модель в <модель>_anim_<имя>.FCStd рядом с ней (сама модель не меняется) и открывает копию;
   3. создаёт в копии группы ExplodedAssembly — так же, как Create Simple Group / Create Bolt Group в GUI;
   4. скрывает объекты из списка HIDDEN, ставит модель «в сборе» (как ⏮ Go To Start) и сохраняет.
 Если детали из последовательности в модели больше нет — она пропускается, и макрос об этом сообщает.
@@ -39,11 +41,17 @@ def repo_dir():
 
 
 def load_sequence(path):
+    """→ (имя, STEPS, HIDDEN, MODELS). Файл последовательности — обычный Python со списками данных."""
     ns = {}
     with open(path, encoding="utf-8") as f:
         exec(compile(f.read(), path, "exec"), ns)
     name = ns.get("SEQUENCE") or os.path.splitext(os.path.basename(path))[0]
-    return str(name), list(ns.get("STEPS", [])), list(ns.get("HIDDEN", []))
+    return str(name), list(ns.get("STEPS", [])), list(ns.get("HIDDEN", [])), [str(m) for m in ns.get("MODELS", [])]
+
+
+def applies(models, stem):
+    """Подходит ли анимация к модели stem: MODELS пуст — к любой; 'van_v0' подходит и к van_v0_T4320."""
+    return not models or any(stem == m or stem.startswith(m + "_") for m in models)
 
 
 def import_addon():
@@ -119,52 +127,33 @@ def build(doc, ea, steps, hidden):
     return created, missing, skipped
 
 
-def main():
-    mw = Gui.getMainWindow()
-    repo = repo_dir()
-
-    seq_path, _ = QtWidgets.QFileDialog.getOpenFileName(
-        mw, TITLE + " 1/2: какую анимацию собрать", os.path.join(repo, "animation", "sequences"), "Python (*.py)")
-    if not seq_path:
-        return
+def build_one(mw, ea, seq_path, model_path, yes, no):
+    """Одна последовательность → <модель>_anim_<имя>.FCStd. Возвращает строки отчёта (или None — пропущено)."""
+    name = os.path.basename(seq_path)
     try:
-        seq_name, steps, hidden = load_sequence(seq_path)
+        seq_name, steps, hidden, models = load_sequence(seq_path)
     except Exception as e:
-        QtWidgets.QMessageBox.warning(mw, TITLE, "Не удалось прочитать %s:\n%s" % (seq_path, e))
-        return
+        return ["%s: не прочитан — %s" % (name, e)]
     if not steps:
-        QtWidgets.QMessageBox.warning(mw, TITLE, "В %s нет шагов (STEPS пуст)." % seq_path)
-        return
-
-    model_path, _ = QtWidgets.QFileDialog.getOpenFileName(
-        mw, TITLE + " 2/2: на какой модели", os.path.join(repo, DEFAULT_MODEL), "FreeCAD (*.FCStd)")
-    if not model_path:
-        return
-
+        return ["%s: нет шагов (STEPS пуст)" % name]
     stem = os.path.splitext(os.path.basename(model_path))[0]
-    out_path = os.path.join(os.path.dirname(model_path), "%s_anim_%s.FCStd" % (stem, seq_name))
-    if os.path.abspath(out_path) == os.path.abspath(model_path):
-        QtWidgets.QMessageBox.warning(mw, TITLE, "Выбран сам файл анимации, а нужна модель.")
-        return
+    if not applies(models, stem):
+        if QtWidgets.QMessageBox.question(
+                mw, TITLE, "Анимация «%s» сделана для моделей: %s,\nа выбрана модель %s.\n\nСобрать всё равно?"
+                % (seq_name, ", ".join(models), stem), yes | no) != yes:
+            return ["«%s»: пропущена — она для моделей %s" % (seq_name, ", ".join(models))]
 
-    yes = QtWidgets.QMessageBox.Yes if hasattr(QtWidgets.QMessageBox, "Yes") else QtWidgets.QMessageBox.StandardButton.Yes
-    no = QtWidgets.QMessageBox.No if hasattr(QtWidgets.QMessageBox, "No") else QtWidgets.QMessageBox.StandardButton.No
+    out_path = os.path.join(os.path.dirname(model_path), "%s_anim_%s.FCStd" % (stem, seq_name))
     for d in list(App.listDocuments().values()):
         if d.FileName and os.path.abspath(d.FileName) == os.path.abspath(out_path):
             if QtWidgets.QMessageBox.question(mw, TITLE, "Файл %s открыт. Закрыть его (без сохранения) и собрать заново?"
                                               % os.path.basename(out_path), yes | no) != yes:
-                return
+                return ["«%s»: пропущена — файл %s открыт" % (seq_name, os.path.basename(out_path))]
             App.closeDocument(d.Name)
     if os.path.exists(out_path):
         if QtWidgets.QMessageBox.question(mw, TITLE, "Файл %s уже есть. Перезаписать?"
                                           % os.path.basename(out_path), yes | no) != yes:
-            return
-
-    try:
-        ea = import_addon()
-    except Exception as e:
-        QtWidgets.QMessageBox.warning(mw, TITLE, "Не найден верстак ExplodedAssembly (Менеджер дополнений):\n%s" % e)
-        return
+            return ["«%s»: пропущена — %s не перезаписан" % (seq_name, os.path.basename(out_path))]
 
     shutil.copyfile(model_path, out_path)
     doc = App.openDocument(out_path)
@@ -172,22 +161,60 @@ def main():
         created, missing, skipped = build(doc, ea, steps, hidden)
     except Exception as e:
         App.Console.PrintError("%s: %s\n" % (TITLE, e))
-        QtWidgets.QMessageBox.warning(mw, TITLE, "Ошибка: %s\nФайл %s не сохранён." % (e, out_path))
-        return
+        return ["«%s»: ошибка — %s; файл %s не сохранён" % (seq_name, e, os.path.basename(out_path))]
     doc.save()
     try:
         Gui.SendMsgToActiveView("ViewFit")
     except Exception:
         pass
-
-    lines = ["Собрано: %s" % out_path, "Последовательность «%s»: групп %d из %d" % (seq_name, len(created), len(steps)), ""]
-    lines += ["%d. %s — %d дет., Distance %.1f" % (i, g.Label, len(g.names), g.Distance)
+    lines = ["Собрано: %s" % out_path, "Последовательность «%s»: групп %d из %d" % (seq_name, len(created), len(steps))]
+    lines += ["  %d. %s — %d дет., Distance %.1f" % (i, g.Label, len(g.names), g.Distance)
               for i, g in enumerate(created, 1)]
     if missing:
-        lines += ["", "Нет в модели (пропущены):"] + missing
+        lines += ["  Нет в модели (пропущены):"] + ["    " + m for m in missing]
     if skipped:
-        lines += ["", "Шаги без деталей (не созданы):"] + skipped
-    lines += ["", "Модель «в сборе». ▶ — разобрать, ◀ — собрать."]
+        lines += ["  Шаги без деталей (не созданы):"] + ["    " + m for m in skipped]
+    return lines
+
+
+def main():
+    mw = Gui.getMainWindow()
+    repo = repo_dir()
+
+    seq_paths, _ = QtWidgets.QFileDialog.getOpenFileNames(
+        mw, TITLE + " 1/2: какие анимации собрать (можно несколько — Ctrl+щелчок)",
+        os.path.join(repo, "animation", "sequences"), "Python (*.py)")
+    if not seq_paths:
+        return
+
+    default = DEFAULT_MODEL                         # модель по умолчанию — из MODELS первой выбранной анимации
+    try:
+        for m in load_sequence(seq_paths[0])[3]:
+            if os.path.isfile(os.path.join(repo, m + ".FCStd")):
+                default = m + ".FCStd"
+                break
+    except Exception:
+        pass
+    model_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+        mw, TITLE + " 2/2: на какой модели", os.path.join(repo, default), "FreeCAD (*.FCStd)")
+    if not model_path:
+        return
+    if "_anim" in os.path.splitext(os.path.basename(model_path))[0]:
+        QtWidgets.QMessageBox.warning(mw, TITLE, "Выбран файл анимации, а нужна модель (без «_anim» в имени).")
+        return
+
+    try:
+        ea = import_addon()
+    except Exception as e:
+        QtWidgets.QMessageBox.warning(mw, TITLE, "Не найден верстак ExplodedAssembly (Менеджер дополнений):\n%s" % e)
+        return
+
+    yes = QtWidgets.QMessageBox.Yes if hasattr(QtWidgets.QMessageBox, "Yes") else QtWidgets.QMessageBox.StandardButton.Yes
+    no = QtWidgets.QMessageBox.No if hasattr(QtWidgets.QMessageBox, "No") else QtWidgets.QMessageBox.StandardButton.No
+    lines = []
+    for sp in seq_paths:
+        lines += build_one(mw, ea, sp, model_path, yes, no) + [""]
+    lines += ["Модели «в сборе». ▶ — разобрать, ◀ — собрать."]
     App.Console.PrintMessage(TITLE + ": " + "\n".join(lines) + "\n")
     QtWidgets.QMessageBox.information(mw, TITLE, "\n".join(lines))
 

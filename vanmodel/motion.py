@@ -28,7 +28,7 @@ import zipfile
 
 import FreeCAD as App
 
-from .common import PROJECT_DIR
+from .common import PROJECT_DIR, SAVE_PATH
 
 SHELL_GROUPS = ("Ribs", "Longitudinals", "Pillars")      # оболочка кузова: упёрлись в неё — «выходит за кузов»
 SKIP_GROUPS = ("Openings", "HoleMarkers", "FactoryThreadedMounts", "ExplodedAssembly")   # реф-объекты, не препятствия
@@ -42,8 +42,8 @@ AXIS_WORDS = {(0, 1): "вперёд, к кабине", (0, -1): "назад, к 
 
 
 # ───────────────────────── чтение анимаций ─────────────────────────
-def read_sequence_py(path):
-    """animation/sequences/<имя>.py → список шагов. Файл — данные: читается без выполнения."""
+def _py_data(path):
+    """Переменные файла последовательности (SEQUENCE, MODELS, STEPS, HIDDEN) — без его выполнения."""
     data = {}
     for node in ast.parse(open(path, encoding="utf-8").read()).body:
         if isinstance(node, ast.Assign) and isinstance(node.targets[0], ast.Name):
@@ -51,6 +51,27 @@ def read_sequence_py(path):
                 data[node.targets[0].id] = ast.literal_eval(node.value)
             except ValueError:
                 pass
+    return data
+
+
+def read_models_py(path):
+    """MODELS — для каких моделей анимация (пусто — для любой)."""
+    return [str(m) for m in _py_data(path).get("MODELS", [])]
+
+
+def applies(models, stem):
+    """Подходит ли анимация к модели stem: MODELS пуст — к любой; 'van_v0' подходит и к van_v0_T4320."""
+    return not models or any(stem == m or stem.startswith(m + "_") for m in models)
+
+
+def model_stem():
+    """Имя модели, которая сейчас собирается: имя её файла без .FCStd (van_v0, van_v0_T4320, van_v1_rect_pan…)."""
+    return os.path.splitext(os.path.basename(SAVE_PATH))[0]
+
+
+def read_sequence_py(path):
+    """animation/sequences/<имя>.py → список шагов. Файл — данные: читается без выполнения."""
+    data = _py_data(path)
     steps = []
     for st in data.get("STEPS", []):
         steps.append(dict(label=str(st.get("label", "?")), kind=st.get("kind", "simple"),
@@ -118,6 +139,17 @@ def read_anim_fcstd(path):
         return steps
 
 
+def model_from_file(stem):
+    """Модель по имени файла анимации: van_v1_rect_pan_anim_upper_drawer → van_v1_rect_pan."""
+    m = re.search(r"^(.+?)_anim_[A-Za-z0-9_]+$", stem)
+    if m:
+        return m.group(1)
+    for suf in ("_drawers", "_drawer", "_anim"):
+        if stem.endswith(suf):
+            return stem[:-len(suf)]
+    return None
+
+
 def seq_name_from_file(stem):
     """Имя последовательности по имени файла анимации — как в animation/ea_export.FCMacro."""
     m = re.search(r"_anim_([A-Za-z0-9_]+)$", stem)
@@ -134,18 +166,34 @@ def _key(steps):
              [(p["name"], tuple(round(c, 4) for c in p["vec"])) for p in s["parts"]]) for s in steps]
 
 
-def load_sequences(repo=PROJECT_DIR):
-    """Все анимации: [{name, source, steps, notes}] — из animation/sequences и из файлов анимации рядом с моделью."""
+def load_sequences(repo=PROJECT_DIR, model=None, skipped=None):
+    """Анимации модели model (None — все): [{name, source, steps, notes}] — из animation/sequences и из файлов
+    анимации рядом с моделью. Анимации других моделей (MODELS) — в список skipped: (имя, модели)."""
     seqs = {}
     for f in sorted(glob.glob(os.path.join(repo, "animation", "sequences", "*.py"))):
         name = os.path.splitext(os.path.basename(f))[0]
+        try:
+            models = read_models_py(f)
+        except Exception:
+            models = []
+        if model and not applies(models, model):
+            if skipped is not None:
+                skipped.append((name, models))
+            continue
         try:
             seqs[name] = dict(name=name, source=os.path.relpath(f, repo), path=f, steps=read_sequence_py(f), notes=[])
         except Exception as e:
             seqs[name] = dict(name=name, source=os.path.relpath(f, repo), path=f, steps=[],
                               notes=["не прочитана: %s" % e])
+    def same_model(stem):                      # файл анимации своей модели: van_v0 ↔ van_v0_T4320 — одна модель
+        fm = model_from_file(stem)
+        return not model or (fm is not None and (fm == model or fm.startswith(model + "_") or model.startswith(fm + "_")))
+
+    skip_names = set(n for n, _ in (skipped or []))
     files = [f for f in glob.glob(os.path.join(repo, "*.FCStd"))
-             if seq_name_from_file(os.path.splitext(os.path.basename(f))[0])]
+             if seq_name_from_file(os.path.splitext(os.path.basename(f))[0])
+             and same_model(os.path.splitext(os.path.basename(f))[0])
+             and seq_name_from_file(os.path.splitext(os.path.basename(f))[0]) not in skip_names]
     for f in sorted(files, key=os.path.getmtime):                       # самый свежий файл — последним
         name, base = seq_name_from_file(os.path.splitext(os.path.basename(f))[0]), os.path.basename(f)
         try:
@@ -413,8 +461,13 @@ def report(S):
         return
     try:
         deadline = time.time() + float(os.environ.get("VAN_MOTION_BUDGET", BUDGET))
-        results = [(seq, check_sequence(doc, seq, deadline)) for seq in load_sequences()]
+        stem, skipped = model_stem(), []
+        results = [(seq, check_sequence(doc, seq, deadline)) for seq in load_sequences(model=stem, skipped=skipped)]
         lines = report_lines(doc, results)
+        lines.insert(1, "  модель: %s" % stem)
+        if skipped:
+            lines.insert(2, "  для других моделей (не проверяются): " + ", ".join(
+                "%s (%s)" % (n, ", ".join(m)) for n, m in skipped))
         motion = dict((seq["name"], steps) for seq, steps in results)
     except Exception as e:
         lines = ["[Анимации → модель]  проверка не выполнена: %s: %s" % (type(e).__name__, e)]
@@ -423,8 +476,10 @@ def report(S):
     docs = os.path.join(PROJECT_DIR, "docs")
     if os.path.isdir(docs) and os.path.isdir(os.path.join(PROJECT_DIR, "animation")):
         try:
-            with open(os.path.join(docs, "animation_report.md"), "w", encoding="utf-8") as f:
-                f.write("# Анимации → модель (последняя сборка)\n\n"
+            stem = model_stem()
+            fname = "animation_report.md" if stem.startswith("van_v0") else "animation_report_%s.md" % stem
+            with open(os.path.join(docs, fname), "w", encoding="utf-8") as f:
+                f.write("# Анимации → модель %s (последняя сборка)\n\n" % stem +
                         "Пишется при каждой сборке модели (`vanmodel/motion.py`): ходы и порядок шагов берутся из анимаций\n"
                         "(`animation/sequences/*.py` и файлы `*_anim_*.FCStd` рядом с моделью) и проверяются на модели.\n"
                         "⚠ — деталь упирается в другую деталь; ⓘ — выходит за кузов (приём «прилёт из-за кадра»).\n\n"
