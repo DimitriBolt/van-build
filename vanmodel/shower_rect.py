@@ -312,8 +312,11 @@ def shower_kitchen(S):
     tb1 = t_sh.BoundBox
     corners_t = [(x_, y_) for x_ in (tb1.XMin, tb1.XMax) for y_ in (ty0, ty1)]
     wc = lambda shapes, dx=0.0: [(b_.XMin + dx, b_.XMax + dx, abs(b_.YMin), abs(b_.YMax)) for b_ in (s_.BoundBox for s_ in shapes)]
-    corners_w = [(x_, y_) for (xa_, xb_, ya_, yb_) in wc(wF, travel) for x_ in (xa_, xb_) for y_ in (ya_, yb_)]
-    corners_w0 = [(x_, y_) for (xa_, xb_, ya_, yb_) in wc(wF) for x_ in (xa_, xb_) for y_ in (ya_, yb_)]
+    # передние колёса стоят на площадке дна ПРОТЕКТОРОМ (колесо ⌀ × ширина); площадка крепления — выше, над скосом дна
+    tread = lambda dx: [(xc_ + dx + sx_ * wr, yc_ + sy_ * ww / 2.0) for xc_ in (f0,) for _, yc_ in zip(tagsF, ysF)
+                        for sx_ in (-1, 1) for sy_ in (-1, 1)]
+    corners_w, corners_w0 = tread(travel), tread(0.0)
+    mounts = [Part.makeBox(mpx, mpy, 30.0, V(f0 - mpx / 2.0, ks * yc_ - mpy / 2.0, z_pl + wd)) for yc_ in ysF]
     pfb = fsh_t["Toilet_Platform"].BoundBox
     fit = dict(
         toilet_in_pan=min(pan_margin(x_, y_, top_in, top_in) for x_, y_ in corners_t),
@@ -343,6 +346,10 @@ def shower_kitchen(S):
         if ss:
             chk_t.append(("туалет/платформа/колёса ↔ %s — в транспорте" % lab, min(m_.distToShape(s_)[0] for m_ in moving0 for s_ in ss)))
             chk_t.append(("туалет/платформа/колёса ↔ %s — в душе" % lab, min(m_.distToShape(s_)[0] for m_ in moving1 for s_ in ss)))
+    fit["mounts_to_pan_transport"] = min(m_.distToShape(pan)[0] for m_ in mounts)
+    fit["mounts_to_pan_shower"] = min(m_.translated(mv).distToShape(pan)[0] for m_ in mounts)
+    chk_t += [("крепления передних колёс ↔ поддон — в транспорте (над скосом дна)", fit["mounts_to_pan_transport"]),
+              ("крепления передних колёс ↔ поддон — в душе", fit["mounts_to_pan_shower"])]
     toilet_pf = dict(plate=(plx0, plx1, plate_th), z=(z_pl, z_pf0, z_pf1, z_tt1), x0=(xt0, xt0 + tlx),
                      x1=(xt0 + travel, xt0 + tlx + travel), y=(ty0, ty1), pf_x=(pfx0, pfx1), pf_y=(pfy0, pfy1), WB=WB,
                      travel=travel, wheels_x=(f0, xw_r0), checks=chk_t, fit=fit, h_total=z_tt1 - floor_top, spacer=spacer,
@@ -422,6 +429,10 @@ def shower_kitchen(S):
         Part.makeCylinder(60.0, 40.0, V(x0 + 250.0, ks * (y_ceil_back - 120.0), z_ceil - 12.0), V(0, 0, 1)), COL_DARK)
 
     # ═══════ КУХНЯ: блок шириной 24″ (= поддону), торец к душу — прямой, по краю поддона ═══════
+    # поддон заходит за плоскость панели (слой утеплителя) — кухня туда не идёт (ребро кузова X≈3130 у её торца): фронт кухни — по панели
+    y_sf_pan = y_sf
+    y_wall0 = yw(z_pan)
+    y_sf = y_wall0 - Wp
     kx0 = x1 + K["kitchen_gap"]
     kx1 = K["kitchen_end_x"]
     kl = kx1 - kx0
@@ -511,6 +522,7 @@ def shower_kitchen(S):
         flap_summary = dict(len=fl_, w=fy1 - fy0, x_open=(kx1, kx1 + fl_), to_seat=3190.0 - (kx1 + bt_ + fth),
                             z_fold_low=z_ct - fl_ - floor_top)
 
+    y_sf = y_sf_pan
     # ═══════ ПРОВЕРКИ И СВОДНЫЕ ЧИСЛА ═══════
     _dd = lambda a, b: a.distToShape(b)[0]
     objs = lambda pfx: [o.Shape for o in doc.Objects if o.Name.startswith(pfx) and o.isDerivedFrom("Part::Feature")
@@ -564,9 +576,9 @@ def shower_kitchen(S):
                  bed_x=dx1, d_arch=d_arch, cut=(cut_a, cut_b), seal_len=(math.hypot(cut_a, cut_b) if cut_a else 0.0),
                  cut_area=cut_a * cut_b / 2.0, title=R["title"]),
         toilet=toilet_pf,
-        kitchen=dict(x=(kx0, kx1), kl=kl, y_front=y_sf, depth=y_wall - y_sf, sec1=(kx0, x_div0), sink_x=(sk_x0, sk_x0 + skx),
+        kitchen=dict(x=(kx0, kx1), kl=kl, y_front=y_wall0 - Wp, depth=Wp, sec1=(kx0, x_div0), sink_x=(sk_x0, sk_x0 + skx),
                      sec1_in=sec1_in, sink_fit=sink_fit, sec2=(x_div1, kx1), fridge=(fx, fy, fz), fridge_title=K.get("fridge_title"),
-                     fridge_front_behind=(y_f0 - y_sf), fridge_back_gap=(y_f1 - (y_f0 + fy)), counter=K["counter_h"],
+                     fridge_front_behind=(y_f0 - (y_wall0 - Wp)), fridge_back_gap=(y_f1 - (y_f0 + fy)), counter=K["counter_h"],
                      seat_gap=3190.0 - kx1, flap=flap_summary),
         gas=gas, checks=checks, aisle_sh=y_sf + y_at_z(half, 900.0),
         headroom=(z_ceil - 12.0) - z_pan, z_ceil=z_ceil, floor_top=floor_top, rear_wall_z=z_rw0, plate_note=plate_note)
