@@ -231,11 +231,12 @@ def shower_kitchen(S):
             m_ = min(m_, (u_ / cut_b + v_ / cut_a - 1.0) * cut_a * cut_b / math.hypot(cut_a, cut_b) - R["seal_t"])
         return m_
 
-    # ═══════ ТУАЛЕТ SEAFLO НА ПЛАТФОРМЕ С КОЛЁСАМИ (транспорт — под щитом; в душе — в поддоне) ═══════
+    # ═══════ ТУАЛЕТ SEAFLO НА ПЛАТФОРМЕ С КОЛЁСАМИ (транспорт — ПОД РАКОВИНОЙ, в секции мойки; в душе — в поддоне, у торца к кухне) ═══════
+    # 2026-11-12 (2-я итерация, Dimitri): туалет выезжает НАЗАД (−X) из-под раковины. Передние (по ходу) колёса — в поддоне всегда, задние —
+    # на плите в секции мойки (верх плиты = дно поддона). Место под кроватью освобождено — там локер баллона (propane_rect).
     TT = TOILET_RECT
+    pw_t = K["wall_panel_t"]
     tlx, tly, tlz = TT["dims"][0], TT["dims"][1], AT["toilet_h"]
-    ty1 = arch_ywall - (WA[ks]["protrusion"] + AR["toilet_arch_gap"])      # |Y| грани туалета к борту (рядом с аркой)
-    ty0 = ty1 - tly                                                        # … к проходу
     wd, ww = AT["wheel_d"], AT["wheel_w"]
     wr = wd / 2.0
     plate_th = AT["plate_th"] if AT.get("plate_th") is not None else z_in - floor_top
@@ -246,6 +247,14 @@ def shower_kitchen(S):
     z_pf0 = z_pl + caster_h
     z_pf1 = z_pf0 + AT["platform_th"]
     z_tt1 = z_pf1 + tlz
+    # размеры секции мойки нужны туалету уже сейчас (подробно кухня строится ниже теми же формулами)
+    kx0_, kx1_ = x1 + K["kitchen_gap"], K["kitchen_end_x"]
+    fx_ = K["fridge"][1] if K.get("fridge_turn") else K["fridge"][0]
+    x_div0_ = kx1_ - pt_ - fx_ - 2.0 * K.get("fridge_pad", 10.0) - K.get("divider", pt_)
+    z_cb_ = floor_top + K["counter_h"] - K["counter_th"]
+    # Y: у борта — как можно ближе (арки здесь нет): в поддоне — в проёме бортика, под раковиной — до задней стенки секции
+    ty1 = min(y_wall - top_in - 1.0, yw(z_tt1) - pw_t - 5.0, yw(z_cb_) - pt_ - 4.0)    # |Y| грани туалета к борту
+    ty0 = ty1 - tly                                              # … к проходу
     pfy0, pfy1 = ty0 - AT["aisle_margin"], ty1
     mpx, mpy = AT.get("mount_plate", (40.0, ww + 10.0))
     wx = max(wr, mpx / 2.0)
@@ -255,32 +264,27 @@ def shower_kitchen(S):
     yW = pfy1 - AT["wheel_inset"] - hw_
     ysF = [yF_a + (yW - yF_a) * i_ / (nF - 1) for i_ in range(nF)] if nF > 1 else [yW]
     tagsF = ["A"] + [str(i_) for i_ in range(2, nF)] + ["W"] if nF > 1 else ["W"]
-    seal_t = R["seal_t"] if cut_a else 0.0
-    # передние колёса в транспорте — у бортика/плотины: ближе всего к борту колесо упирается в линию среза
-    v_wheel_min = y_wall - (yW + hw_)
-    f0 = x0 + max(t_end, uc(v_wheel_min) + seal_t + 4.0) + wx
-    d_fwd = AR.get("toilet_forward", 0.0)                                  # Dimitri 2026-11-12: туалет в транспорте торчит вперёд за край щита
-    xt0 = dx1 - tlx + d_fwd                                                # туалет в транспорте: передом до края щита (+ d_fwd вперёд)
-    v_toilet_min = y_wall - ty1
-    u_in = max(t_end, uc(v_toilet_min) + seal_t) + AT["toilet_in"]         # туалет в душе: его задняя грань за бортиком
-    travel = (x0 + u_in) - xt0
-    WB = travel + f0 - (x0 - wx)                                           # колёсная база (задние колёса в душе — у края)
-    xw_r0 = f0 - WB
-    pfx0, pfx1 = xw_r0 - wx - AT["rear_over"], f0 + wx + AT["front_over"]
-    plx0, plx1 = xw_r0 - wx - AT["rear_gap"], x0 - 2.0
+    u_in = t_end + AT["toilet_in"]                                         # туалет в душе: задняя грань (к кухне) — от торца поддона
+    xt_sh1 = x1 - u_in                                                     # … её X в душе
+    f0 = x1 - t_end - wx - 45.0                                            # передние колёса — в поддоне у торца к кухне (транспорт); 45 мм — запас до скруглённого угла чаши
+    xw_r0 = x_div0_ - 3.0 - AT["rear_over"] - wx                           # задние колёса в транспорте — у перегородки секции
+    travel = xw_r0 - (x1 + wx)                                             # в душе задние колёса — сразу за торцом поддона, на плите
+    xt0 = xt_sh1 - tlx + travel                                            # туалет в транспорте: передняя грань
+    WB = xw_r0 - f0                                                        # колёсная база
+    pfx0, pfx1 = f0 - wx - AT["front_over"], xw_r0 + wx + AT["rear_over"]
+    plx0, plx1 = x1 + 2.0, xw_r0 + wx + AT["rear_gap"]
     fg_t = sg
     fsh_t = {}
     put_t = lambda n_, l_, sh_, c_: (add_shape(doc, n_, l_, sh_, color=c_, group=fg_t), fsh_t.__setitem__(n_, sh_),
                                       parts.__setitem__(n_, sh_))
     if plate_th > 1.0:
-        put_t("Toilet_Plate", "Плита под туалет — %.1f″ (%.0f мм): верх = дно поддона; X %.0f..%.0f — задние колёса по ней" % (
+        put_t("Toilet_Plate", "Плита под туалет в секции мойки — %.1f″ (%.0f мм): верх = дно поддона; X %.0f..%.0f — задние колёса по ней" % (
             plate_th / 25.4, plate_th, plx0, plx1),
             Part.makeBox(plx1 - plx0, pfy1 - pfy0, plate_th, V(plx0, ybase(ks, pfy1, pfy1 - pfy0), floor_top)),
             (0.55, 0.45, 0.35))
-    f1 = f0 + travel
     pf_box = Part.makeBox(pfx1 - pfx0, pfy1 - pfy0, AT["platform_th"], V(pfx0, ybase(ks, pfy1, pfy1 - pfy0), z_pf0))
     put_t("Toilet_Platform", "Платформа туалета — фанера %.2f″ %.1f×%.1f″ на колёсиках ⌀%.0f″ (%d спереди, 2 сзади); передняя часть "
-          "всегда в поддоне (за краем щита, внутри душа — согласованное исключение)" % (
+          "всегда в поддоне (за торцом к кухне; согласованное исключение)" % (
               AT["platform_th"] / 25.4, (pfx1 - pfx0) / 25.4, (pfy1 - pfy0) / 25.4, wd / 25.4, nF), pf_box, (0.80, 0.66, 0.46))
     wheels = [("F", f0, t_, y_) for t_, y_ in zip(tagsF, ysF)] + [
         ("R", xw_r0, "A", yF_a), ("R", xw_r0, "W", yW)]
@@ -293,45 +297,42 @@ def shower_kitchen(S):
                                              wd / 25.4, AT["mount_h"] / 25.4, spacer,
                                              {"A": "к проходу", "W": "к борту"}.get(side_, "№%s от прохода" % side_)),
               wheel, (0.15, 0.15, 0.15))
-        xl1 = dx1 + pt_ + 16.0                                 # линия нижней шторки — сразу за задней стенкой душа
-    xl1 = dx1 + pt_ + 16.0                                 # линия нижней шторки — сразу за задней стенкой душа
-    dam_x = max(xl1 - 16.0, xt0 + tlx + 4.0)               # порожек — за шторкой, но не под туалетом
-    if dam_x + 10.0 < pfx1 - 3.0:
-        put_t("Toilet_PlatformDam", "Порожек на платформе за нижней шторкой (в транспортном положении): вода с передней части "
-              "платформы стекает в поддон, а не по платформе под кровать",
-              Part.makeBox(10.0, pfy1 - pfy0, 10.0, V(dam_x, ybase(ks, pfy1, pfy1 - pfy0), z_pf1)), (0.25, 0.25, 0.25))
+    dam_x = xt0 - 16.0                                     # порожек — перед туалетом (на стороне поддона): вода с платформы стекает в поддон
+    put_t("Toilet_PlatformDam", "Порожек на платформе перед туалетом (в транспортном положении — над торцом поддона): вода с передней "
+          "части платформы стекает в поддон, а не под раковину",
+          Part.makeBox(10.0, pfy1 - pfy0, 10.0, V(dam_x, ybase(ks, pfy1, pfy1 - pfy0), z_pf1)), (0.25, 0.25, 0.25))
     tsh_ = Part.makeBox(tlx, tly, tlz, V(xt0, ybase(ks, ty1, tly), z_pf1))
     try:
         tsh_ = tsh_.makeFillet(25.0, [e for e in tsh_.Edges if abs(e.tangentAt(0).z) > 0.9])
     except Exception:
         pass
-    put_t("Toilet_Camco", "%s — на платформе с колёсами, транспортное положение (под щитом, вплотную к краю щита); выезжает в душ "
+    put_t("Toilet_Camco", "%s — на платформе с колёсами, транспортное положение (под раковиной, в секции мойки); выезжает назад, в душ, "
           "на %.1f″" % (TT["title"], travel / 25.4), tsh_, (0.78, 0.78, 0.76))
-    # ── проверки «в душе» — по формам (сдвиг на ход) ──
-    mv = V(travel, 0, 0)
+    # ── проверки «в душе» — по формам (сдвиг на −ход) ──
+    mv = V(-travel, 0, 0)
     t_sh = tsh_.translated(mv)
     wF = [fsh_t[n_] for n_ in fsh_t if n_.startswith("Toilet_Wheel_F")]
     wR = [fsh_t["Toilet_Wheel_R%s" % s_] for s_ in "AW"]
     pf_sh = fsh_t["Toilet_Platform"].translated(mv)
     tb1 = t_sh.BoundBox
     corners_t = [(x_, y_) for x_ in (tb1.XMin, tb1.XMax) for y_ in (ty0, ty1)]
-    wc = lambda shapes, dx=0.0: [(b_.XMin + dx, b_.XMax + dx, abs(b_.YMin), abs(b_.YMax)) for b_ in (s_.BoundBox for s_ in shapes)]
     # передние колёса стоят на площадке дна ПРОТЕКТОРОМ (колесо ⌀ × ширина); площадка крепления — выше, над скосом дна
     tread = lambda dx: [(xc_ + dx + sx_ * wr, yc_ + sy_ * ww / 2.0) for xc_ in (f0,) for _, yc_ in zip(tagsF, ysF)
                         for sx_ in (-1, 1) for sy_ in (-1, 1)]
-    corners_w, corners_w0 = tread(travel), tread(0.0)
+    corners_w, corners_w0 = tread(-travel), tread(0.0)
     mounts = [Part.makeBox(mpx, mpy, 30.0, V(f0 - mpx / 2.0, ks * yc_ - mpy / 2.0, z_pl + wd)) for yc_ in ysF]
     pfb = fsh_t["Toilet_Platform"].BoundBox
     fit = dict(
         toilet_in_pan=min(pan_margin(x_, y_, top_in, top_in) for x_, y_ in corners_t),
         front_wheels_in_pan_shower=min(pan_margin(x_, y_, t_end, t_side) for x_, y_ in corners_w),
         front_wheels_in_pan_transport=min(pan_margin(x_, y_, t_end, t_side) for x_, y_ in corners_w0),
-        rear_wheels_out_shower=x0 - max(w_.translated(mv).BoundBox.XMax for w_ in wR),
-        rear_wheels_on_plate=min(w_.BoundBox.XMin for w_ in wR) - (plx0 + AT["rear_gap"]),
-        toilet_under_deck=dx1 - tsh_.BoundBox.XMax,
+        rear_wheels_out_shower=min(w_.translated(mv).BoundBox.XMin for w_ in wR) - x1,
+        rear_wheels_on_plate=(plx1 - AT["rear_gap"]) - max(w_.BoundBox.XMax for w_ in wR),
+        toilet_in_cabinet=x_div0_ - (xt0 + tlx),
+        toilet_over_pan_transport=(kx0_ + pt_) - xt0,
         platform_over_rim=z_pf0 - z_pan - AT["rim_clear"],
-        platform_front_in_pan_transport=min(pan_margin(pfb.XMax, y_, top_in, top_in) for y_ in (pfy0, pfy1)),
-        platform_front_in_pan_shower=min(pan_margin(pfb.XMax + travel, y_, top_in, top_in) for y_ in (pfy0, pfy1)))
+        platform_front_in_pan_transport=min(pan_margin(pfb.XMin, y_, top_in, top_in) for y_ in (pfy0, pfy1)),
+        platform_front_in_pan_shower=min(pan_margin(pfb.XMin - travel, y_, top_in, top_in) for y_ in (pfy0, pfy1)))
     chk_t = [("туалет в душе — внутри проёма поддона (запас)", fit["toilet_in_pan"]),
              ("передние колёса на площадке дна — в душе", fit["front_wheels_in_pan_shower"]),
              ("передние колёса на площадке дна — в транспорте", fit["front_wheels_in_pan_transport"]),
@@ -339,40 +340,25 @@ def shower_kitchen(S):
              ("передний край платформы в поддоне — в душе", fit["platform_front_in_pan_shower"]),
              ("задние колёса снаружи поддона — в душе", fit["rear_wheels_out_shower"]),
              ("задние колёса на плите — в транспорте (до её заднего края)", fit["rear_wheels_on_plate"]),
-             ("туалет под щитом — в транспорте (< 0: торчит вперёд за край щита, по решению Dimitri)", fit["toilet_under_deck"]),
+             ("туалет в секции мойки — до перегородки с холодильником (в транспорте)", fit["toilet_in_cabinet"]),
+             ("туалет выступает из секции мойки к поддону (в транспорте), мм — по решению: колёса большие", fit["toilet_over_pan_transport"]),
              ("платформа над бортиком поддона (сверх %.0f мм)" % AT["rim_clear"], fit["platform_over_rim"])]
     moving0 = [tsh_, fsh_t["Toilet_Platform"]] + wF + wR
     moving1 = [t_sh, pf_sh] + [w_.translated(mv) for w_ in wF + wR]
-    for lab, pref in (("арка", ("WheelArch_",)), ("стойки/пластины кровати", ("BedPost",)), ("поперечины кровати", ("BedCross_",)),
-                      ("этажерка батарей", ("Bank", "Battery_"))):
-        ss = [o.Shape for o in doc.Objects if o.isDerivedFrom("Part::Feature") and not o.Shape.isNull()
-              and o.Name.startswith(pref)]
-        if ss:
-            chk_t.append(("туалет/платформа/колёса ↔ %s — в транспорте" % lab, min(m_.distToShape(s_)[0] for m_ in moving0 for s_ in ss)))
-            chk_t.append(("туалет/платформа/колёса ↔ %s — в душе" % lab, min(m_.distToShape(s_)[0] for m_ in moving1 for s_ in ss)))
     fit["mounts_to_pan_transport"] = min(m_.distToShape(pan)[0] for m_ in mounts)
     fit["mounts_to_pan_shower"] = min(m_.translated(mv).distToShape(pan)[0] for m_ in mounts)
     chk_t += [("крепления передних колёс ↔ поддон — в транспорте (над скосом дна)", fit["mounts_to_pan_transport"]),
               ("крепления передних колёс ↔ поддон — в душе", fit["mounts_to_pan_shower"])]
     toilet_pf = dict(plate=(plx0, plx1, plate_th), z=(z_pl, z_pf0, z_pf1, z_tt1), x0=(xt0, xt0 + tlx),
-                     x1=(xt0 + travel, xt0 + tlx + travel), y=(ty0, ty1), pf_x=(pfx0, pfx1), pf_y=(pfy0, pfy1), WB=WB,
+                     x1=(xt0 - travel, xt0 + tlx - travel), y=(ty0, ty1), pf_x=(pfx0, pfx1), pf_y=(pfy0, pfy1), WB=WB,
                      travel=travel, wheels_x=(f0, xw_r0), checks=chk_t, fit=fit, h_total=z_tt1 - floor_top, spacer=spacer,
-                     from_wall=(y_wall - ty1, y_wall - ty0), n_front=nF)
+                     from_wall=(y_wall - ty1, y_wall - ty0), n_front=nF, x_div0=x_div0_)
 
     # ═══════ СТЕНКИ, ПОТОЛОК, ШТОРКА, НАГРЕВАТЕЛЬ ═══════
-    x_rw = dx1                                             # задняя стенка душа — по краю щита, вниз — до верха туалета (+10 мм)
-    z_rw0 = z_tt1 + 10.0                                   # Dimitri 2026-11-12: козырёк не нужен — стенка продлена вниз
-    put("Shower_WallRear", "Задняя стенка душа по краю щита кровати: от потолка вниз до верха туалета + 10 мм (%.0f мм над полом) — "
-        "ниже проём, под стенкой туалет на платформе выезжает в душ" % (z_rw0 - floor_top), env_solid(x_rw, pt_, y_sf, z_rw0, z_ceil),
-        COL_WALL, 10)
-    cur_lo = Part.makeBox(4.0, (y_wall - 30.0) - (y_sf + 80.0), (z_rw0 - 4.0) - (z_pan + 25.0),
-                          V(xl1 - 6.0, y_sf + 80.0, z_pan + 25.0))
-    cur_lo = cur_lo.cut(Part.makeBox(20.0, pfy1 - pfy0 + 2.0, z_pf1 - z_pan, V(xl1 - 16.0, ybase(ks, pfy1 + 1.0, pfy1 - pfy0 + 2.0), z_pan)))
-    if xt0 + tlx > xl1 - 6.0:                              # туалет в транспорте торчит сквозь линию шторки — вырез по его сечению
-        cur_lo = cur_lo.cut(Part.makeBox(30.0, tly + 10.0, z_tt1 - z_pan + 5.0, V(xl1 - 16.0, ybase(ks, ty1 + 5.0, tly + 10.0), z_pan)))
-    put("Shower_CurtainLower", "Нижняя шторка с нижнего края задней стенки до поддона — закрывает проём; ложится на платформу туалета перед "
-        "порожком; сдвигается, когда туалет выезжает в душ", cur_lo, (0.55, 0.75, 0.85), 55)
-    pw_t = K["wall_panel_t"]
+    x_rw = dx1                                             # задняя стенка душа — по краю щита, от верха бортика поддона до потолка
+    z_rw0 = z_pan                                          # 2026-11-12: туалет под стенкой больше не проезжает — стенка сплошная, нижней шторки нет
+    put("Shower_WallRear", "Задняя стенка душа по краю щита кровати: от верха бортика поддона до потолка (сплошная; туалет живёт под раковиной)",
+        env_solid(x_rw, pt_, y_sf, z_rw0, z_ceil), COL_WALL, 10)
     back = env_solid(x_rw + pt_, x1 - (x_rw + pt_), y_sf, z_pan, z_ceil).cut(
         env_solid(x_rw + pt_ - 1, x1 - x_rw + 2, y_sf - 5, z_pan - 1, z_ceil + 1, g_extra=pw_t)).cut(arch_s)
     put("Shower_WallBack", "Стенка душа по борту (фанера 1/2″ + FRP) от задней стенки до торца кухни; у арки вырезана по её форме",
@@ -467,14 +453,17 @@ def shower_kitchen(S):
     z_sh = z_f0 + fz + 40.0                                # полка над ларём (низ)
     cav_f = Part.makeBox(kx1 - pt_ - x_div1, (y_kb + 1.0) - (y_kf - 1.0), z_sh - z_b, V(x_div1, y_kf - 1.0, z_b))   # без задней стенки
     cav_u = Part.makeBox(kx1 - pt_ - x_div1, (y_kb - pt_) - (y_kf - 1.0), z_cb - (z_sh + pt_), V(x_div1, y_kf - 1.0, z_sh + pt_))
-    carc = carc.cut(cav1).cut(cav_f).cut(cav_u)
+    # туалет живёт под раковиной: проём в торце секции (под платформу, колёса и туалет) + «пол» секции — плита на уровне дна поддона
+    pocket = Part.makeBox(x_div0 - (kx0 - 1.0), (pfy1 - pfy0) + 8.0, (z_tt1 + 8.0) - (floor_top - 1.0),
+                          V(kx0 - 1.0, ybase(ks, pfy1 + 4.0, (pfy1 - pfy0) + 8.0), floor_top - 1.0))
+    carc = carc.cut(cav1).cut(cav_f).cut(cav_u).cut(pocket)
     put("Kitchen_Carcass", "Короб кухни (фанера 3/4″) шириной 24″ вместе с дверцами (= поддон), 2 секции: мойка | шкафчик + "
         "холодильник; торец к душу — прямой, по краю поддона", carc, COL_CAB)
     put("Kitchen_WallPanel", "Стенная панель 1/2″ за кухней (продолжение панели душа): поддон и кухня стоят перед ней",
         env_solid(kx0, kl, y_sf, z_ct, z_ceil).cut(env_solid(kx0 - 1, kl + 2, y_sf - 5, z_ct - 1, z_ceil + 1, g_extra=pw_t)),
         COL_WALL, 10)
-    put("Kitchen_Plinth", "Цоколь кухни", Part.makeBox(kl, (y_kb - y_kf) - pr_k, ph_k, V(kx0, y_kf + pr_k, floor_top)),
-        (0.35, 0.30, 0.25))
+    put("Kitchen_Plinth", "Цоколь кухни (в секции мойки вырезан под плиту и колёса туалета)",
+        Part.makeBox(kl, (y_kb - y_kf) - pr_k, ph_k, V(kx0, y_kf + pr_k, floor_top)).cut(pocket), (0.35, 0.30, 0.25))
     top = env_solid(kx0, kl, y_ctf, z_cb, z_ct).cut(Part.makeBox(skx, sky, K["counter_th"] + 2, V(sk_x0, y_s0, z_cb - 1)))
     put("Kitchen_Countertop", "Столешница 1″ (мебельный щит), верх %.0f над полом (36″); передняя кромка — вровень с краем поддона"
         % K["counter_h"], top, COL_TOP)
@@ -547,9 +536,9 @@ def shower_kitchen(S):
         checks.append((plate_note, 0.0))
     m0_, m1_ = moving0, moving1
     pass_ = [n_ for n_ in parts if n_.startswith(("Shower_", "Kitchen_")) and n_ not in (
-        "Shower_CurtainLower", "Shower_PanRect", "Shower_PanCutSeal", "Shower_Drain")]
-    for pos_, ms_ in (("в транспорте", m0_), ("в душе", m1_)):
-        v_, n_min = min((_dd(m_, parts[n_]), n_) for m_ in ms_ for n_ in pass_)
+        "Shower_PanRect", "Shower_PanCutSeal", "Shower_Drain")]
+    for pos_, ms_, sk_ in (("в транспорте", m0_, ()), ("в душе (торцевая шторка сдвигается)", m1_, ("Shower_CurtainFront",))):
+        v_, n_min = min((_dd(m_, parts[n_]), n_) for m_ in ms_ for n_ in pass_ if n_ not in sk_)
         toilet_pf["checks"].append(("туалет/платформа ↔ душ/кухня — %s (ближе всего %s)" % (pos_, n_min), v_))
     toilet_pf["checks"].append(("платформа ↔ поддон — в транспорте", _dd(m0_[1], pan)))
     toilet_pf["checks"].append(("платформа ↔ поддон — в душе", _dd(m1_[1], pan)))
@@ -615,11 +604,11 @@ def report(S):
                   RECT_PAN["seal_t"]))
     else:
         print("  Срез угла не нужен — поддон не задевает арку (зазор %.1f мм)" % p["d_arch"])
-    print("  Туалет в транспорте: X %.0f..%.0f (под щитом, вплотную к краю щита), от борта %.1f″…%.1f″ (у пола), верх %.1f″ над полом; "
-          "платформа X %.0f..%.0f, Y %.0f..%.0f" % (
-              t["x0"][0], t["x0"][1], t["from_wall"][0] / 25.4, t["from_wall"][1] / 25.4, t["h_total"] / 25.4, t["pf_x"][0],
-              t["pf_x"][1], t["pf_y"][0], t["pf_y"][1]))
-    print("  Туалет в душе: X %.0f..%.0f; ход %s, колёсная база %s; плита %.1f″ X %.0f..%.0f; колёса ⌀%.0f″ (%d спереди, 2 сзади), "
+    print("  Туалет в транспорте — ПОД РАКОВИНОЙ (секция мойки): X %.0f..%.0f (выступает к поддону на %.0f мм: колёса ⌀3″ длинные), от борта %.1f″…%.1f″ (у пола), "
+          "верх %.1f″ над полом; платформа X %.0f..%.0f, Y %.0f..%.0f" % (
+              t["x0"][0], t["x0"][1], t["fit"]["toilet_over_pan_transport"], t["from_wall"][0] / 25.4, t["from_wall"][1] / 25.4, t["h_total"] / 25.4,
+              t["pf_x"][0], t["pf_x"][1], t["pf_y"][0], t["pf_y"][1]))
+    print("  Туалет в душе (выезжает НАЗАД): X %.0f..%.0f; ход %s, колёсная база %s; плита в секции мойки %.1f″ X %.0f..%.0f; колёса ⌀%.0f″ (%d спереди, 2 сзади), "
           "брусок-проставка %.0f мм" % (t["x1"][0], t["x1"][1], mm_in(t["travel"]), mm_in(t["WB"]), t["plate"][2] / 25.4, t["plate"][0],
                                         t["plate"][1], dict(ANCHORS["toilet"], **ANCHORS["rect_pan"].get("toilet_wheels", {}))["wheel_d"] / 25.4, t["n_front"], t["spacer"]))
     print("  Кухня: X %.0f..%.0f (%.0f мм = %.1f″), глубина блока с дверцами и столешницей %s (= поддон), фронт |Y|=%.0f; секция "
@@ -636,6 +625,6 @@ def report(S):
                                                 (g_["heater_z"][1] - f0) / 25.4, g_["top_to_ceil"], g_["flue_c"][0], g_["flue_top"]))
     print("  В душе: от верха бортика до потолка %s; проход напротив поддона %.0f мм (%.1f″)" % (
         mm_in(k["headroom"]), k["aisle_sh"], k["aisle_sh"] / 25.4))
-    print("  Не нарисованы (по заданию): бак воды и насос, локер и баллон пропана, газовая линия, ящики багажника, полка 2-го этажа")
+    print("  Локер баллона, бак воды, ящики и полка — в своих разделах (propane_rect / drawers_rect); не нарисованы: насос воды, серый бак")
     print("  Зазоры/запасы: " + "; ".join("%s %.1f" % (n_, v_) for n_, v_ in k["checks"]))
     print("=" * 70)

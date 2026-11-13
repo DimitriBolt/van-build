@@ -81,8 +81,9 @@ def drawers(S):
 
     # ── ограничения из уже построенных деталей ──
     z_top_lim = bb("BedCross_1").ZMin                                  # низ поперечин кровати
-    toilet_top = max(o.Shape.BoundBox.ZMax for o in doc.Objects if o.Name.startswith("Toilet_") and o.isDerivedFrom("Part::Feature")
-                     and not o.Shape.isNull())
+    PS = S.propane_summary                                              # локер баллона на месте бывшего туалета: его верх задаёт низ верхнего ящика
+    locker_top = PS["z_top"]
+    locker_x0 = PS["x"][0]
     p3 = bb("BankPost_P3")                                             # ножка батарей у пассажирского борта (край Y)
     pan = bb("Shower_PanRect")
     pil = bb("Pillar_Rear_pY")
@@ -90,17 +91,17 @@ def drawers(S):
 
     # ═══════ ВЕРХНИЙ ящик: назад, на SLIDEWAY, над туалетом и аркой ═══════
     SL = U["slide"]
-    zu0 = toilet_top + U["above_toilet"]                               # низ ящика
+    zu0 = locker_top + U["above_locker"]                               # низ ящика — над акриловой крышкой локера
     zu1 = z_top_lim - U["top_gap"]                                     # верх ящика (под поперечинами кровати)
     y_out = pil.YMin - U["door_gap"]                                   # наружная плоскость направляющих (|Y|) — в проёме дверей
     y_box = y_out - SL["T"]                                            # наружная грань ящика (|Y|) пассажирской стороны: между направляющими
     y_box_d = min(U.get("driver_y_box", y_box), y_box)                 # водительская сторона сужена — колодец над аркой (люки в кровати)
     xu0, xu1 = U["x_rear"], U["x_rear"] + SL["L"]
     put("Drawer_Upper", "Верхний ящик (фанера 1/2″): X %.0f..%.0f, Y %.0f..%.0f, ширина %.0f мм (%.1f″) — пассажирская сторона на весь проём дверей, "
-        "водительская сужена до Y %.0f (колодец над аркой), высота %.0f мм (%.1f″), низ %.0f мм над полом (над туалетом: его верх %.0f); "
+        "водительская сужена до Y %.0f (колодец над аркой), высота %.0f мм (%.1f″), низ %.0f мм над полом (над локером баллона: его верх %.0f); "
         "выезжает НАЗАД на SLIDEWAY" % (
             xu0, xu1, -y_box, y_box_d, y_box + y_box_d, (y_box + y_box_d) / 25.4, y_box_d, zu1 - zu0, (zu1 - zu0) / 25.4,
-            zu0 - floor_top, toilet_top - floor_top),
+            zu0 - floor_top, locker_top - floor_top),
         tray(xu0, xu1, -y_box, y_box_d, zu0, zu1), COL_PLY)
     zs0 = zu0 + (zu1 - zu0 - SL["H"]) / 2.0                            # направляющие — на середине высоты стенки
     cb1, cb2 = bb("BedCross_1"), bb("BedCross_2")
@@ -200,14 +201,13 @@ def drawers(S):
     water_summary = None
     if WR.get("enable"):
         tl, tw_, th_ = WR["dims"]
-        tx1 = min(o.Shape.BoundBox.XMin for o in doc.Objects if o.Name.startswith("Toilet_") and o.isDerivedFrom("Part::Feature")
-                  and not o.Shape.isNull()) - WR["gap_toilet"]
+        tx1 = locker_x0 - WR["gap_toilet"]                              # бак — сзади от локера баллона
         ty0 = parts["Drawer_Lower"].BoundBox.YMax + WR["gap_drawer"]
         tx0 = tx1 - tl
         wg = doc.addObject("App::DocumentObjectGroup", "WaterTankRect")
         wg.Label = "Бак воды — Class A Customs %s %d gal (проект 2026-11-12)" % (WR["model"], WR["gal"])
         tank = Part.makeBox(tl, tw_, th_, V(tx0, ty0, floor_top))
-        add_shape(doc, "WaterTank_Rect", "Бак воды Class A Customs %s, %d gal, %.1f×%.1f×%.1f″: сзади от туалета (X %.0f..%.0f), "
+        add_shape(doc, "WaterTank_Rect", "Бак воды Class A Customs %s, %d gal, %.1f×%.1f×%.1f″: сзади от локера баллона (X %.0f..%.0f), "
                   "справа от нижнего ящика (Y %.0f..%.0f), под верхним ящиком (верх %.0f мм над полом, зазор до ящика %.0f мм); "
                   "штуцеры 1.5″ NPT ×2 и 0.5″ ×2 — по месту" % (WR["model"], WR["gal"], tl / 25.4, tw_ / 25.4, th_ / 25.4, tx0, tx1,
                                                               ty0, ty0 + tw_, th_, zu0 - (floor_top + th_)),
@@ -219,7 +219,7 @@ def drawers(S):
                                                       (fy1, fz1, 21.3, 18.0, "0.5″ NPT"), (fy0, fz0, 21.3, 18.0, "0.5″ NPT"))):
             add_shape(doc, "WaterTank_Fitting_%d" % (k_ + 1), "Штуцер %s на заднем торце бака (смотрит к задним дверям)" % lab,
                       Part.makeCylinder(dd_ / 2.0, ln_, V(tx0 - ln_, yy, zz), V(1, 0, 0)), color=(0.15, 0.15, 0.15), group=wg)
-        obst2 = [(n_, s_) for n_, s_ in obst if not n_.startswith(("Shower", "Kitchen", "Toilet_Plate"))]
+        obst2 = [(n_, s_) for n_, s_ in obst if not n_.startswith(("Shower", "Kitchen", "Toilet_", "Gas_"))]
         dmin, nmin = min((tank.distToShape(s_)[0], n_) for n_, s_ in obst2 + [(n_, s_) for n_, s_ in parts.items()
                                                                            if n_.startswith("Drawer_") and "Wheel" not in n_ or "Wheel" in n_])
         checks.append(("бак воды: ближе всего «%s»" % nmin, dmin))
@@ -227,7 +227,7 @@ def drawers(S):
                              gap_up=zu0 - (floor_top + th_))
     drawers_summary = dict(
         upper=dict(x=(xu0, xu1), width=y_box + y_box_d, y_d=y_box_d, h=zu1 - zu0, z=(zu0 - floor_top, zu1 - floor_top), y_out=y_out, travel=tr_u,
-                   vol=(xu1 - xu0 - 2 * tw) * (y_box + y_box_d - 2 * tw) * (zu1 - zu0 - tb) / 1e6, toilet_top=toilet_top - floor_top),
+                   vol=(xu1 - xu0 - 2 * tw) * (y_box + y_box_d - 2 * tw) * (zu1 - zu0 - tb) / 1e6, locker_top=locker_top - floor_top),
         lower=dict(x=(xl0, xl1), y=(y_pass, y_drv), width=y_drv - y_pass, h=zl1 - zl0, z=(zl0 - floor_top, zl1 - floor_top),
                    travel=tr_l, vol=(xl1 - xl0 - 2 * tw) * (y_drv - y_pass - 2 * tw) * (zl1 - zl0 - tb) / 1e6),
         checks=checks, floor_top=floor_top, water=water_summary)
@@ -246,9 +246,9 @@ def report(S):
               l["x"][0], l["x"][1], l["x"][1] - l["x"][0], l["y"][0], l["y"][1], l["width"], l["width"] / 25.4, l["h"], l["h"] / 25.4,
               l["z"][0], l["z"][1], l["vol"], l["travel"]))
     print("  ВЕРХНИЙ (SLIDEWAY 44″, НАЗАД): X %.0f..%.0f, ширина %.0f мм (%.1f″) — пассажирская сторона на весь проём дверей (направляющие на |Y|=%.0f), водительская сужена до Y=%.0f; "
-          "высота %.0f мм (%.1f″), от %.0f до %.0f мм над полом (верх туалета %.0f); объём ≈ %.0f л; ход %.0f мм" % (
+          "высота %.0f мм (%.1f″), от %.0f до %.0f мм над полом (верх локера баллона %.0f); объём ≈ %.0f л; ход %.0f мм" % (
               u["x"][0], u["x"][1], u["width"], u["width"] / 25.4, u["y_out"], u["y_d"], u["h"], u["h"] / 25.4, u["z"][0], u["z"][1],
-              u["toilet_top"], u["vol"], u["travel"]))
+              u["locker_top"], u["vol"], u["travel"]))
     sh = k.get("shelf")
     if sh:
         print("  ПОЛКА над левой аркой (2 яруса на водительских стойках 2020): X %.0f..%.0f, Y %.0f..%.0f (%.0f × %.0f мм); ярусы Z %.0f..%.0f и %.0f..%.0f; "
@@ -257,7 +257,7 @@ def report(S):
                   sh["z"][0][0], sh["z"][0][1], sh["z"][1][0], sh["z"][1][1], sh["gap_between"], sh["gap_top"], sh["board"][0][0], sh["board"][1][0]))
     w = k.get("water")
     if w:
-        print("  БАК ВОДЫ Class A Customs %s (%d gal) %.1f×%.1f×%.1f″: X %.0f..%.0f (за туалетом), Y %.0f..%.0f (справа от нижнего ящика), "
+        print("  БАК ВОДЫ Class A Customs %s (%d gal) %.1f×%.1f×%.1f″: X %.0f..%.0f (за локером баллона), Y %.0f..%.0f (справа от нижнего ящика), "
               "высота %.0f мм, до верхнего ящика %.0f мм" % (w["model"], w["gal"], w["dims"][0] / 25.4, w["dims"][1] / 25.4,
                                                          w["dims"][2] / 25.4, w["x"][0], w["x"][1], w["y"][0], w["y"][1], w["h"], w["gap_up"]))
     print("  Зазоры/запасы: " + "; ".join("%s %.1f" % (n_, v_) for n_, v_ in k["checks"]))
@@ -292,9 +292,8 @@ def shelf(S):
     y_out = bb("BedSideRail_pY").YMin - H["gap_rail"]
     x0, bt, gu = H["x0"], H["board_t"], H["gusset"]
     x1 = H["x1"] if H["x1"] is not None else bb("Shower_WallRear").XMin - H["gap_wall"]
-    toilet_top = max(o.Shape.BoundBox.ZMax for o in doc.Objects if o.Name.startswith("Toilet_") and o.isDerivedFrom("Part::Feature")
-                     and not o.Shape.isNull())
-    za_list = (max(H["tiers"][0], toilet_top + H["gap_toilet"] - 20.0), H["tiers"][1])
+    locker_top = S.propane_summary["z_top"] if S.propane_summary else 0.0
+    za_list = (max(H["tiers"][0], locker_top + H["gap_toilet"] - 20.0), H["tiers"][1])
     # колонна у переднего наружного угла: от арки (через резину) до низа фанеры верхнего яруса; под свес 460 мм до задней стенки душа
     yc0 = y_out - 22.0
     xc0 = x1 - 20.0
@@ -345,7 +344,7 @@ def shelf(S):
     dd = min(parts["Shelf_Board_1"].distToShape(doc.getObject("Drawer_Upper").Shape)[0], parts["Shelf_Board_2"].distToShape(doc.getObject("Drawer_Upper").Shape)[0])
     k["checks"].append(("полка ↔ верхний ящик", dd))
     k["checks"].append(("верх верхнего яруса (бортики) ↔ поперечины кровати", bb("BedCross_1").ZMin - tiers[1][1]))
-    k["checks"].append(("нижний ярус над туалетом в транспорте (низ плеч/фанеры ↔ верх туалета)", tiers[0][2] - toilet_top))
+    k["checks"].append(("нижний ярус над локером баллона (низ фанеры ↔ акрил)", tiers[0][2] - locker_top))
     k["shelf"] = dict(x=(x0, x1), y=(y_in, y_out), z=[(a_, b_) for a_, b_, _, _ in tiers],
                       gap_between=za_list[1] - tiers[0][3], gap_top=bb("BedCross_1").ZMin - tiers[1][1], z_arch=z_arch,
                       board=[(c_, d_) for _, _, c_, d_ in tiers])

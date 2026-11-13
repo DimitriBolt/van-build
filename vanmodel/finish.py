@@ -66,10 +66,11 @@ _LABEL_SEPS = (" — ", ": ", " (", ", ", "; ")
 BUY_URLS = {
     "Toilet_Camco": "https://a.co/d/0fEaEKEz",        # туалет SEAFLO 2.6 gal (Amazon B07ZPC4C9N)
     r"Toilet_Wheel_\w+": "https://a.co/d/02nt85Aa",   # колёсики 1″ неповоротные, высота 1.15″ (Amazon B0CHFSQHRP)
-    "WaterTank_Rect": "https://www.classacustoms.com/water-tank-list.html",   # Class A Customs T-3000 (страница списка; заказ — у производителя)
+    "WaterTank_Rect": "https://www.classacustoms.com/water-tank-list.html",   # Class A Customs T-3300 (страница списка; заказ — у производителя)
     r"Shelf_(Arm|Lip)_\w+": "https://www.amazon.com/dp/B0F83QJV1M",           # тот же профиль SeekLiny 2020
     r"Shelf_Column_Front": "https://www.amazon.com/dp/B0F83QJV1M",
     r"Shelf_Gusset_\w+": "https://www.amazon.com/s?k=2020+T+slot+corner+bracket+gusset",   # поиск Amazon
+    "Propane_LockerLid": "https://www.amazon.com/s?k=clear+acrylic+sheet+1%2F8+inch+cast",   # акрил 1/8″ — крышка локера
     r"Drawer_Leg_\w+": "https://www.amazon.com/dp/B0F83QJV1M",      # SeekLiny 10Pcs V Slot 2020 Aluminum Extrusion 2440mm (ASIN B0F83QJV1M), $149.99
     "Shower_PanRect": "https://a.co/d/09SdfkLC",      # поддон RecPro RP-SP-3624 36×24×5″, Right Drain (Amazon B089DJX71P)
 }
@@ -138,7 +139,7 @@ EN_LABELS = [
     (r"Shower_FlueCap", "Flue roof cap"), (r"Shower_FlueThimble", "Flue ceiling thimble"),
     (r"Shower_Ceiling", "Shower ceiling"), (r"Shower_Curtain", "Shower curtain"), (r"Shower_CurtainRod", "Curtain rod"),
     (r"Shower_Head", "Shower head"), (r"Shower_ExhaustFan", "Exhaust fan 12V"),
-    (r"WaterTankRect", "Water tank"), (r"WaterTank_Fitting_(\d)", "Tank fitting {1}"), (r"WaterTank_Rect", "Water tank Class A T-3000 30 gal"),
+    (r"WaterTankRect", "Water tank"), (r"WaterTank_Fitting_(\d)", "Tank fitting {1}"), (r"WaterTank_Rect", "Water tank Class A T-3300 33 gal"),
     (r"ArchShelf", "Arch shelf"), (r"Shelf_Arm_(\d)_(\d)", "Shelf arm {1}.{2}"), (r"Shelf_Gusset_(\d)_(\d)", "Shelf gusset {1}.{2}"),
     (r"Shelf_Board_(\d)", "Shelf board {1}"), (r"Shelf_Lip_Inner_(\d)", "Shelf lip inner {1}"), (r"Shelf_Lip_Front_(\d)", "Shelf lip front {1}"),
     (r"Shelf_Lip_Rear_(\d)", "Shelf lip rear {1}"), (r"Shelf_Column_Front", "Shelf front column"),
@@ -163,7 +164,7 @@ EN_LABELS = [
     # пропан, газ, датчики
     (r"Propane_Locker", "Propane locker"), (r"Propane_LockerDoor", "Propane locker door"),
     (r"Propane_Vent", "Locker vent tube 1″"), (r"Propane_Cylinder", "Propane cylinder 20 lb"),
-    (r"Propane_Regulator", "Propane regulator"), (r"Gas_Line", "Gas line"), (r"Gas_Bulkhead", "Gas bulkhead fitting"),
+    (r"Propane_Regulator", "Propane regulator"), (r"Propane_LockerLid", "Locker acrylic lid 1/8″"), (r"Gas_WallGrommet", "Gas hose wall grommet"), (r"Gas_Line", "Gas line"), (r"Gas_Bulkhead", "Gas bulkhead fitting"),
     (r"Safety_LPCO", "LP + CO detector"), (r"Safety_CO_Bed", "CO detector at bed"),
     # багажник
     (r"TrunkShelf", "Trunk"), (r"Trunk2_PlateP3m", "Post plate P3m"), (r"Trunk2_PostP3mBolt", "Bolt 3/8″ P3m"),

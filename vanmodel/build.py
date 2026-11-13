@@ -6,7 +6,7 @@
 """
 import sys
 
-from . import body, bed, battery_bank, water_tank, shower_kitchen, shower_rect, drawers_rect, trunk, wall_cabinets, finish, summary, motion
+from . import body, bed, battery_bank, water_tank, shower_kitchen, shower_rect, propane_rect, drawers_rect, trunk, wall_cabinets, finish, summary, motion
 from .state import State
 
 # (функция раздела, название — для сообщения об ошибке)
@@ -43,6 +43,7 @@ for _f, _t in STAGES:
     if _f is shower_kitchen.shower_kitchen:
         STAGES_RECT_PAN.append((shower_rect.shower_kitchen, "Душ (прямоугольный поддон RecPro) + туалет + кухня 24″"))
     elif _f is trunk.trunk:
+        STAGES_RECT_PAN.append((propane_rect.locker, "Локер баллона 20 lb на месте туалета"))
         STAGES_RECT_PAN.append((drawers_rect.drawers, "Ящики под кроватью (нижний — вперёд на колёсиках, верхний — назад)"))
         STAGES_RECT_PAN.append((drawers_rect.shelf, "Полка над левой аркой (2 яруса на стойках 2020)"))
     else:
@@ -50,6 +51,7 @@ for _f, _t in STAGES:
     if _f is summary.print_summary:
         STAGES_RECT_PAN.append((shower_rect.report, "Сводка: поддон RecPro, туалет, кухня"))
         STAGES_RECT_PAN.append((drawers_rect.report, "Сводка: ящики под кроватью"))
+        STAGES_RECT_PAN.append((propane_rect.report, "Сводка: локер баллона"))
 
 LAST = None          # контекст последней сборки — посмотреть в консоли FreeCAD: vanmodel.build.LAST.<имя>
 
