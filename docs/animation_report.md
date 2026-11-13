@@ -12,7 +12,7 @@
         ⓘ «Mattress» (BedMattress): уже в исходном положении задевает кузов — «Body rail driver Z=980 #1» (Rail_pY_z0980_s1)
     ▶ 2 «2 Настил» — вверх 1000 мм:
         ⚠ «Bed deck» (BedDeck): в эту сторону не идёт — сразу упирается в «Wall plywood above deck» (BedWallPanel)
-    ▶ 3 «3 Поперечины» — вверх 150 мм: свободно (3 дет.); в конце хода ближе всего: 6 мм — «Bed crossbar #1» (BedCross_1) ↔ «Hatch 1 mattress flap» (BedHatch_1_Mattress)
+    ▶ 3 «3 Поперечины» — вверх 150 мм: свободно (3 дет.); в конце хода ближе всего: 15 мм — «Bed crossbar #1» (BedCross_1) ↔ «Body rail driver Z=980 #1» (Rail_pY_z0980_s1)
     ▶ 4 «4 Батареи B2–B4» — вверх 600 мм:
         ⚠ «Battery B2» (Battery_B2): свободный ход 47 мм из 600 — дальше «Bed side rail passenger» (BedSideRail_nY)
         ⚠ «Battery B3» (Battery_B3): свободный ход 47 мм из 600 — дальше «Bed side rail passenger» (BedSideRail_nY)
