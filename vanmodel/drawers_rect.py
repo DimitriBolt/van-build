@@ -168,6 +168,13 @@ def drawers(S):
                   "штуцеры 1.5″ NPT ×2 и 0.5″ ×2 — по месту" % (WR["model"], WR["gal"], tl / 25.4, tw_ / 25.4, th_ / 25.4, tx0, tx1,
                                                               ty0, ty0 + tw_, th_, zu0 - (floor_top + th_)),
                   tank, color=(0.70, 0.86, 0.98), transparency=25, group=wg)
+        # штуцеры — все на ОДНОМ торце (по картинке T-1800): задний торец (к дверям) — залив; 2 × 1.5″ NPT по диагонали + 2 × 0.5″
+        fz0, fz1 = floor_top + th_ * 0.28, floor_top + th_ * 0.72
+        fy0, fy1 = ty0 + tw_ * 0.2, ty0 + tw_ * 0.8
+        for k_, (yy, zz, dd_, ln_, lab) in enumerate(((fy0, fz1, 48.3, 22.0, "1.5″ NPT (залив)"), (fy1, fz0, 48.3, 22.0, "1.5″ NPT"),
+                                                      (fy1, fz1, 21.3, 18.0, "0.5″ NPT"), (fy0, fz0, 21.3, 18.0, "0.5″ NPT"))):
+            add_shape(doc, "WaterTank_Fitting_%d" % (k_ + 1), "Штуцер %s на заднем торце бака (смотрит к задним дверям)" % lab,
+                      Part.makeCylinder(dd_ / 2.0, ln_, V(tx0 - ln_, yy, zz), V(1, 0, 0)), color=(0.15, 0.15, 0.15), group=wg)
         obst2 = [(n_, s_) for n_, s_ in obst if not n_.startswith(("Shower", "Kitchen", "Toilet_Plate"))]
         dmin, nmin = min((tank.distToShape(s_)[0], n_) for n_, s_ in obst2 + [(n_, s_) for n_, s_ in parts.items()
                                                                            if n_.startswith("Drawer_") and "Wheel" not in n_ or "Wheel" in n_])

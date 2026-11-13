@@ -66,7 +66,7 @@ _LABEL_SEPS = (" — ", ": ", " (", ", ", "; ")
 BUY_URLS = {
     "Toilet_Camco": "https://a.co/d/0fEaEKEz",        # туалет SEAFLO 2.6 gal (Amazon B07ZPC4C9N)
     r"Toilet_Wheel_\w+": "https://a.co/d/02nt85Aa",   # колёсики 1″ неповоротные, высота 1.15″ (Amazon B0CHFSQHRP)
-    "WaterTank_Rect": "https://www.classacustoms.com/water-tank-list.html",   # Class A Customs T-1800 (страница списка; заказ — у производителя)
+    "WaterTank_Rect": "https://www.classacustoms.com/water-tank-list.html",   # Class A Customs T-1600 (страница списка; заказ — у производителя)
     "Shower_PanRect": "https://a.co/d/09SdfkLC",      # поддон RecPro RP-SP-3624 36×24×5″, Right Drain (Amazon B089DJX71P)
 }
 
@@ -134,7 +134,7 @@ EN_LABELS = [
     (r"Shower_FlueCap", "Flue roof cap"), (r"Shower_FlueThimble", "Flue ceiling thimble"),
     (r"Shower_Ceiling", "Shower ceiling"), (r"Shower_Curtain", "Shower curtain"), (r"Shower_CurtainRod", "Curtain rod"),
     (r"Shower_Head", "Shower head"), (r"Shower_ExhaustFan", "Exhaust fan 12V"),
-    (r"WaterTankRect", "Water tank"), (r"WaterTank_Rect", "Water tank Class A T-1800 18 gal"),
+    (r"WaterTankRect", "Water tank"), (r"WaterTank_Fitting_(\d)", "Tank fitting {1}"), (r"WaterTank_Rect", "Water tank Class A T-1600 16 gal"),
     (r"Drawers", "Drawers"), (r"Drawer_Upper_Handle", "Upper drawer handle"), (r"Drawer_Lower_Handle", "Lower drawer handle"),
     (r"Drawer_Upper", "Upper drawer (slides rearward)"), (r"Drawer_Lower", "Lower drawer (rolls forward)"),
     (r"Drawer_Slide_(\w+)", "Drawer slide {1}"), (r"Drawer_Hanger_(\w+)_(\d)", "Slide hanger {1} {2}"),
