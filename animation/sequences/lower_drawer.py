@@ -44,5 +44,4 @@ STEPS = [
 
 # Объекты, скрытые в файле анимации на момент экспорта; ea_build скроет их снова.
 HIDDEN = [
-    'Shower_DoorEnd_Folded',  # Shower end panel folded
 ]

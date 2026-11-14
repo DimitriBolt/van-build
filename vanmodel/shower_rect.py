@@ -515,7 +515,7 @@ def shower_kitchen(S):
     # (объект открытой двери в модель не добавляем — открывание Dimitri показывает анимацией; door_open нужен для проверок)
     door_fold = door_e.copy()
     door_fold.rotate(V(x_ax - DT / 2.0, y_e1, 0.0), V(0, 0, 1), -90.0)
-    put("Shower_DoorEnd_Folded", "Торцевая створка сложена внутрь (вдоль боковой стенки)", door_fold, (0.65, 0.82, 0.90), 85)
+    # (объект сложенной створки в модель не добавляем — складывание Dimitri показывает анимацией; door_fold нужен для проверок)
     for k_, (xh_, yh_, zl_, zh_, nm_) in enumerate(((x_hz, y_sf, z_d0, z_d1, "Door"), (x_ax - DT / 2.0, y_e1, z_e0, z_e1, "DoorEnd"))):
         for j_, zz_ in enumerate((zl_ + 150.0, zh_ - 210.0)):
             put("Shower_%sHinge_%d" % (nm_, j_ + 1), "Петля %s %d (нержавейка, на акрил — зажимная для стекла/акрила), вертикальная ось" % (nm_, j_ + 1),
@@ -675,8 +675,8 @@ def shower_kitchen(S):
     checks.append(("дверь прохода (закрыта) ↔ поддон (над бортиком)", _dd(parts["Shower_Door"], pan)))
     checks.append(("дверь прохода (открыта на 90°) ↔ кровать/батареи (нижний ящик вперёд при открытой двери не пройдёт)", min([_dd(door_open, s_) for s_ in arch_all] or [999.0])))
     checks.append(("торцевая створка ↔ верх туалета (транспорт; низ створки − верх туалета)", z_e0 - toilet_pf["z"][3]))
-    checks.append(("торцевая створка сложена ↔ боковая стенка душа", _dd(parts["Shower_DoorEnd_Folded"], parts["Shower_WallBack"])))
-    checks.append(("торцевая створка сложена ↔ туалет в душе", min(_dd(parts["Shower_DoorEnd_Folded"], m_) for m_ in moving1)))
+    checks.append(("торцевая створка сложена ↔ боковая стенка душа", _dd(door_fold, parts["Shower_WallBack"])))
+    checks.append(("торцевая створка сложена ↔ туалет в душе", min(_dd(door_fold, m_) for m_ in moving1)))
     checks.append(("дверь прохода ↔ торцевая створка", _dd(parts["Shower_Door"], parts["Shower_DoorEnd"])))
     rect_summary = dict(
         pan=dict(x=(x0, x1), y_wall=y_wall, y_aisle=y_aisle, z_pan=z_pan - floor_top, z_in=z_in - floor_top, L=Lp, W=Wp,
