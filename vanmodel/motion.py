@@ -76,7 +76,10 @@ def read_sequence_py(path):
     for st in data.get("STEPS", []):
         steps.append(dict(label=str(st.get("label", "?")), kind=st.get("kind", "simple"),
                           distance=float(st.get("distance", 0.0)), revolutions=float(st.get("revolutions", 0.0)),
-                          parts=[dict(name=p["name"], vec=tuple(float(c) for c in p["vec"])) for p in st.get("parts", [])]))
+                          parts=[dict(name=p["name"], vec=tuple(float(c) for c in p["vec"]),
+                                      rot_axis=tuple(float(c) for c in p.get("rot_axis", p["vec"])),
+                                      rot_center=tuple(float(c) for c in p.get("rot_center", (0.0, 0.0, 0.0))))
+                                 for p in st.get("parts", [])]))
     return steps
 
 
@@ -131,11 +134,20 @@ def read_anim_fcstd(path):
             dv = prop(g, "dir_vectors")
             vl = dv.find("VectorList") if dv is not None else None
             vecs = _vector_list(z.read(vl.get("file"))) if vl is not None and vl.get("file") else []
+
+            def vlist(pname):
+                pr = prop(g, pname)
+                el_ = pr.find("VectorList") if pr is not None else None
+                return _vector_list(z.read(el_.get("file"))) if el_ is not None and el_.get("file") else []
+            rvs, rcs = vlist("rot_vectors"), vlist("rot_centers")
             n = min(len(names), len(vecs))
             steps.append(dict(label=value(g, "Label", "String", gname), kind="bolt" if gname.startswith("Bolt") else "simple",
                               distance=float(value(g, "Distance", "Float", 0.0)),
                               revolutions=float(value(g, "Revolutions", "Float", 0.0)),
-                              parts=[dict(name=str(names[i]), vec=tuple(float(c) for c in vecs[i])) for i in range(n)]))
+                              parts=[dict(name=str(names[i]), vec=tuple(float(c) for c in vecs[i]),
+                                          rot_axis=tuple(float(c) for c in (rvs[i] if i < len(rvs) else vecs[i])),
+                                          rot_center=tuple(float(c) for c in (rcs[i] if i < len(rcs) else (0.0, 0.0, 0.0))))
+                                     for i in range(n)]))
         return steps
 
 
@@ -321,6 +333,76 @@ def _free_travel(shape, disp, world, skip, deadline):
     return 1.0, None, len(unknown)
 
 
+def _pose(shape, disp, rot):
+    """f (0..1) → деталь в доле f хода: поворот rot = (центр, ось, градусы) · f вокруг неподвижной оси, затем сдвиг
+    disp · f — как в ExplodedAssembly (Bolt Group: центр вращения не едет; сдвиг у болта идёт вдоль оси)."""
+    def pose(f):
+        s = shape.copy()
+        if rot is not None and abs(rot[2]) > 1e-9:
+            s.rotate(App.Vector(*rot[0]), App.Vector(*rot[1]), rot[2] * f)
+        if any(abs(c) > 1e-12 for c in disp):
+            s.translate(App.Vector(disp[0] * f, disp[1] * f, disp[2] * f))
+        return s
+    return pose
+
+
+def _free_sweep(shape, pose, rot, disp, world, skip, deadline):
+    """Как _free_travel, но для поворота (Bolt Group): деталь проходит дугу по кадрам — не больше ~20 мм на самом
+    дальнем от оси углу за кадр. → (доля 0..1, имя препятствия, число неопределённых)."""
+    import math
+    bb0 = _bb(shape)
+    c, a = rot[0], rot[1]
+    an = (a[0] ** 2 + a[1] ** 2 + a[2] ** 2) ** 0.5 or 1.0
+    a = (a[0] / an, a[1] / an, a[2] / an)
+    rmax = 0.0
+    for x in (bb0[0], bb0[3]):
+        for y in (bb0[1], bb0[4]):
+            for z in (bb0[2], bb0[5]):
+                v = (x - c[0], y - c[1], z - c[2])
+                t = v[0] * a[0] + v[1] * a[1] + v[2] * a[2]
+                rmax = max(rmax, (max(0.0, v[0] ** 2 + v[1] ** 2 + v[2] ** 2 - t * t)) ** 0.5)
+    arc = rmax * math.radians(abs(rot[2])) + (disp[0] ** 2 + disp[1] ** 2 + disp[2] ** 2) ** 0.5
+    n = max(1, int(math.ceil(max(abs(rot[2]) / 3.0, arc / 20.0))))
+    base, unknown = {}, set()
+
+    def hit(f):
+        mv = pose(f)
+        bb = _bb(mv)
+        for name, ob in world.items():
+            if name in skip or not _overlap(bb, ob["bb"], -0.2):
+                continue
+            if name not in base:
+                base[name] = _common(shape, ob["shape"]) if _overlap(bb0, ob["bb"], -0.2) else 0.0
+            if base[name] is None:
+                unknown.add(name)
+                continue
+            v = _common(mv, ob["shape"])
+            if v is None:
+                unknown.add(name)
+            elif v > base[name] + TOL_V:
+                return name
+        return None
+
+    prev = 0.0
+    for i in range(1, n + 1):
+        if time.time() > deadline:
+            return None, None, len(unknown)
+        f = float(i) / n
+        ob = hit(f)
+        if ob:
+            lo, hi = prev, f
+            for _ in range(7):
+                mid = (lo + hi) / 2.0
+                h = hit(mid)
+                if h:
+                    hi, ob = mid, h
+                else:
+                    lo = mid
+            return lo, ob, len(unknown)
+        prev = f
+    return 1.0, None, len(unknown)
+
+
 def _nearest(start, shape, world, skip):
     """Ближайшее к shape (деталь в конце хода) тело — из тех, к которым она ПРИБЛИЗИЛАСЬ (в начале, start, была дальше).
     → (имя, мм) или None, если ближе NEAR ничего нет."""
@@ -356,22 +438,32 @@ def check_sequence(doc, seq, deadline):
     for st in seq["steps"]:
         parts, res = [p for p in st["parts"]], []
         moving = set(p["name"] for p in parts)
+        deg = float(st.get("revolutions") or 0.0) * 360.0
         for p in parts:
-            r = dict(name=p["name"], vec=p["vec"], travel=st["distance"] * (sum(c * c for c in p["vec"]) ** 0.5))
+            disp = tuple(c * st["distance"] for c in p["vec"])
+            rot = (p.get("rot_center", (0.0, 0.0, 0.0)), p.get("rot_axis", p["vec"]), deg) if abs(deg) > 1e-9 else None
+            r = dict(name=p["name"], vec=p["vec"], travel=st["distance"] * (sum(c * c for c in p["vec"]) ** 0.5), unit=" мм")
+            if rot is not None:
+                r.update(travel=abs(deg), unit="°")         # поворот: ход и свободный ход — в градусах
             if doc.getObject(p["name"]) is None:
                 r["status"] = "missing"
             elif p["name"] not in world:
                 r["status"] = "nosolid"
             else:
-                disp = tuple(c * st["distance"] for c in p["vec"])
-                f, ob, unk = _free_travel(world[p["name"]]["shape"], disp, world, moving, deadline)
+                sh0 = world[p["name"]]["shape"]
+                if rot is None:
+                    f, ob, unk = _free_travel(sh0, disp, world, moving, deadline)
+                    end = lambda: _moved(sh0, disp)
+                else:
+                    pose = _pose(sh0, disp, rot)
+                    f, ob, unk = _free_sweep(sh0, pose, rot, disp, world, moving, deadline)
+                    end = lambda: pose(1.0)
                 r["unknown"] = unk
                 if f is None:
                     r["status"] = "timeout"
                 elif ob is None:
                     r["status"] = "free"
-                    sh0 = world[p["name"]]["shape"]
-                    near = _nearest(sh0, _moved(sh0, disp), world, moving) if time.time() < deadline else None
+                    near = _nearest(sh0, end(), world, moving) if time.time() < deadline else None
                     if near:
                         r["near"] = near
                 else:
@@ -381,7 +473,11 @@ def check_sequence(doc, seq, deadline):
             if p["name"] in world:
                 disp = tuple(c * st["distance"] for c in p["vec"])
                 w = world[p["name"]]
-                world[p["name"]] = dict(shape=_moved(w["shape"], disp), bb=_shift(w["bb"], disp), shell=w["shell"])
+                if abs(deg) > 1e-9:
+                    sh = _pose(w["shape"], disp, (p.get("rot_center", (0.0, 0.0, 0.0)), p.get("rot_axis", p["vec"]), deg))(1.0)
+                    world[p["name"]] = dict(shape=sh, bb=_bb(sh), shell=w["shell"])
+                else:
+                    world[p["name"]] = dict(shape=_moved(w["shape"], disp), bb=_shift(w["bb"], disp), shell=w["shell"])
         out.append(dict(label=st["label"], kind=st["kind"], distance=st["distance"], revolutions=st["revolutions"],
                         parts=res))
     return out
@@ -409,10 +505,13 @@ def report_lines(doc, results):
         for i, s in enumerate(steps, 1):
             tot["steps"] += 1
             vecs = set(tuple(round(c, 4) for c in p["vec"]) for p in s["parts"])
-            head = "    ▶ %d «%s» — %s %.0f мм" % (i, s["label"], direction_text(s["parts"][0]["vec"]) if len(vecs) == 1
-                                                   else "детали в разные стороны,", s["distance"])
-            if s["revolutions"]:
-                head += " (+ вращение %.1f об. — не проверяется)" % s["revolutions"]
+            if s["revolutions"] and abs(s["distance"]) < 1e-9:
+                head = "    ▶ %d «%s» — поворот %+.0f°" % (i, s["label"], s["revolutions"] * 360.0)
+            else:
+                head = "    ▶ %d «%s» — %s %.0f мм" % (i, s["label"], direction_text(s["parts"][0]["vec"]) if len(vecs) == 1
+                                                       else "детали в разные стороны,", s["distance"])
+                if s["revolutions"]:
+                    head += " + поворот %+.0f°" % (s["revolutions"] * 360.0)
             bad = [p for p in s["parts"] if p["status"] != "free"]
             if not bad:
                 tot["free"] += 1
@@ -431,13 +530,13 @@ def report_lines(doc, results):
                 if p["status"] == "blocked" and p["free"] < 1.0:
                     L.append("        ⚠ %s: в эту сторону не идёт — сразу упирается в %s" % (nm, _lab(doc, p["obstacle"])))
                 elif p["status"] == "blocked":
-                    L.append("        ⚠ %s: свободный ход %.0f мм из %.0f — дальше %s" % (
-                        nm, p["free"], p["travel"], _lab(doc, p["obstacle"])))
+                    L.append("        ⚠ %s: свободный ход %.0f%s из %.0f — дальше %s" % (
+                        nm, p["free"], p.get("unit", " мм"), p["travel"], _lab(doc, p["obstacle"])))
                 elif p["status"] == "shell" and p["free"] < 1.0:
                     L.append("        ⓘ %s: уже в исходном положении задевает кузов — %s" % (nm, _lab(doc, p["obstacle"])))
                 elif p["status"] == "shell":
-                    L.append("        ⓘ %s: через %.0f мм из %.0f выходит за кузов (%s)" % (
-                        nm, p["free"], p["travel"], _lab(doc, p["obstacle"])))
+                    L.append("        ⓘ %s: через %.0f%s из %.0f выходит за кузов (%s)" % (
+                        nm, p["free"], p.get("unit", " мм"), p["travel"], _lab(doc, p["obstacle"])))
                 elif p["status"] == "missing":
                     L.append("        ⚠ %s: такой детали в модели нет" % p["name"])
                 elif p["status"] == "nosolid":

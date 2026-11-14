@@ -4,6 +4,16 @@
 (внутренние имена `obj.Name`), смену их положения, новые последовательности анимации. Подробная история модели —
 в `git log`, решения по мебели — в `FURNITURE_MEMORY.md`.
 
+## 2026-11-13 — Claude: анимация двери душа; проверка поворотов
+
+- Новая анимация `animation/sequences/shower_door.py` (модель `van_v1_rect_pan`): `Shower_Door` поворачивается на −90°
+  вокруг вертикальной оси петель (X 1351.94, Y 334.19 — внутренняя кромка задней стенки, `Shower_WallRear.Edge4`) —
+  Bolt Group, distance 0, revolutions −0.25; конечное положение совпадает с контрольным `Shower_Door_Open`.
+  В файле анимации призраки `Shower_Door_Open`, `Shower_DoorEnd_Folded` скрыты.
+- `vanmodel/motion.py`: повороты (Bolt Group) теперь проверяются — деталь проходит дугу по кадрам (≤ ~20 мм на дальнем
+  углу), как сдвиг; ось и центр вращения читаются из `.py` и из `*_anim_*.FCStd`. Отчёт: «поворот −90°», ход — в градусах.
+- Модель не менялась.
+
 ## 2026-11-13 — Claude: анимация нижнего ящика
 
 - Новая анимация `animation/sequences/lower_drawer.py` (модель `van_v1_rect_pan`): `Drawer_Lower`, `Drawer_Lower_Handle`
