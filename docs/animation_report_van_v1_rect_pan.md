@@ -31,11 +31,17 @@
     порядок сборки (обратный разборке): Торцевая створка — сложить внутрь на 90° → Дверь душа — открыть на 90° наружу
     ▶ 1 «Дверь душа — открыть на 90° наружу» — поворот -90°: свободно (1 дет.); в конце хода ближе всего: 9 мм — «Shower door (acrylic, hinged on rear wall)» (Shower_Door) ↔ «Cabinet passenger 4 door» (CabPass_4_Door)
     ▶ 2 «Торцевая створка — сложить внутрь на 90°» — поворот -90°: свободно (1 дет.); в конце хода ближе всего: 4 мм — «Shower end panel (acrylic, folds to side wall)» (Shower_DoorEnd) ↔ «Shower side wall» (Shower_WallBack)
+  toilet — animation/sequences/toilet.py: шагов 1, деталей 7
+    порядок сборки (обратный разборке): Туалет на платформе — выкатить в душ
+    ▶ 1 «Туалет на платформе — выкатить в душ» — назад, к задним дверям 400 мм:
+        ⚠ «Rear wheel A» (Toilet_Wheel_RA): свободный ход 400 мм из 400 — дальше «Shower pan RecPro 36x24x5″» (Shower_PanRect)
+        ⚠ «Rear wheel W» (Toilet_Wheel_RW): свободный ход 400 мм из 400 — дальше «Shower pan RecPro 36x24x5″» (Shower_PanRect)
+        остальные свободно: Toilet_Platform, Toilet_PlatformDam, Toilet_Camco, Toilet_Wheel_FA, Toilet_Wheel_FW
   upper_drawer — animation/sequences/upper_drawer.py: шагов 2, деталей 6
     порядок сборки (обратный разборке): Откидной борт — откинуть назад на 90° → Верхний ящик — выдвинуть назад
     ▶ 1 «Верхний ящик — выдвинуть назад» — назад, к задним дверям 1118 мм:
         · «SUP bag picture (top)» (Drawer_Upper_BagPicture): не твёрдое тело — не проверяется
         остальные свободно: Drawer_Upper, Drawer_Upper_Tailgate, Drawer_Upper_TailgateHinge, Drawer_Upper_Bag
     ▶ 2 «Откидной борт — откинуть назад на 90°» — поворот -90°: свободно (1 дет.)
-  Итого: шагов 10 — свободно 5, ⚠ упирается 3, ⓘ выходит за кузов 1, прочее 1
+  Итого: шагов 11 — свободно 5, ⚠ упирается 4, ⓘ выходит за кузов 1, прочее 1
 ```

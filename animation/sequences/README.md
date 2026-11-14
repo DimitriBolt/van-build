@@ -9,6 +9,7 @@
 | `lower_drawer.py` | `van_v1_rect_pan` | нижний ящик на колёсиках выкатывается вперёд на 900 мм |
 | `shower_door.py` | `van_v1_rect_pan` | дверь душа открывается наружу, торцевая створка складывается внутрь (по 90°) |
 | `fridge.py` | `van_v1_rect_pan` | холодильник выдвигается в проход (−Y) |
+| `toilet.py` | `van_v1_rect_pan` | туалет на платформе выкатывается из-под раковины в душ (−X, 400 мм) |
 
 Пишет их `animation/ea_export.FCMacro` (или руками — это данные на Python), собирает файл анимации на модели —
 `animation/ea_build.FCMacro`. Формат и договор — `animation/README.md`.
