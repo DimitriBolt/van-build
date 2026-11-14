@@ -4,6 +4,14 @@
 (внутренние имена `obj.Name`), смену их положения, новые последовательности анимации. Подробная история модели —
 в `git log`, решения по мебели — в `FURNITURE_MEMORY.md`.
 
+## 2026-11-13 — Claude: анимация нижнего ящика
+
+- Новая анимация `animation/sequences/lower_drawer.py` (модель `van_v1_rect_pan`): `Drawer_Lower`, `Drawer_Lower_Handle`
+  и колёсики `Drawer_Wheel_D1..D3`, `Drawer_Wheel_P1..P3` выкатываются вперёд (+X) на 900 мм (`DRAWERS_RECT["lower"]["travel"]`).
+  В файле анимации скрыты призраки `Shower_Door_Open`, `Shower_DoorEnd_Folded` (ящик выкатывают при закрытой двери).
+- `vanmodel/motion.py`: объекты `*_Open`, `*_Folded` (иллюстративные положения дверей) — не препятствия, как `*_Out`.
+- Модель не менялась.
+
 ## 2026-11-13 — Claude: анимация верхнего ящика; анимации привязаны к моделям (`MODELS`)
 
 - Новая анимация `animation/sequences/upper_drawer.py` (модель `van_v1_rect_pan`): `Drawer_Upper` и
