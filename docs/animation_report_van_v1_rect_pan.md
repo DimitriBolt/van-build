@@ -21,22 +21,21 @@
   fridge — animation/sequences/fridge.py: шагов 1, деталей 1
     порядок сборки (обратный разборке): Холодильник — выдвинуть в проход
     ▶ 1 «Холодильник — выдвинуть в проход» — к борту пассажира 400 мм: свободно (1 дет.)
-  lower_drawer — animation/sequences/lower_drawer.py: шагов 1, деталей 8
+  lower_drawer — animation/sequences/lower_drawer.py: шагов 1, деталей 7
     порядок сборки (обратный разборке): Нижний ящик — выкатить вперёд
     ▶ 1 «Нижний ящик — выкатить вперёд» — вперёд, к кабине 900 мм:
         ⚠ «Drawer caster P2» (Drawer_Wheel_P2): свободный ход 835 мм из 900 — дальше «Rack post plate P3f» (BankPostPlate_P3f)
         ⚠ «Drawer caster P3» (Drawer_Wheel_P3): свободный ход 286 мм из 900 — дальше «Rack post plate P3f» (BankPostPlate_P3f)
-        остальные свободно: Drawer_Lower, Drawer_Lower_Handle, Drawer_Wheel_D1, Drawer_Wheel_P1, Drawer_Wheel_D2, Drawer_Wheel_D3
+        остальные свободно: Drawer_Lower, Drawer_Wheel_D1, Drawer_Wheel_P1, Drawer_Wheel_D2, Drawer_Wheel_D3
   shower_door — animation/sequences/shower_door.py: шагов 2, деталей 2
     порядок сборки (обратный разборке): Торцевая створка — сложить внутрь на 90° → Дверь душа — открыть на 90° наружу
-    ▶ 1 «Дверь душа — открыть на 90° наружу» — поворот -90°:
-        ⚠ «Shower door (acrylic, hinged on rear wall)» (Shower_Door): свободный ход 90° из 90 — дальше «Lower drawer handle» (Drawer_Lower_Handle)
+    ▶ 1 «Дверь душа — открыть на 90° наружу» — поворот -90°: свободно (1 дет.); в конце хода ближе всего: 9 мм — «Shower door (acrylic, hinged on rear wall)» (Shower_Door) ↔ «Cabinet passenger 4 door» (CabPass_4_Door)
     ▶ 2 «Торцевая створка — сложить внутрь на 90°» — поворот -90°: свободно (1 дет.); в конце хода ближе всего: 4 мм — «Shower end panel (acrylic, folds to side wall)» (Shower_DoorEnd) ↔ «Shower side wall» (Shower_WallBack)
-  upper_drawer — animation/sequences/upper_drawer.py: шагов 2, деталей 8
+  upper_drawer — animation/sequences/upper_drawer.py: шагов 2, деталей 6
     порядок сборки (обратный разборке): Откидной борт — откинуть назад на 90° → Верхний ящик — выдвинуть назад
     ▶ 1 «Верхний ящик — выдвинуть назад» — назад, к задним дверям 1118 мм:
         · «SUP bag picture (top)» (Drawer_Upper_BagPicture): не твёрдое тело — не проверяется
-        остальные свободно: Drawer_Upper, Drawer_Upper_Handle, Drawer_Upper_Tailgate, Drawer_Upper_TailgateHinge, Drawer_Upper_Bag
-    ▶ 2 «Откидной борт — откинуть назад на 90°» — поворот -90°: свободно (2 дет.)
-  Итого: шагов 10 — свободно 4, ⚠ упирается 4, ⓘ выходит за кузов 1, прочее 1
+        остальные свободно: Drawer_Upper, Drawer_Upper_Tailgate, Drawer_Upper_TailgateHinge, Drawer_Upper_Bag
+    ▶ 2 «Откидной борт — откинуть назад на 90°» — поворот -90°: свободно (1 дет.)
+  Итого: шагов 10 — свободно 5, ⚠ упирается 3, ⓘ выходит за кузов 1, прочее 1
 ```

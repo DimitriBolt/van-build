@@ -43,6 +43,15 @@ def drawers(S):
         parts[name] = shape
         return shape
 
+    def hand_hole(x0, th, yc, zc, w=110.0, h=32.0):
+        """Овальное отверстие-ручка (стадион w × h) сквозь торцевую стенку толщиной th (вдоль X) — вместо выступающей ручки
+        (2026-11-14, Dimitri: выступающие ручки в машине травмоопасны; дверь душа упиралась в ручку нижнего ящика)."""
+        r = h / 2.0
+        X = V(1, 0, 0)
+        return Part.makeBox(th + 2.0, w - h, h, V(x0 - 1.0, yc - (w - h) / 2.0, zc - r)).fuse(
+            Part.makeCylinder(r, th + 2.0, V(x0 - 1.0, yc - (w - h) / 2.0, zc), X)).fuse(
+            Part.makeCylinder(r, th + 2.0, V(x0 - 1.0, yc + (w - h) / 2.0, zc), X))
+
     def tray(x0, x1, y0, y1, z0, z1):
         """Ящик — фанера: дно tb и 4 стенки tw, сверху открыт."""
         outer = Part.makeBox(x1 - x0, y1 - y0, z1 - z0, V(x0, y0, z0))
@@ -79,7 +88,8 @@ def drawers(S):
     put("Drawer_Upper_Tailgate", "Откидной борт верхнего ящика (задняя стенка, фанера 1/2″, %.0f × %.0f мм): петля по нижнему ребру "
         "(рояльная петля, ось X=%.0f, Z=%.0f); откидывается наружу на 90° и ложится вровень с дном; сверху — фиксаторы-защёлки к боковинам"
         % (y_box + y_box_d, zu1 - zu0, xu0, zu0),
-        Part.makeBox(tw, y_box + y_box_d, zu1 - zu0, V(xu0, -y_box, zu0)), COL_PLY)
+        Part.makeBox(tw, y_box + y_box_d, zu1 - zu0, V(xu0, -y_box, zu0)).cut(
+            hand_hole(xu0, tw, (y_box_d - y_box) / 2.0, zu1 - 45.0)), COL_PLY)
     put("Drawer_Upper_TailgateHinge", "Рояльная петля откидного борта (piano hinge, нержавейка) по нижнему ребру, ось X=%.0f, Z=%.0f" % (xu0, zu0),
         Part.makeCylinder(3.0, y_box + y_box_d - 40.0, V(xu0, -y_box + 20.0, zu0), V(0, 1, 0)), COL_STEEL)
     zs0 = zu0 + (zu1 - zu0 - SL["H"]) / 2.0                            # направляющие — на середине высоты стенки
@@ -98,8 +108,7 @@ def drawers(S):
                 "Aluminum Extrusion 2440 mm) от пола (над пластиной 2 мм) до поперечины кровати #%d; внизу и вверху — угольники 2020 с T-гайками; "
                 "направляющая — болтами в паз стойки (держит и боковую нагрузку в повороте)" % (k, side, k), h, (0.78, 0.80, 0.84))
             hang.append(h)
-    put("Drawer_Upper_Handle", "Ручка верхнего ящика (задний торец)",
-        Part.makeCylinder(10.0, 300.0, V(xu0 - 25.0, (y_box_d - y_box) / 2.0 - 150.0, zu1 - 60.0), V(0, 1, 0)), COL_STEEL)
+    # ручки нет — в откидном борту овальное отверстие 110 × 32 мм (hand_hole), центр на 45 мм ниже верха
 
     # ── Баул SUP-борда Genreen (2026-11-14, Dimitri): лежит вдоль X по центру ящика, приклеен к нему, выезжает вместе с ящиком ──
     BG = U["bag"]
@@ -139,7 +148,7 @@ def drawers(S):
     put("Drawer_Lower", "Нижний ящик на колёсиках (фанера 1/2″): X %.0f..%.0f, Y %.0f..%.0f — ширина %.0f мм (%.1f″), высота %.0f мм "
         "(%.1f″); от ножки батарей P3 до края поддона душа; катится ВПЕРЁД в салон" % (
             xl0, xl1, y_pass, y_drv, y_drv - y_pass, (y_drv - y_pass) / 25.4, zl1 - zl0, (zl1 - zl0) / 25.4),
-        tray(xl0, xl1, y_pass, y_drv, zl0, zl1), COL_PLY2)
+        tray(xl0, xl1, y_pass, y_drv, zl0, zl1).cut(hand_hole(xl1 - tw, tw, (y_pass + y_drv) / 2.0, zl1 - 45.0)), COL_PLY2)
     wr, ww = CA["wheel_d"] / 2.0, CA["wheel_w"]
     mpx, mpy = CA["plate"]
     xs = [xl0 + CA["x_inset"], (xl0 + xl1) / 2.0, xl1 - CA["x_inset"]]
@@ -149,8 +158,7 @@ def drawers(S):
                 Part.makeBox(mpx, mpy, zl0 - (floor_top + 2 * wr), V(xc - mpx / 2.0, yc - mpy / 2.0, floor_top + 2 * wr)))
             put("Drawer_Wheel_%s%d" % (tag, i + 1), "Колёсико %s %d ⌀%.0f мм неповоротное (высота с креплением %.0f мм)" % (
                 {"D": "водительское", "P": "пассажирское"}[tag], i + 1, CA["wheel_d"], CA["h"]), wh, COL_WHEEL)
-    put("Drawer_Lower_Handle", "Ручка нижнего ящика (передний торец, к салону)",
-        Part.makeCylinder(10.0, 300.0, V(xl1 + 25.0, (y_pass + y_drv) / 2.0 - 150.0, zl1 - 60.0), V(0, 1, 0)), COL_STEEL)
+    # ручки нет — в переднем торце овальное отверстие 110 × 32 мм (hand_hole), центр на 45 мм ниже верха
 
     # ═══════ ПРОВЕРКИ: в закрытом положении и по пути выдвижения ═══════
     skip = ("Scan_", "Opening_", "RearDoorLeaf", "Drawer", "Floor_")

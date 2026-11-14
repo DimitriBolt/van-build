@@ -3,7 +3,7 @@
 # Источник: написана Claude по модели van_v1_rect_pan (vanmodel/drawers_rect.py), 2026-11-13.
 #
 # Нижний ящик на 6 колёсиках выкатывается ВПЕРЁД, в салон, на 900 мм (ход из проверок модели:
-# DRAWERS_RECT["lower"]["travel"]); ящик, ручка и колёсики едут вместе. ▶ — выкатить, ◀ — закатить.
+# DRAWERS_RECT["lower"]["travel"]); ящик и колёсики едут вместе (ручка — овальное отверстие в переднем торце). ▶ — выкатить, ◀ — закатить.
 # Колёсики не вращаются: в ExplodedAssembly ось вращения стоит на месте, а у катящегося колеса она едет вместе с ним.
 # Выкатывать — при закрытой двери душа (открытая дверь стоит на пути ящика); призрак сложенной створки душа
 # в файле анимации скрыт (HIDDEN).
@@ -32,7 +32,6 @@ STEPS = [
         'revolutions': 0.0,
         'parts': [
             {'name': 'Drawer_Lower', 'vec': (1.0, 0.0, 0.0), 'rot_axis': (1.0, 0.0, 0.0), 'rot_center': (0.0, 0.0, 0.0)},  # Lower drawer (rolls forward)
-            {'name': 'Drawer_Lower_Handle', 'vec': (1.0, 0.0, 0.0), 'rot_axis': (1.0, 0.0, 0.0), 'rot_center': (0.0, 0.0, 0.0)},  # Lower drawer handle
             {'name': 'Drawer_Wheel_D1', 'vec': (1.0, 0.0, 0.0), 'rot_axis': (1.0, 0.0, 0.0), 'rot_center': (0.0, 0.0, 0.0)},  # Drawer caster D1
             {'name': 'Drawer_Wheel_P1', 'vec': (1.0, 0.0, 0.0), 'rot_axis': (1.0, 0.0, 0.0), 'rot_center': (0.0, 0.0, 0.0)},  # Drawer caster P1
             {'name': 'Drawer_Wheel_D2', 'vec': (1.0, 0.0, 0.0), 'rot_axis': (1.0, 0.0, 0.0), 'rot_center': (0.0, 0.0, 0.0)},  # Drawer caster D2
