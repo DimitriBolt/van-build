@@ -512,7 +512,7 @@ def shower_kitchen(S):
     # открытые положения — для проверки и анимации (полупрозрачные)
     door_open = door.copy()
     door_open.rotate(V(x_hz, y_sf, 0.0), V(0, 0, 1), -90.0)
-    put("Shower_Door_Open", "Дверь душа открыта на 90° наружу (контрольное положение)", door_open, (0.65, 0.82, 0.90), 85)
+    # (объект открытой двери в модель не добавляем — открывание Dimitri показывает анимацией; door_open нужен для проверок)
     door_fold = door_e.copy()
     door_fold.rotate(V(x_ax - DT / 2.0, y_e1, 0.0), V(0, 0, 1), -90.0)
     put("Shower_DoorEnd_Folded", "Торцевая створка сложена внутрь (вдоль боковой стенки)", door_fold, (0.65, 0.82, 0.90), 85)
@@ -615,12 +615,8 @@ def shower_kitchen(S):
         for i_, yb_ in enumerate((yc_ - KF["spacing"] / 2.0, yc_ + KF["spacing"] / 2.0)):
             put("Kitchen_FlapBracket%d" % (i_ + 1), "Складной кронштейн %d (сложен) — на торце кухни, плечо %.0f″" % (i_ + 1, bl_ / 25.4),
                 Part.makeBox(bt_, bw_, bl_, V(kx1, ks * yb_ - bw_ / 2.0, z_ct - fth - bl_)), COL_STEEL)
-            put("Kitchen_FlapBracketOpen%d" % (i_ + 1), "Кронштейн %d разложен (сиденье развёрнуто на 180°)" % (i_ + 1),
-                Part.makeBox(bl_, bw_, bt_, V(kx1, ks * yb_ - bw_ / 2.0, z_ct - fth - bt_)), COL_STEEL, 70)
         put("Kitchen_Flap", "Откидная столешница %.0f×%.0f″ (1/2″) — сложена, висит на торце кухни" % (fl_ / 25.4, (fy1 - fy0) / 25.4),
             Part.makeBox(fth, fy1 - fy0, fl_, V(kx1 + bt_, fy0, z_ct - fl_)), COL_TOP)
-        put("Kitchen_FlapOpen", "Откидная столешница разложена — вровень со столешницей, над развёрнутым сиденьем",
-            Part.makeBox(fl_, fy1 - fy0, fth, V(kx1, fy0, z_ct - fth)), COL_TOP, 65)
         flap_summary = dict(len=fl_, w=fy1 - fy0, x_open=(kx1, kx1 + fl_), to_seat=3190.0 - (kx1 + bt_ + fth),
                             z_fold_low=z_ct - fl_ - floor_top)
 
@@ -677,7 +673,7 @@ def shower_kitchen(S):
     arch_all = [o.Shape for o in doc.Objects if o.Name.startswith(("BedSideRail", "BedPost", "BedCross", "BedDeck", "BankPost", "Battery_"))
                 and o.isDerivedFrom("Part::Feature") and not o.Shape.isNull() and o.Shape.Solids]
     checks.append(("дверь прохода (закрыта) ↔ поддон (над бортиком)", _dd(parts["Shower_Door"], pan)))
-    checks.append(("дверь прохода (открыта на 90°) ↔ кровать/батареи (нижний ящик вперёд при открытой двери не пройдёт)", min([_dd(parts["Shower_Door_Open"], s_) for s_ in arch_all] or [999.0])))
+    checks.append(("дверь прохода (открыта на 90°) ↔ кровать/батареи (нижний ящик вперёд при открытой двери не пройдёт)", min([_dd(door_open, s_) for s_ in arch_all] or [999.0])))
     checks.append(("торцевая створка ↔ верх туалета (транспорт; низ створки − верх туалета)", z_e0 - toilet_pf["z"][3]))
     checks.append(("торцевая створка сложена ↔ боковая стенка душа", _dd(parts["Shower_DoorEnd_Folded"], parts["Shower_WallBack"])))
     checks.append(("торцевая створка сложена ↔ туалет в душе", min(_dd(parts["Shower_DoorEnd_Folded"], m_) for m_ in moving1)))
