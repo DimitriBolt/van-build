@@ -4,6 +4,13 @@
 (внутренние имена `obj.Name`), смену их положения, новые последовательности анимации. Подробная история модели —
 в `git log`, решения по мебели — в `FURNITURE_MEMORY.md`.
 
+## 2026-11-14 — Claude: `ea_build` сам делает `git pull`
+
+- `animation/ea_build.FCMacro`: перед выбором файлов — `git pull --ff-only` в репозитории (во FreeCAD из Flatpak — через
+  `flatpak-spawn --host`, т.е. git и ключи самой системы). Ошибка не останавливает сборку: макрос показывает причину
+  (для Flatpak — команду `flatpak override --user --talk-name=org.freedesktop.Flatpak org.freecad.FreeCAD`) и работает
+  с файлами на диске. Результат pull — первой строкой в итоговом сообщении.
+
 ## 2026-11-14 — Claude: торцевая створка душа в анимации `shower_door`
 
 - `animation/sequences/shower_door.py`: шаг 2 — `Shower_DoorEnd` складывается внутрь душа на 90° (Bolt Group,

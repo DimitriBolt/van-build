@@ -5,6 +5,8 @@
     Файл → Открыть… → animation/ea_build.FCMacro → Макрос → Выполнить макрос (Ctrl+F6)
 
 Что делает:
+  0. сначала забирает свежие изменения из GitHub: git pull --ff-only в репозитории (во FreeCAD из Flatpak — через
+     flatpak-spawn --host, т.е. git самой системы); не получилось — пишет почему и работает с тем, что есть;
   1. спрашивает файлы последовательностей (animation/sequences/*.py — можно несколько сразу) и модель
      (по умолчанию — первая из MODELS выбранной анимации, иначе van_v0_T4320.FCStd);
      если анимация сделана для другой модели (MODELS), спрашивает, собирать ли всё равно;
@@ -16,6 +18,7 @@
 """
 import os
 import shutil
+import subprocess
 
 import FreeCAD as App
 import FreeCADGui as Gui
@@ -38,6 +41,37 @@ def repo_dir():
             return cur
         cur = os.path.dirname(cur)
     return os.path.expanduser("~/van-build")
+
+
+def git_pull(repo):
+    """git pull --ff-only в repo. → (ok, текст); ok = None — не git-репозиторий (молча пропускаем).
+    Во FreeCAD из Flatpak git ищется в системе (flatpak-spawn --host)."""
+    if not os.path.isdir(os.path.join(repo, ".git")):
+        return None, "%s — не git-репозиторий, обновление пропущено" % repo
+    cmd = ["git", "-C", repo, "pull", "--ff-only"]
+    tries = [["flatpak-spawn", "--host"] + cmd, cmd] if os.path.exists("/.flatpak-info") else [cmd]
+    errors = []
+    for c in tries:
+        try:
+            r = subprocess.run(c, capture_output=True, text=True, timeout=120,
+                               env=dict(os.environ, GIT_TERMINAL_PROMPT="0"))
+        except FileNotFoundError:
+            errors.append("%s: не найден" % c[0])
+            continue
+        except subprocess.TimeoutExpired:
+            return False, "git pull: нет ответа 2 минуты — работаю с тем, что есть"
+        out = (r.stdout + r.stderr).strip()
+        if r.returncode == 0:
+            return True, out or "обновлено"
+        errors.append(out or "%s: код %d" % (c[0], r.returncode))
+        if c[0] != "flatpak-spawn":
+            break
+    hint = ""
+    if os.path.exists("/.flatpak-info"):
+        hint = ("\nFreeCAD из Flatpak: разрешите ему запускать git системы (один раз, в терминале):\n"
+                "  flatpak override --user --talk-name=org.freedesktop.Flatpak org.freecad.FreeCAD\n"
+                "и перезапустите FreeCAD.")
+    return False, "git pull не удался:\n" + "\n".join(errors) + hint
 
 
 def load_sequence(path):
@@ -181,6 +215,11 @@ def main():
     mw = Gui.getMainWindow()
     repo = repo_dir()
 
+    ok, pull_msg = git_pull(repo)             # свежие анимации и модель — до выбора файлов
+    App.Console.PrintMessage("%s: git pull — %s\n" % (TITLE, pull_msg))
+    if ok is False:
+        QtWidgets.QMessageBox.warning(mw, TITLE, pull_msg + "\n\nПродолжаю с файлами, которые уже есть на диске.")
+
     seq_paths, _ = QtWidgets.QFileDialog.getOpenFileNames(
         mw, TITLE + " 1/2: какие анимации собрать (можно несколько — Ctrl+щелчок)",
         os.path.join(repo, "animation", "sequences"), "Python (*.py)")
@@ -211,7 +250,7 @@ def main():
 
     yes = QtWidgets.QMessageBox.Yes if hasattr(QtWidgets.QMessageBox, "Yes") else QtWidgets.QMessageBox.StandardButton.Yes
     no = QtWidgets.QMessageBox.No if hasattr(QtWidgets.QMessageBox, "No") else QtWidgets.QMessageBox.StandardButton.No
-    lines = []
+    lines = ["git pull: " + pull_msg.splitlines()[0], ""] if ok else []
     for sp in seq_paths:
         lines += build_one(mw, ea, sp, model_path, yes, no) + [""]
     lines += ["Модели «в сборе». ▶ — разобрать, ◀ — собрать."]

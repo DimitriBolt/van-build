@@ -95,7 +95,9 @@ MODELS = []                    # пусто — для любой модели (
 3. `git commit` + `git push`.
 
 **Получить анимацию на свежей модели** (после правок модели или на другом компьютере):
-1. `git pull`.
+1. `git pull` делать не нужно: `ea_build` сам делает `git pull --ff-only` в начале (во FreeCAD из Flatpak — git системы
+   через `flatpak-spawn --host`; если Flatpak не даёт, макрос подскажет одну команду
+   `flatpak override --user --talk-name=org.freedesktop.Flatpak org.freecad.FreeCAD`). Не вышло — работает с тем, что на диске.
 2. **Файл → Открыть… → `animation/ea_build.FCMacro` → Макрос → Выполнить макрос**.
 3. Выбрать одну или несколько последовательностей (`animation/sequences/*.py`), затем модель — макрос сам предложит
    модель из `MODELS` (например, `van_v1_rect_pan.FCStd`).
