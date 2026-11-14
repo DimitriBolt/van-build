@@ -39,6 +39,8 @@ STEPS = [
             {'name': 'Drawer_Upper_Handle', 'vec': (-1.0, 0.0, 0.0), 'rot_axis': (-1.0, 0.0, 0.0), 'rot_center': (0.0, 0.0, 0.0)},  # Upper drawer handle
             {'name': 'Drawer_Upper_Tailgate', 'vec': (-1.0, 0.0, 0.0), 'rot_axis': (-1.0, 0.0, 0.0), 'rot_center': (0.0, 0.0, 0.0)},  # Upper drawer tailgate (drop-down rear wall)
             {'name': 'Drawer_Upper_TailgateHinge', 'vec': (-1.0, 0.0, 0.0), 'rot_axis': (-1.0, 0.0, 0.0), 'rot_center': (0.0, 0.0, 0.0)},  # Upper drawer tailgate hinge
+            {'name': 'Drawer_Upper_Bag', 'vec': (-1.0, 0.0, 0.0), 'rot_axis': (-1.0, 0.0, 0.0), 'rot_center': (0.0, 0.0, 0.0)},  # SUP bag Genreen (in upper drawer)
+            {'name': 'Drawer_Upper_BagPicture', 'vec': (-1.0, 0.0, 0.0), 'rot_axis': (-1.0, 0.0, 0.0), 'rot_center': (0.0, 0.0, 0.0)},  # SUP bag picture (top)
         ],
     },
     {   # 2

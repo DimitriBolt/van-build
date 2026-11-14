@@ -8,6 +8,8 @@
 Оба — «максимально широкие»: ради этого поддон и туалет сдвинуты к борту. Бак, баллон и полка 2-го этажа не строятся.
 Размеры и зазоры считаются от уже построенных деталей (пассажирская стойка, поддон, туалет, задние стойки, поперечины)."""
 
+import os
+
 import FreeCAD as App
 import Part
 
@@ -99,6 +101,30 @@ def drawers(S):
     put("Drawer_Upper_Handle", "Ручка верхнего ящика (задний торец)",
         Part.makeCylinder(10.0, 300.0, V(xu0 - 25.0, (y_box_d - y_box) / 2.0 - 150.0, zu1 - 60.0), V(0, 1, 0)), COL_STEEL)
 
+    # ── Баул SUP-борда Genreen (2026-11-14, Dimitri): лежит вдоль X по центру ящика, приклеен к нему, выезжает вместе с ящиком ──
+    BG = U["bag"]
+    bz0 = zu0 + tb                                                       # дно ящика (внутри)
+    bag_h = min(BG["H"], zu1 - bz0 - BG["top_gap"])                      # выше борта ящика баул не поднимается (под кроватью)
+    bcx, bcy = (xu0 + xu1) / 2.0, (y_box_d - y_box) / 2.0                # центр ящика (X, Y)
+    put("Drawer_Upper_Bag", "Баул SUP-борда Genreen: %.0f × %.0f × %.0f мм (желаемые %.0f × %.0f × %.0f; высота ограничена внутренней высотой "
+        "ящика), лежит вдоль фургона по центру верхнего ящика, приклеен к ящику и выезжает с ним" % (
+            BG["L"], BG["W"], bag_h, BG["L"], BG["W"], BG["H"]),
+        Part.makeBox(BG["L"], BG["W"], bag_h, V(bcx - BG["L"] / 2.0, bcy - BG["W"] / 2.0, bz0)), BG["color"])
+    try:                                                                 # картинка на крышке: Image::ImagePlane (файл вшивается в .FCStd)
+        try:
+            import ImageGui                                              # noqa: F401  (в GUI — чтобы плоскость нарисовалась)
+        except Exception:
+            pass
+        ip = doc.addObject("Image::ImagePlane", "Drawer_Upper_BagPicture")
+        ip.ImageFile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", BG["img"])
+        ip.XSize, ip.YSize = BG["W"], BG["L"]                            # картинка: ширина 300 (поперёк), длина 1100 (вдоль X)
+        # верх картинки (молния) — к кабине (+X), читается от задних дверей: поворот на −90° вокруг Z
+        ip.Placement = App.Placement(V(bcx, bcy, bz0 + bag_h + 0.3), App.Rotation(V(0, 0, 1), -90))
+        ip.Label = "Рисунок на крышке баула (Genreen): картинка вшита в файл; верх рисунка — к кабине"
+        g.addObject(ip)
+    except Exception as e_:
+        App.Console.PrintWarning("Рисунок баула не создан: %r\n" % (e_,))
+
     # ═══════ НИЖНИЙ ящик: на колёсиках, вперёд в салон ═══════
     CA = L["caster"]
     y_pass = p3.YMax + L["side_gap"]                                   # пассажирская грань (|Y| макс. к борту)
@@ -171,6 +197,12 @@ def drawers(S):
                    min([pw.distToShape(p_)[0] for p_ in plates] or [0.0])))
     dd, nn = nearest(Part.makeCompound([parts[n] for n in parts if n.startswith("Drawer_Wheel")]), ())
     checks.append(("колёсики: ближе всего «%s»" % nn, dd))
+    bgb = parts["Drawer_Upper_Bag"].BoundBox
+    ib = parts["Drawer_Upper"].BoundBox
+    checks.append(("баул (%.0f × %.0f × %.0f мм): запас до верха бортов ящика" % (bgb.XLength, bgb.YLength, bgb.ZLength), zu1 - bgb.ZMax))
+    checks.append(("баул: ближайшая стенка ящика (в плане)", min(bgb.XMin - (ib.XMin + tw), (ib.XMax - tw) - bgb.XMax,
+                                                                   bgb.YMin - (ib.YMin + tw), (ib.YMax - tw) - bgb.YMax)))
+    checks.append(("баул ↔ дно ящика (касается: 0)", bgb.ZMin - (zu0 + tb)))
     checks.append(("верхний ящик ↔ нижний ящик (зазор по высоте)", zu0 - zl1))
     checks.append(("верх верхнего ящика ↔ поперечины кровати", z_top_lim - zu1))
     checks.append(("нижний ящик: запас до края поддона / до ножки P3", min(pan.YMin - y_drv, y_pass - p3.YMax)))

@@ -154,7 +154,7 @@ EN_LABELS = [
     (r"Shelf_Board_(\d)", "Shelf board {1}"), (r"Shelf_Lip_Inner_(\d)", "Shelf lip inner {1}"), (r"Shelf_Lip_Front_(\d)", "Shelf lip front {1}"),
     (r"Shelf_Lip_Rear_(\d)", "Shelf lip rear {1}"), (r"Shelf_Column_Front", "Shelf front column"),
     (r"Drawers", "Drawers"), (r"Drawer_Upper_Handle", "Upper drawer handle"),
-    (r"Drawer_Upper_Tailgate", "Upper drawer tailgate (drop-down rear wall)"), (r"Drawer_Upper_TailgateHinge", "Upper drawer tailgate hinge"), (r"Drawer_Lower_Handle", "Lower drawer handle"),
+    (r"Drawer_Upper_BagPicture", "SUP bag picture (top)"), (r"Drawer_Upper_Bag", "SUP bag Genreen (in upper drawer)"), (r"Drawer_Upper_Tailgate", "Upper drawer tailgate (drop-down rear wall)"), (r"Drawer_Upper_TailgateHinge", "Upper drawer tailgate hinge"), (r"Drawer_Lower_Handle", "Lower drawer handle"),
     (r"Drawer_Upper", "Upper drawer (slides rearward)"), (r"Drawer_Lower", "Lower drawer (rolls forward)"),
     (r"Drawer_Slide_(\w+)", "Drawer slide {1}"), (r"Drawer_Hanger_(\w+)_(\d)", "Slide hanger {1} {2}"), (r"Drawer_Leg_(\w+)_(\d)", "Slide leg {1} {2}"),
     (r"Drawer_Wheel_(\w)(\d)", "Drawer caster {1}{2}"),
