@@ -70,7 +70,16 @@ def drawers(S):
         "выезжает НАЗАД на SLIDEWAY" % (
             xu0, xu1, -y_box, y_box_d, y_box + y_box_d, (y_box + y_box_d) / 25.4, y_box_d, zu1 - zu0, (zu1 - zu0) / 25.4,
             zu0 - floor_top, locker_top - floor_top),
-        tray(xu0, xu1, -y_box, y_box_d, zu0, zu1), COL_PLY)
+        tray(xu0, xu1, -y_box, y_box_d, zu0, zu1).cut(
+            Part.makeBox(tw + 0.01, y_box + y_box_d + 2.0, zu1 - zu0 + 2.0, V(xu0 - 0.01, -y_box - 1.0, zu0 - 1.0))), COL_PLY)
+    # 2026-11-14 (Dimitri): задняя стенка ящика — откидной борт: петля по нижнему наружному ребру, откидывается наружу (назад)
+    # на 90° и ложится горизонтально вровень с дном ящика (верх борта = уровень дна внутри). Ось: X = xu0, Z = zu0, вдоль Y.
+    put("Drawer_Upper_Tailgate", "Откидной борт верхнего ящика (задняя стенка, фанера 1/2″, %.0f × %.0f мм): петля по нижнему ребру "
+        "(рояльная петля, ось X=%.0f, Z=%.0f); откидывается наружу на 90° и ложится вровень с дном; сверху — фиксаторы-защёлки к боковинам"
+        % (y_box + y_box_d, zu1 - zu0, xu0, zu0),
+        Part.makeBox(tw, y_box + y_box_d, zu1 - zu0, V(xu0, -y_box, zu0)), COL_PLY)
+    put("Drawer_Upper_TailgateHinge", "Рояльная петля откидного борта (piano hinge, нержавейка) по нижнему ребру, ось X=%.0f, Z=%.0f" % (xu0, zu0),
+        Part.makeCylinder(3.0, y_box + y_box_d - 40.0, V(xu0, -y_box + 20.0, zu0), V(0, 1, 0)), COL_STEEL)
     zs0 = zu0 + (zu1 - zu0 - SL["H"]) / 2.0                            # направляющие — на середине высоты стенки
     cb1, cb2 = bb("BedCross_1"), bb("BedCross_2")
     hang = []

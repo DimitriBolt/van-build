@@ -72,6 +72,7 @@ BUY_URLS = {
     r"Shelf_Gusset_\w+": "https://www.amazon.com/s?k=2020+T+slot+corner+bracket+gusset",   # поиск Amazon
     r"Shower_Door(End)?": "https://www.amazon.com/s?k=clear+acrylic+sheet+1%2F4+inch+cast",   # акрил 1/4″, резать по размеру
     r"Shower_Door(End)?Hinge_\d": "https://www.amazon.com/s?k=acrylic+glass+door+clamp+hinge+stainless",
+    "Drawer_Upper_TailgateHinge": "https://www.amazon.com/s?k=stainless+piano+hinge+48+inch",   # рояльная петля, режется по длине
     "Propane_LockerLid": "https://www.amazon.com/s?k=clear+acrylic+sheet+1%2F8+inch+cast",   # акрил 1/8″ — крышка локера
     r"Bank(Rail_(Wall|Inner)|Post_P3f|Cross_(Rear|Front))": "https://www.amazon.com/dp/B0F83QJV1M",   # V-Slot 2020 SeekLiny (рейки/стойки/поперечины этажерки)
         r"BankLPlate_\w+": "https://www.amazon.com/s?k=2020+L+shape+joining+plate+5+hole+aluminum+extrusion",
@@ -152,7 +153,8 @@ EN_LABELS = [
     (r"ArchShelf", "Arch shelf"), (r"Shelf_Arm_(\d)_(\d)", "Shelf arm {1}.{2}"), (r"Shelf_Gusset_(\d)_(\d)", "Shelf gusset {1}.{2}"),
     (r"Shelf_Board_(\d)", "Shelf board {1}"), (r"Shelf_Lip_Inner_(\d)", "Shelf lip inner {1}"), (r"Shelf_Lip_Front_(\d)", "Shelf lip front {1}"),
     (r"Shelf_Lip_Rear_(\d)", "Shelf lip rear {1}"), (r"Shelf_Column_Front", "Shelf front column"),
-    (r"Drawers", "Drawers"), (r"Drawer_Upper_Handle", "Upper drawer handle"), (r"Drawer_Lower_Handle", "Lower drawer handle"),
+    (r"Drawers", "Drawers"), (r"Drawer_Upper_Handle", "Upper drawer handle"),
+    (r"Drawer_Upper_Tailgate", "Upper drawer tailgate (drop-down rear wall)"), (r"Drawer_Upper_TailgateHinge", "Upper drawer tailgate hinge"), (r"Drawer_Lower_Handle", "Lower drawer handle"),
     (r"Drawer_Upper", "Upper drawer (slides rearward)"), (r"Drawer_Lower", "Lower drawer (rolls forward)"),
     (r"Drawer_Slide_(\w+)", "Drawer slide {1}"), (r"Drawer_Hanger_(\w+)_(\d)", "Slide hanger {1} {2}"), (r"Drawer_Leg_(\w+)_(\d)", "Slide leg {1} {2}"),
     (r"Drawer_Wheel_(\w)(\d)", "Drawer caster {1}{2}"),
