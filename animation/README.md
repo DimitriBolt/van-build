@@ -40,7 +40,7 @@ MODELS = []                    # пусто — для любой модели (
 | `drawers.py` | `van_v0` | два ящика багажника старой модели (`Trunk1_Drawer`, `Trunk2_TrayFwd`) |
 | `upper_drawer.py` | `van_v1_rect_pan` | верхний ящик (`Drawer_Upper` + ручка) выезжает назад на 1117.6 мм (SLIDEWAY 44″) |
 | `lower_drawer.py` | `van_v1_rect_pan` | нижний ящик (`Drawer_Lower` + ручка + 6 колёсиков) выкатывается вперёд на 900 мм |
-| `shower_door.py` | `van_v1_rect_pan` | дверь душа (`Shower_Door`) открывается наружу на 90° вокруг оси петель (Bolt Group) |
+| `shower_door.py` | `van_v1_rect_pan` | дверь душа (`Shower_Door`) открывается наружу на 90°, затем торцевая створка (`Shower_DoorEnd`) складывается внутрь на 90° (Bolt Group) |
 
 - **Какую анимацию запустить — выбираете файлом.** Каждая анимация — свой файл `<модель>_anim_<имя>.FCStd`
   (своя вкладка во FreeCAD): открыли `…_anim_upper_drawer` — ▶ двигает верхний ящик, `…_anim_lower_drawer` — нижний.
