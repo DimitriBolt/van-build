@@ -32,9 +32,11 @@
     ▶ 1 «Дверь душа — открыть на 90° наружу» — поворот -90°:
         ⚠ «Shower door (acrylic, hinged on rear wall)» (Shower_Door): свободный ход 90° из 90 — дальше «Lower drawer handle» (Drawer_Lower_Handle)
     ▶ 2 «Торцевая створка — сложить внутрь на 90°» — поворот -90°: свободно (1 дет.); в конце хода ближе всего: 4 мм — «Shower end panel (acrylic, folds to side wall)» (Shower_DoorEnd) ↔ «Shower side wall» (Shower_WallBack)
-  upper_drawer — animation/sequences/upper_drawer.py: шагов 2, деталей 6
+  upper_drawer — animation/sequences/upper_drawer.py: шагов 2, деталей 8
     порядок сборки (обратный разборке): Откидной борт — откинуть назад на 90° → Верхний ящик — выдвинуть назад
-    ▶ 1 «Верхний ящик — выдвинуть назад» — назад, к задним дверям 1118 мм: свободно (4 дет.)
+    ▶ 1 «Верхний ящик — выдвинуть назад» — назад, к задним дверям 1118 мм:
+        · «SUP bag picture (top)» (Drawer_Upper_BagPicture): не твёрдое тело — не проверяется
+        остальные свободно: Drawer_Upper, Drawer_Upper_Handle, Drawer_Upper_Tailgate, Drawer_Upper_TailgateHinge, Drawer_Upper_Bag
     ▶ 2 «Откидной борт — откинуть назад на 90°» — поворот -90°: свободно (2 дет.)
-  Итого: шагов 10 — свободно 5, ⚠ упирается 4, ⓘ выходит за кузов 1
+  Итого: шагов 10 — свободно 4, ⚠ упирается 4, ⓘ выходит за кузов 1, прочее 1
 ```
