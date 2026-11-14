@@ -37,7 +37,6 @@ MODELS = []                    # пусто — для любой модели (
 | Анимация | MODELS | Что показывает |
 |---|---|---|
 | `assembly.py` | любая | снять матрас → настил → поперечины → батареи B2–B4 |
-| `drawers.py` | `van_v0` | два ящика багажника старой модели (`Trunk1_Drawer`, `Trunk2_TrayFwd`) |
 | `upper_drawer.py` | `van_v1_rect_pan` | верхний ящик (`Drawer_Upper` + ручка) выезжает назад на 1117.6 мм (SLIDEWAY 44″) |
 | `lower_drawer.py` | `van_v1_rect_pan` | нижний ящик (`Drawer_Lower` + ручка + 6 колёсиков) выкатывается вперёд на 900 мм |
 | `shower_door.py` | `van_v1_rect_pan` | дверь душа (`Shower_Door`) открывается наружу на 90°, затем торцевая створка (`Shower_DoorEnd`) складывается внутрь на 90° (Bolt Group) |
@@ -113,23 +112,23 @@ MODELS = []                    # пусто — для любой модели (
 ## Формат `sequences/<имя>.py`
 
 ```python
-SEQUENCE = 'drawers'
-MODELS = ['van_v0']            # для каких моделей; [] — для любой
+SEQUENCE = 'upper_drawer'
+MODELS = ['van_v1_rect_pan']   # для каких моделей; [] — для любой
 STEPS = [                      # порядок РАЗБОРКИ, как группы в папке ExplodedAssembly
     {
-        'label': 'Ящик выдвинуть',
+        'label': 'Верхний ящик — выдвинуть назад',
         'kind': 'simple',      # simple | bolt
-        'distance': 914.4,     # мм
-        'steps': 90,           # кадров
+        'distance': 1117.6,    # мм
+        'steps': 110,          # кадров
         'step_time': 0.01,     # с между кадрами
         'revolutions': 0.0,    # обороты (Bolt Group)
         'parts': [
-            {'name': 'Trunk1_Drawer', 'vec': (-1.0, 0.0, 0.0),
+            {'name': 'Drawer_Upper', 'vec': (-1.0, 0.0, 0.0),
              'rot_axis': (-1.0, 0.0, 0.0), 'rot_center': (0.0, 0.0, 0.0)},  # Label детали
         ],
     },
 ]
-HIDDEN = ['Trunk1_Drawer_Out']   # что скрыть в файле анимации
+HIDDEN = ['Shower_DoorEnd_Folded']   # что скрыть в файле анимации
 ```
 
 Длина `vec` масштабирует ход детали: в одной группе деталь с `vec = (-0.5, 0, 0)` проедет половину `distance`

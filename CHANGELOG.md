@@ -4,6 +4,12 @@
 (внутренние имена `obj.Name`), смену их положения, новые последовательности анимации. Подробная история модели —
 в `git log`, решения по мебели — в `FURNITURE_MEMORY.md`.
 
+## 2026-11-14 — Claude: удалена анимация `drawers.py` (по просьбе Dimitri — старый мусор)
+
+- `animation/sequences/drawers.py` — ящики `Trunk1_Drawer`/`Trunk2_TrayFwd` старой модели `van_v0`; в `van_v1_rect_pan`
+  их нет (ящики там — `upper_drawer.py`, `lower_drawer.py`). Удалена; вернуть при нужде — из истории git (`b8e42a0`).
+- `assembly.py` оставлена: все её детали (матрас, настил, поперечины, батареи B2–B4) есть и в `van_v1_rect_pan`.
+
 ## 2026-11-14 — Claude: `ea_build` сам делает `git pull`
 
 - `animation/ea_build.FCMacro`: перед выбором файлов — `git pull --ff-only` в репозитории (во FreeCAD из Flatpak — через
