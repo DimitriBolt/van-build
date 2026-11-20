@@ -393,17 +393,17 @@ def bank(S):
         # (2026-11-07, вопрос Dimitri «зачем P2, P4, средняя поперечина?» — не нужны: рейка у борта лежит на арке,
         #  рейке в салон хватает пролёта P3 ↔ P3f; B1 спереди упирается в арку через клин)
         inb = (("P3f", xf - VW / 2.0, "напротив передней стойки кровати"),)      # P3 убрана: рейку держит ножка ящика #1 (см. ниже)
-        g_ = BK.get("p3_guard")
-        z_p3t = z_l0 + VH + (BK["shelf_th"] + g_ if g_ is not None else 0.0)   # верх P3f: заподлицо с верхом рейки / бортик над полкой
-        top_note = ("верх на %.0f″ выше полки (бортик у батарей)" % (g_ / 25.4)) if g_ is not None else \
-                   "верх заподлицо с верхом рейки прохода (бортик не нужен)"
+        # 2026-11-20 (Dimitri): рейка прохода ЛЕЖИТ НА стойках P3f и Front (а не крепится к их боку): стойка — прямо под
+        # рейкой, верх = низ рейки; рейка — винтом M5 сверху через рейку в торец стойки (резьба M5 в центральном отверстии)
+        z_p3t = z_l0                                                      # верх стоек под рейкой = низ рейки
+        top_note = "рейка прохода лежит на торце, сверху — винт M5×40 через рейку в торец"
         for nm, x0, note in inb:
             bk_box("BankPostPlate_%s" % nm, "Пластина под %s" % nm, (qx, qy, qt),
-                   (x0 + VW / 2.0 - qx / 2.0, ybase(ps, y_r, qy), floor_top), COL_STRUT)
+                   (x0 + VW / 2.0 - qx / 2.0, ybase(ps, y_r + VW / 2.0 + qy / 2.0, qy), floor_top), COL_STRUT)
             bk_shape("BankPost_%s" % nm, "Стойка %s — V-Slot 2020 (со стороны прохода, %s), L=%.0f — к пластине снизу винтом "
-                     "M5 в торец (резьба M5 в центральное отверстие), рейка — сбоку M5 в T-гайку, %s" % (
+                     "M5 в торец (резьба M5 в центральное отверстие), %s" % (
                          nm, note, z_p3t - floor_top - qt, top_note),
-                     vslot_2020(x0, ybase(ps, y_r, VW), floor_top + qt, z_p3t), COL_VS)
+                     vslot_2020(x0, ybase(ps, y_r + VW, VW), floor_top + qt, z_p3t), COL_VS)
         # лестница
         # 2026-11-07 (Dimitri, фото): рейка у борта — как продольная рейка кровати: на всю длину X P1..Pf, по грани
         # стоек кровати со стороны салона, сквозной болт через стойку и рейку (без уголков) — просто и надёжно
@@ -429,7 +429,10 @@ def bank(S):
         xw0 = AR["wall_x_rear"] if AR.get("wall_x_rear") is not None else x_from_dp(post_in, sd, z_l0, sw, x_rear_frame)
         xi0 = AR["inner_x_rear"] if AR.get("inner_x_rear") is not None else x_from_dp(y_r + sd, sd, z_l0, sw,
                                                                                       x_rear_frame)
-        xw1, xi1 = xw0 + AR["wall_len"], xi0 + AR["inner_len"]
+        if AR.get("front") == "door":                                       # 2026-11-20: передние концы — на одном уровне, до двери
+            xw1 = xi1 = x_front
+        else:
+            xw1, xi1 = xw0 + AR["wall_len"], xi0 + AR["inner_len"]
         xw1_old, xi1_old = x_front, x_front                                # было: обе — до проёма сдвижной двери
         yw0 = ybase(ps, post_in, VW)                      # Y-начало рейки у борта (грань стоек кровати со стороны салона)
         yi0 = ybase(ps, y_r + VW, VW)                     # … рейки со стороны прохода
@@ -453,14 +456,19 @@ def bank(S):
             o_ = doc.getObject(nm_)
             legs_x.append((o_.Shape.BoundBox.XMin + 4.0 + 10.0) if o_ is not None else None)
         legs_x = [x_ for x_ in legs_x if x_ is not None]
-        sup_x = legs_x + [xf]                              # центры опор рейки прохода по X
+        x_pfront = xi1 - BK.get("front_post_back", 72.0)   # передняя стойка под рейкой прохода — сразу за L-пластинами поперечины
+        posts_x = [xf, x_pfront]                           # стойки под рейкой прохода (рейка лежит на них): P3f, Front
+        sup_x = legs_x + posts_x                           # центры всех опор рейки прохода по X
         y_leg_face = y_r                                   # грань ножки ящика со стороны борта (|Y|) = грань рейки: вплотную
         ri_ = vslot_x(xi0, xi1, yi0, z_l0)
-        for xc_ in sup_x:
+        for xc_ in legs_x:
             ri_ = drill_y(ri_, xc_, z_l0 + 10.0, yi0 - 1.0, yi0 + VW + 1.0, 5.5)
+        for xc_ in posts_x:                                # вертикальное отверстие ⌀5.5 под винт в торец стойки
+            ri_ = ri_.cut(Part.makeCylinder(2.75, VH + 2.0, App.Vector(xc_, ps * (y_r + VW / 2.0), z_l0 - 1.0)))
         bk_shape("BankRail_Inner", "Продольная рейка со стороны прохода — V-Slot 2020 (20×20), L=%.0f: опоры — ножки направляющих "
-                 "верхнего ящика #1 и #2 и P3f — вплотную, без проставок (винт M5×30 + угловая скоба снизу); на %.0f мм ближе "
-                 "к проходу, чем грань батарей (полка доведена до рейки); назад — до задней рамы" % (xi1 - xi0, r_shift), ri_, COL_VS)
+                 "верхнего ящика #1 и #2 — вплотную сбоку (винт M5×30 + угловая скоба снизу); на стойках P3f и Front — лежит "
+                 "сверху (винт M5×40 в торец стойки); на %.0f мм ближе к проходу, чем грань батарей (полка доведена до рейки); "
+                 "назад — до задней рамы, вперёд — до проёма сдвижной двери (вровень с рейкой у борта)" % (xi1 - xi0, r_shift), ri_, COL_VS)
 
         def screw_y(name, label, x, z, y_tip, y_head, d, head_d, head_h):
             """Винт вдоль Y: острие в |Y|=y_tip, головка (⌀head_d, высота head_h) на |Y|=y_head."""
@@ -470,9 +478,21 @@ def bank(S):
             sh_ = Part.makeCylinder(d / 2.0, abs(yb_ - ya), App.Vector(x, lo, z), App.Vector(0, 1, 0))
             hh_ = Part.makeCylinder(head_d / 2.0, head_h, App.Vector(x, yb_ if sg > 0 else yb_ - head_h, z), App.Vector(0, 1, 0))
             bk_shape(name, label, sh_.fuse(hh_), COL_HW)
-        for i_, xc in enumerate(sup_x):
-            is_leg = i_ < len(legs_x)
-            tag = ("Leg%d" % (i_ + 1)) if is_leg else "P3f"
+        # передняя стойка под концом рейки прохода (2026-11-20): скамейка/сиденье спереди — опора под краем полки
+        bk_box("BankPostPlate_Front", "Пластина под передней стойкой", (qx, qy, qt),
+               (x_pfront - qx / 2.0, ybase(ps, y_r + VW / 2.0 + qy / 2.0, qy), floor_top), COL_STRUT)
+        bk_shape("BankPost_Front", "Стойка передняя — V-Slot 2020 (под передним концом рейки прохода, %.0f мм от торца), L=%.0f — "
+                 "к пластине снизу винтом M5 в торец; рейка прохода лежит на торце, сверху — винт M5×40 через рейку в торец "
+                 "(опора переднего края полки: скамейка/сиденье)" % (xi1 - x_pfront, z_p3t - floor_top - qt),
+                 vslot_2020(x_pfront - VW / 2.0, ybase(ps, y_r + VW, VW), floor_top + qt, z_p3t), COL_VS)
+        for nm_, xc_ in (("P3f", xf), ("Front", x_pfront)):
+            sc_ = Part.makeCylinder(2.5, 40.0, App.Vector(xc_, ps * (y_r + VW / 2.0), z_l1 - 40.0)).fuse(
+                Part.makeCylinder(4.75, 2.75, App.Vector(xc_, ps * (y_r + VW / 2.0), z_l1)))
+            bk_shape("BankRailScrew_%s" % nm_, "Винт M5×40 с полукруглой головкой (ISO 7380): сверху через рейку прохода в торец "
+                     "стойки %s (резьба M5 в центральном отверстии); под головку — выборка ⌀10×3 в фанере полки" % nm_, sc_, COL_HW)
+        for i_, xc in enumerate(legs_x):
+            is_leg = True
+            tag = "Leg%d" % (i_ + 1)
             y_tip = y_r - 8.0                                             # острие — в T-гайке в пазу ножки/стойки
             screw_y("BankRailScrew_%s" % tag, "Винт M5×%d + T-гайка M5: рейка прохода ↔ %s (головка — со стороны щели между рейками)" % (
                     30, "ножка направляющей ящика #%d" % (i_ + 1) if is_leg else "стойка P3f"),
@@ -487,7 +507,8 @@ def bank(S):
         # поперечины (один профиль 20×20 — это только распорки) — между рейками; сдвинуты от опор; к рейкам снизу L-пластинами
         cx_rear = BK.get("cross_rear_x", None)
         cx_rear = (max(legs_x) if False else (legs_x[0] + 43.0)) if cx_rear is None and legs_x else (xr + 78.0 if cx_rear is None else cx_rear)
-        crosses = (("Rear", cx_rear, +1.0), ("Front", xf - BK.get("cross_off", 40.0), -1.0))
+        # 2026-11-20: передняя поперечина — на переднем торце реек (замыкает раму под краем полки; L-пластины — назад)
+        crosses = (("Rear", cx_rear, +1.0), ("Front", xi1 - VW / 2.0, -1.0))
         yc0 = ybase(ps, post_in - VW, Lc)
         yc1 = yc0 + Lc
         for nm, xc, dx_ in crosses:
@@ -518,6 +539,8 @@ def bank(S):
         for dxo in (-eg_, 0.0, eg_):                         # зазор ends_gap вокруг D-стойки
             for dyo in (-eg_, 0.0, eg_):
                 ply = ply.cut(dps_.translated(App.Vector(dxo, dyo, 0)))
+        for xc_ in posts_x:                                  # выборка ⌀10×3 под головки винтов M5 (рейка ↔ стойки)
+            ply = ply.cut(Part.makeCylinder(5.0, 3.0, App.Vector(xc_, ps * (y_r + VW / 2.0), z_l1)))
         ply = Part.makeCompound([sl_ for sl_ in ply.Solids if sl_.Volume > 1e4]).Solids[0] if len(ply.Solids) > 1 else ply
         add_shape(doc, "BankShelf", "Полка — фанера 1/2″ %.0f×%.0f поверх лестницы: батареи + полочка за B2 (до D-стойки) "
                   "+ полочка под бельё (до проёма сдвижной двери); вырезы под стойки кровати" % (
@@ -551,15 +574,16 @@ def bank(S):
         # раскрой V-Slot 2020 (профиль берём любой длины): каждая рейка/поперечина — 2 профиля; стойка — 1
         L_p = z_p3t - floor_top - qt
         vcut = [("рейка у борта", float(xw1 - xw0), 1), ("рейка прохода", float(xi1 - xi0), 1),
-                ("поперечина", float(Lc), 2), ("стойка P3f", float(L_p), 1)]
+                ("поперечина", float(Lc), 2), ("стойка P3f / передняя", float(L_p), 2)]
         vcut_total = sum(L_ * n_ for _, L_, n_ in vcut)
         n_sup = len(sup_x)
         vhw = [("L-пластина 2020, 5 отв. (поперечины)", 4),
-               ("угловая скоба 20×28 под рейкой прохода", n_sup),
-               ("винт M5×30 + T-гайка (рейка прохода ↔ ножки ящика и P3f, вплотную)", n_sup),
+               ("винт M5×30 + T-гайка (рейка прохода ↔ ножки ящика, вплотную)", len(legs_x)),
+               ("угловая скоба 20×28 под рейкой прохода у ножек ящика", len(legs_x)),
+               ("винт M5×40 ISO 7380 сверху: рейка прохода → торец стойки P3f / передней", 2),
                ("болт M8×60 + гайка + 2 шайбы (рейка↔стойка кровати)", 2),
-               ("винт M5×8 + T-гайка (L-пластины, скобы): ~", 4 * 5 + n_sup * 2),
-               ("винт M5×10 в торец P3f + пластина снизу", 1)]
+               ("винт M5×8 + T-гайка (L-пластины, скобы): ~", 4 * 5 + len(legs_x) * 2),
+               ("винт M5×10 в торец стойки P3f / передней + пластина снизу", 2)]
         # проверки
         obj = lambda n: doc.getObject(n).Shape
         arch = arch_shapes.get(ps)

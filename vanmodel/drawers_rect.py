@@ -136,7 +136,9 @@ def drawers(S):
 
     # ═══════ НИЖНИЙ ящик: на колёсиках, вперёд в салон ═══════
     CA = L["caster"]
-    y_pass = p3.YMax + L["side_gap"]                                   # пассажирская грань (|Y| макс. к борту)
+    # пассажирская грань (|Y| макс. к борту): зазор до ближайшей к проходу из опор — стойки P3f или ножки верхнего ящика
+    lp_ = doc.getObject("Drawer_Leg_passenger_1")
+    y_pass = max(p3.YMax, lp_.Shape.BoundBox.YMax if lp_ is not None else p3.YMax) + L["side_gap"]
     y_drv = pan.YMin - L["side_gap"]                                   # водительская грань — до края поддона
     WR = WATER_RECT
     arch_y = min(bb("WheelArch_pY").YMin, pil.YMin) - WR["gap_wall"]    # бак: поперёк до арки / задней стойки
