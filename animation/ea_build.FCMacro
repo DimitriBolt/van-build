@@ -12,7 +12,8 @@
      если анимация сделана для другой модели (MODELS), спрашивает, собирать ли всё равно;
   2. для КАЖДОЙ анимации КОПИРУЕТ модель в <модель>_anim_<имя>.FCStd рядом с ней (сама модель не меняется) и открывает копию;
   3. создаёт в копии группы ExplodedAssembly — так же, как Create Simple Group / Create Bolt Group в GUI;
-  4. скрывает объекты из списка HIDDEN, ставит модель «в сборе» (как ⏮ Go To Start) и сохраняет.
+  4. скрывает объекты из HIDDEN и ABSENT (группа из ABSENT — вместе со всем содержимым), показывает объекты из SHOWN
+     (например, пол и арки, скрытые в модели по умолчанию), ставит модель «в сборе» (как ⏮ Go To Start) и сохраняет.
 Если детали из последовательности в модели больше нет — она пропускается, и макрос об этом сообщает.
 Обратный макрос — ea_export.FCMacro.
 """
@@ -75,12 +76,45 @@ def git_pull(repo):
 
 
 def load_sequence(path):
-    """→ (имя, STEPS, HIDDEN, MODELS). Файл последовательности — обычный Python со списками данных."""
+    """→ (имя, STEPS, HIDDEN, MODELS, ABSENT, SHOWN). Файл последовательности — обычный Python со списками данных.
+    ABSENT — чего в сценарии ещё нет (скрыть вместе с содержимым групп); SHOWN — что показать (скрытое в модели)."""
     ns = {}
     with open(path, encoding="utf-8") as f:
         exec(compile(f.read(), path, "exec"), ns)
     name = ns.get("SEQUENCE") or os.path.splitext(os.path.basename(path))[0]
-    return str(name), list(ns.get("STEPS", [])), list(ns.get("HIDDEN", [])), [str(m) for m in ns.get("MODELS", [])]
+    return (str(name), list(ns.get("STEPS", [])), list(ns.get("HIDDEN", [])), [str(m) for m in ns.get("MODELS", [])],
+            [str(n) for n in ns.get("ABSENT", [])], [str(n) for n in ns.get("SHOWN", [])])
+
+
+def with_content(doc, names):
+    """Объекты по именам + всё содержимое групп (рекурсивно). Возвращает (объекты, ненайденные имена)."""
+    out, seen, lost = [], set(), []
+    stack = list(reversed(names))
+    while stack:
+        n = stack.pop()
+        if n in seen:
+            continue
+        seen.add(n)
+        o = doc.getObject(n)
+        if o is None:
+            lost.append(n)
+            continue
+        out.append(o)
+        stack.extend(reversed([c.Name for c in (getattr(o, "Group", None) or [])]))
+    return out, lost
+
+
+def set_visible(o, on):
+    try:
+        o.Visibility = on
+    except Exception:
+        pass
+    vo = getattr(o, "ViewObject", None)
+    if vo is not None:
+        try:
+            vo.Visibility = on
+        except Exception:
+            pass
 
 
 def applies(models, stem):
@@ -95,7 +129,7 @@ def import_addon():
     return ea
 
 
-def build(doc, ea, steps, hidden):
+def build(doc, ea, steps, hidden, absent=(), shown=()):
     """Создать группы в doc. Возвращает (созданные группы, пропущенные детали, пропущенные шаги)."""
     App.setActiveDocument(doc.Name)
     ea.checkDocumentStructure()
@@ -152,6 +186,14 @@ def build(doc, ea, steps, hidden):
         o = doc.getObject(n)
         if o is not None and hasattr(o, "Visibility"):
             o.Visibility = False
+    objs, lost = with_content(doc, list(absent))            # чего в сценарии нет — скрыть вместе с содержимым групп
+    for o in objs:
+        set_visible(o, False)
+    missing += ["ABSENT: %s" % n for n in lost]
+    objs, lost = with_content(doc, list(shown))             # что показать, хотя в модели оно скрыто по умолчанию
+    for o in objs:
+        set_visible(o, True)
+    missing += ["SHOWN: %s" % n for n in lost]
 
     doc.recompute()            # группы пересчитываются → модель «разобрана» (так устроено дополнение)
     if created:
@@ -165,7 +207,7 @@ def build_one(mw, ea, seq_path, model_path, yes, no):
     """Одна последовательность → <модель>_anim_<имя>.FCStd. Возвращает строки отчёта (или None — пропущено)."""
     name = os.path.basename(seq_path)
     try:
-        seq_name, steps, hidden, models = load_sequence(seq_path)
+        seq_name, steps, hidden, models, absent, shown = load_sequence(seq_path)
     except Exception as e:
         return ["%s: не прочитан — %s" % (name, e)]
     if not steps:
@@ -192,7 +234,7 @@ def build_one(mw, ea, seq_path, model_path, yes, no):
     shutil.copyfile(model_path, out_path)
     doc = App.openDocument(out_path)
     try:
-        created, missing, skipped = build(doc, ea, steps, hidden)
+        created, missing, skipped = build(doc, ea, steps, hidden, absent, shown)
     except Exception as e:
         App.Console.PrintError("%s: %s\n" % (TITLE, e))
         return ["«%s»: ошибка — %s; файл %s не сохранён" % (seq_name, e, os.path.basename(out_path))]

@@ -55,16 +55,34 @@ def default_seq_name(doc):
     return split_anim_name(doc)[1]
 
 
-def existing_models(path):
-    """MODELS из уже записанного файла последовательности (без выполнения файла)."""
+def existing_list(path, var):
+    """Список var (MODELS, ABSENT, SHOWN) из уже записанного файла последовательности (без выполнения файла)."""
     import ast
     try:
         for node in ast.parse(open(path, encoding="utf-8").read()).body:
-            if isinstance(node, ast.Assign) and getattr(node.targets[0], "id", "") == "MODELS":
+            if isinstance(node, ast.Assign) and getattr(node.targets[0], "id", "") == var:
                 return [str(m) for m in ast.literal_eval(node.value)]
     except (OSError, SyntaxError, ValueError):
         pass
     return []
+
+
+def existing_models(path):
+    """MODELS из уже записанного файла последовательности (без выполнения файла)."""
+    return existing_list(path, "MODELS")
+
+
+def with_content(doc, names):
+    """Имена объектов + всё содержимое групп (рекурсивно), только те, что есть в документе."""
+    out, stack = set(), list(names)
+    while stack:
+        n = stack.pop()
+        o = doc.getObject(n)
+        if o is None or n in out:
+            continue
+        out.add(n)
+        stack.extend(c.Name for c in (getattr(o, "Group", None) or []))
+    return out
 
 
 def num(x):
@@ -80,8 +98,8 @@ def one_line(s):
     return " ".join(str(s).split())
 
 
-def collect(doc, ea_folder):
-    """Группы ExplodedAssembly → список шагов (dict) + предупреждения."""
+def collect(doc, ea_folder, absent=()):
+    """Группы ExplodedAssembly → список шагов (dict) + предупреждения. Скрытое из ABSENT в HIDDEN не пишется."""
     steps, warnings = [], []
     traj_lines = set()
     for g in ea_folder.Group:
@@ -111,13 +129,13 @@ def collect(doc, ea_folder):
             parts.append(dict(name=names[i], label=o.Label, vec=dv[i], rot_axis=rv[i], rot_center=rc[i]))
         steps.append(dict(label=g.Label, kind=kind, distance=g.Distance, steps=g.AnimationSteps,
                           step_time=g.AnimationStepTime, revolutions=g.Revolutions, parts=parts))
-    skip = traj_lines | {ea_folder.Name} | {g.Name for g in ea_folder.Group}
+    skip = traj_lines | {ea_folder.Name} | {g.Name for g in ea_folder.Group} | with_content(doc, absent)
     hidden = sorted(o.Name for o in doc.Objects
                     if o.Name not in skip and hasattr(o, "Visibility") and not o.Visibility)
     return steps, hidden, warnings
 
 
-def render(seq_name, src, steps, hidden, labels, models=()):
+def render(seq_name, src, steps, hidden, labels, models=(), absent=(), shown=()):
     out = []
     w = out.append
     w("# -*- coding: utf-8 -*-")
@@ -162,6 +180,21 @@ def render(seq_name, src, steps, hidden, labels, models=()):
         w("    %r,  # %s" % (n, one_line(labels.get(n, ""))))
     w("]")
     w("")
+    if absent:
+        w("# Чего в этом сценарии ещё НЕТ (есть только в модели): ea_build скрывает (группу — вместе с содержимым),")
+        w("# проверка модели (vanmodel/motion.py) не считает препятствием.")
+        w("ABSENT = [")
+        for n in absent:
+            w("    %r,  # %s" % (n, one_line(labels.get(n, ""))))
+        w("]")
+        w("")
+    if shown:
+        w("# Что показать, хотя в модели оно скрыто по умолчанию.")
+        w("SHOWN = [")
+        for n in shown:
+            w("    %r,  # %s" % (n, one_line(labels.get(n, ""))))
+        w("]")
+        w("")
     return "\n".join(out)
 
 
@@ -205,8 +238,15 @@ def main():
     model = split_anim_name(doc)[0]
     if model and (models or not existed) and not any(model == m or model.startswith(m + "_") for m in models):
         models.append(model)
+    # ABSENT (чего в сценарии нет) и SHOWN (что показать) — из уже записанного файла: в документе их не отличить
+    # от просто скрытого/видимого. ABSENT в HIDDEN не дублируется; из SHOWN выпадает то, что теперь скрыто.
+    absent = [n for n in existing_list(path, "ABSENT") if doc.getObject(n) is not None] if existed else []
+    shown = [n for n in existing_list(path, "SHOWN")
+             if doc.getObject(n) is not None and getattr(doc.getObject(n), "Visibility", True)] if existed else []
+    if absent:
+        steps, hidden, warnings = collect(doc, ea_folder, absent)
     with open(path, "w", encoding="utf-8") as f:
-        f.write(render(name, src, steps, hidden, labels, models))
+        f.write(render(name, src, steps, hidden, labels, models, absent, shown))
 
     lines = ["Записано: %s" % path, "Шагов: %d, деталей: %d, скрытых объектов: %d"
              % (len(steps), sum(len(s["parts"]) for s in steps), len(hidden)),

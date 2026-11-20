@@ -11,6 +11,8 @@
   • деталь проходит свой ход (vec × distance), не задевая то, что в этот момент ещё стоит на месте;
     детали предыдущих шагов считаются уже сдвинутыми — так проверяется и порядок сборки;
   • если ход свободен — что оказывается рядом в конце хода (зазор меньше NEAR мм).
+Не препятствия: детали из списка ABSENT анимации (в этом сценарии их ещё нет; группа — вместе с содержимым) и
+детали, которые предыдущие шаги унесли целиком за пределы кузова («из-за кадра», с 2026-11-20).
 Результат печатается после сводки и пишется в docs/animation_report.md. Геометрию модели раздел не меняет;
 любая ошибка здесь — только строка в отчёте, сборка модели от анимаций не зависит.
 Отключить: переменная окружения VAN_MOTION=0.
@@ -57,6 +59,11 @@ def _py_data(path):
 def read_models_py(path):
     """MODELS — для каких моделей анимация (пусто — для любой)."""
     return [str(m) for m in _py_data(path).get("MODELS", [])]
+
+
+def read_absent_py(path):
+    """ABSENT — чего в сценарии анимации ещё нет (не препятствия; группа — вместе с содержимым)."""
+    return [str(n) for n in _py_data(path).get("ABSENT", [])]
 
 
 def applies(models, stem):
@@ -193,10 +200,11 @@ def load_sequences(repo=PROJECT_DIR, model=None, skipped=None):
                 skipped.append((name, models))
             continue
         try:
-            seqs[name] = dict(name=name, source=os.path.relpath(f, repo), path=f, steps=read_sequence_py(f), notes=[])
+            seqs[name] = dict(name=name, source=os.path.relpath(f, repo), path=f, steps=read_sequence_py(f), notes=[],
+                              absent=read_absent_py(f))
         except Exception as e:
             seqs[name] = dict(name=name, source=os.path.relpath(f, repo), path=f, steps=[],
-                              notes=["не прочитана: %s" % e])
+                              notes=["не прочитана: %s" % e], absent=[])
     def same_model(stem):                      # файл анимации своей модели: van_v0 ↔ van_v0_T4320 — одна модель
         fm = model_from_file(stem)
         return not model or (fm is not None and (fm == model or fm.startswith(model + "_") or model.startswith(fm + "_")))
@@ -218,12 +226,12 @@ def load_sequences(repo=PROJECT_DIR, model=None, skipped=None):
             continue
         cur = seqs.get(name)
         if cur is None or not cur["path"].endswith(".py"):
-            seqs[name] = dict(name=name, source=base, path=f, steps=steps,
+            seqs[name] = dict(name=name, source=base, path=f, steps=steps, absent=(cur or {}).get("absent", []),
                               notes=["взята из файла анимации — в репозиторий ещё не записана (ea_export)"])
         elif _key(steps) == _key(cur["steps"]):
             continue
         elif os.path.getmtime(f) >= os.path.getmtime(cur["path"]):
-            seqs[name] = dict(name=name, source=base, path=f, steps=steps,
+            seqs[name] = dict(name=name, source=base, path=f, steps=steps, absent=cur.get("absent", []),
                               notes=["файл анимации отличается от %s и новее — в модель взят файл; "
                                      "записать в репозиторий: ea_export" % cur["source"]])
         else:
@@ -262,23 +270,32 @@ def _common(a, b):
         return None
 
 
-def _world(doc):
-    """Твёрдые тела модели: имя → dict(shape, bb, shell)."""
-    world = {}
+def _world(doc, absent=()):
+    """Твёрдые тела модели: имя → dict(shape, bb, shell). absent — чего в сценарии нет (имена деталей и групп)."""
+    world, absent = {}, set(absent)
     for o in doc.Objects:
-        if not o.isDerivedFrom("Part::Feature") or o.Name.endswith(SKIP_SUFFIX):
+        if not o.isDerivedFrom("Part::Feature") or o.Name.endswith(SKIP_SUFFIX) or o.Name in absent:
             continue
         chain, g = [], o.getParentGroup()
         while g is not None:
             chain.append(g.Name)
             g = g.getParentGroup()
-        if any(n in SKIP_GROUPS for n in chain) or o.Name.startswith("trajectory_line"):
+        if any(n in SKIP_GROUPS or n in absent for n in chain) or o.Name.startswith("trajectory_line"):
             continue
         sh = o.Shape
         if sh.isNull() or not sh.Solids:
             continue
         world[o.Name] = dict(shape=sh, bb=_bb(sh), shell=any(n in SHELL_GROUPS for n in chain))
     return world
+
+
+def _envelope(world):
+    """Габарит кузова (оболочка: SHELL_GROUPS) или None, если оболочки в модели нет."""
+    bbs = [ob["bb"] for ob in world.values() if ob["shell"]]
+    if not bbs:
+        return None
+    return (min(b[0] for b in bbs), min(b[1] for b in bbs), min(b[2] for b in bbs),
+            max(b[3] for b in bbs), max(b[4] for b in bbs), max(b[5] for b in bbs))
 
 
 def _free_travel(shape, disp, world, skip, deadline):
@@ -433,7 +450,9 @@ def direction_text(vec):
 
 def check_sequence(doc, seq, deadline):
     """Проверить одну анимацию на модели. → список шагов с результатами по каждой детали."""
-    world = _world(doc)
+    world = _world(doc, seq.get("absent", ()))
+    env = _envelope(world)
+    gone = {}                                             # унесённые за кузов: имя → тело в текущем положении
     out = []
     for st in seq["steps"]:
         parts, res = [p for p in st["parts"]], []
@@ -445,12 +464,13 @@ def check_sequence(doc, seq, deadline):
             r = dict(name=p["name"], vec=p["vec"], travel=st["distance"] * (sum(c * c for c in p["vec"]) ** 0.5), unit=" мм")
             if rot is not None:
                 r.update(travel=abs(deg), unit="°")         # поворот: ход и свободный ход — в градусах
+            cur = world.get(p["name"]) or gone.get(p["name"])   # из-за кадра деталь тоже возвращается — путь проверяем
             if doc.getObject(p["name"]) is None:
                 r["status"] = "missing"
-            elif p["name"] not in world:
+            elif cur is None:
                 r["status"] = "nosolid"
             else:
-                sh0 = world[p["name"]]["shape"]
+                sh0 = cur["shape"]
                 if rot is None:
                     f, ob, unk = _free_travel(sh0, disp, world, moving, deadline)
                     end = lambda: _moved(sh0, disp)
@@ -478,6 +498,22 @@ def check_sequence(doc, seq, deadline):
                     world[p["name"]] = dict(shape=sh, bb=_bb(sh), shell=w["shell"])
                 else:
                     world[p["name"]] = dict(shape=_moved(w["shape"], disp), bb=_shift(w["bb"], disp), shell=w["shell"])
+                # ушла целиком за кузов («из-за кадра») — дальше не препятствие (вернётся — снова станет)
+                if env is not None and not w["shell"] and not _overlap(world[p["name"]]["bb"], env, 0.0):
+                    gone[p["name"]] = world.pop(p["name"])
+            elif p["name"] in gone:
+                g_ = gone[p["name"]]
+                disp = tuple(c * st["distance"] for c in p["vec"])
+                if abs(deg) > 1e-9:
+                    sh = _pose(g_["shape"], disp, (p.get("rot_center", (0.0, 0.0, 0.0)), p.get("rot_axis", p["vec"]), deg))(1.0)
+                    g_ = dict(shape=sh, bb=_bb(sh), shell=g_["shell"])
+                else:
+                    g_ = dict(shape=_moved(g_["shape"], disp), bb=_shift(g_["bb"], disp), shell=g_["shell"])
+                if env is not None and not _overlap(g_["bb"], env, 0.0):
+                    gone[p["name"]] = g_
+                else:                                     # вернулась в кузов — снова препятствие
+                    gone.pop(p["name"])
+                    world[p["name"]] = g_
         out.append(dict(label=st["label"], kind=st["kind"], distance=st["distance"], revolutions=st["revolutions"],
                         parts=res))
     return out
@@ -499,6 +535,8 @@ def report_lines(doc, results):
         L.append("  %s — %s: шагов %d, деталей %d" % (seq["name"], seq["source"], len(steps), n_parts))
         for note in seq["notes"]:
             L.append("    ! %s" % note)
+        if seq.get("absent"):
+            L.append("    не препятствия (ABSENT — в этом сценарии их ещё нет): %s" % ", ".join(seq["absent"]))
         if steps:
             L.append("    порядок сборки (обратный разборке): " +
                      " → ".join(re.sub(r"^\d+[.)]?\s+", "", s["label"]) for s in reversed(steps)))
@@ -581,7 +619,8 @@ def report(S):
                 f.write("# Анимации → модель %s (последняя сборка)\n\n" % stem +
                         "Пишется при каждой сборке модели (`vanmodel/motion.py`): ходы и порядок шагов берутся из анимаций\n"
                         "(`animation/sequences/*.py` и файлы `*_anim_*.FCStd` рядом с моделью) и проверяются на модели.\n"
-                        "⚠ — деталь упирается в другую деталь; ⓘ — выходит за кузов (приём «прилёт из-за кадра»).\n\n"
+                        "⚠ — деталь упирается в другую деталь; ⓘ — выходит за кузов (приём «прилёт из-за кадра»).\n"
+                        "Не препятствия: детали из ABSENT анимации и детали, унесённые целиком за кузов.\n\n"
                         "```\n" + "\n".join(lines) + "\n```\n")
         except OSError:
             pass

@@ -8,7 +8,7 @@
 'van_v0' в MODELS подходит и к van_v0_T4320 и т.д. Остальные перечисляются как «для других моделей».
 
 Анимация ссылается на детали по внутреннему имени (obj.Name). Скрипт читает имена объектов прямо из .FCStd
-(это zip с Document.xml) и сверяет их с именами в STEPS и HIDDEN каждой последовательности.
+(это zip с Document.xml) и сверяет их с именами в STEPS, HIDDEN, ABSENT и SHOWN каждой последовательности.
 Запускать после пересборки модели — до коммита. Код возврата 0 — все детали на месте.
 """
 import ast
@@ -59,7 +59,7 @@ def sequence_names(path):
     for step in data.get("STEPS", []):
         for p in step.get("parts", []):
             parts.setdefault(p["name"], []).append(step.get("label", "?"))
-    return parts, list(data.get("HIDDEN", []))
+    return parts, list(data.get("HIDDEN", [])) + list(data.get("ABSENT", [])) + list(data.get("SHOWN", []))
 
 
 def check(names, repo=REPO, out=print, model=None):
@@ -73,7 +73,7 @@ def check(names, repo=REPO, out=print, model=None):
             continue
         parts, hidden = sequence_names(f)
         lost = [(n, "шаг «%s»" % "», «".join(parts[n])) for n in parts if n not in names]
-        lost += [(n, "список HIDDEN") for n in hidden if n not in names and n not in parts]
+        lost += [(n, "список HIDDEN / ABSENT / SHOWN") for n in hidden if n not in names and n not in parts]
         out("  %-16s деталей в шагах %d, скрытых %d — %s" % (
             os.path.basename(f), len(parts), len(hidden), "все есть в модели" if not lost else "НЕТ В МОДЕЛИ: %d" % len(lost)))
         for n, where in lost:
