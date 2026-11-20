@@ -125,7 +125,7 @@ EN_LABELS = [
     (r"BankPostPlate_(\w+)", "Rack post plate {1}"), (r"BankPost_(\w+)", "Rack post {1}"),
     (r"BankRailBolt_(\w+)", "Rail bolt M8 {1}"),
     (r"BankRailScrew_(\w+)", "Rail screw M5 {1}"), (r"BankJoinPlate_(\w+)", "Joining plate {1}"),
-    (r"BankLPlate_(\w+)", "L-plate {1}"), (r"BankBracket_(\w+)", "Corner bracket {1}"), (r"BankRail_Wall", "Rack rail (wall side)"), (r"BankLegSpacer_(\d)", "Rail spacer 8 mm {1}"),
+    (r"BankLPlate_(\w+)", "L-plate {1}"), (r"BankBracket_(\w+)", "Corner bracket {1}"), (r"BankRail_Wall", "Rack rail (wall side)"),
     (r"BankRail_Inner", "Rack rail (aisle side)"), (r"BankCross_(Rear|Front)", "Rack crossbar {1}"),
     (r"BankShelf", "Battery shelf"), (r"BankStop_ShelfRear", "Battery stop (rear)"),
     (r"BankStop_ShelfFront", "Battery stop (front)"), (r"BankWedge_B1Arch", "Wedge B1 / arch"),

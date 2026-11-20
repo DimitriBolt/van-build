@@ -8,6 +8,7 @@ import Part
 
 from .anchors import ANCHORS, KERF
 from .params import BATTERY_RACK, ELECTRICAL
+from .params_rect import DRAWERS_RECT
 from .common import COL_BATTERY, COL_BOLT, COL_PLY, COL_STRUT, COL_WOOD, add_box, add_shape, add_sphere
 from .scan import y_at_z
 from .strut import STRUT
@@ -353,7 +354,17 @@ def bank(S):
         b_short, b_long, bz = R["battery"]
         bxl, byl = b_long, b_short                       # 10.07″ вдоль борта, 7.63″ поперёк
         y_w = post_in                                    # грань батарей к борту = внутр. грань стоек кровати
-        y_i = post_in - byl                              # грань батарей к проходу (= линия стоек P3/P4/P3f)
+        y_i = post_in - byl                              # грань батарей к проходу
+        # 2026-11-20 (Dimitri): проставки 8 мм между рейкой прохода и ножками ящика — ненадёжно → рейка прохода и P3f сдвинуты
+        # к проходу ВПЛОТНУЮ к ножкам направляющих верхнего ящика (ножки к борту сдвинуть нельзя: ножка #2 стоит у арки, запас ~5 мм).
+        # Поперечины лестницы удлинены на тот же сдвиг. y_r — грань рейки прохода со стороны прохода (|Y|) = грань ножек к борту.
+        U_ = DRAWERS_RECT["upper"]
+        pil_ = doc.getObject("Pillar_Rear_pY")
+        y_r = y_i
+        if BK.get("rail_to_legs", True) and pil_ is not None:
+            y_r = min(y_i, pil_.Shape.BoundBox.YMin - U_["door_gap"] + U_["leg"])
+        r_shift = y_i - y_r                              # на сколько рейка прохода ближе к проходу, чем грань батарей
+        Lc = byl - 2 * VW + r_shift                      # длина поперечины лестницы
         pt = B["plate"][2]
         qx, qy, qt = R["p34_plate"]
         p2px, p2py, p2pt = R["p2_plate"]
@@ -385,11 +396,11 @@ def bank(S):
         z_p3t = z_l0 + VH + BK["shelf_th"] + BK.get("p3_guard", 0.0)      # верх P3: над полкой — бортик
         for nm, x0, note in inb:
             bk_box("BankPostPlate_%s" % nm, "Пластина под %s" % nm, (qx, qy, qt),
-                   (x0 + VW / 2.0 - qx / 2.0, ybase(ps, y_i, qy), floor_top), COL_STRUT)
+                   (x0 + VW / 2.0 - qx / 2.0, ybase(ps, y_r, qy), floor_top), COL_STRUT)
             bk_shape("BankPost_%s" % nm, "Стойка %s — V-Slot 2020 (со стороны прохода, %s), L=%.0f — к пластине снизу винтом "
                      "M5 в торец (резьба M5 в центральное отверстие), рейка — сбоку 2×M5 в T-гайки, верх на %.0f″ "
                      "выше полки (бортик у батарей)" % (nm, note, z_p3t - floor_top - qt, BK.get("p3_guard", 0.0) / 25.4),
-                     vslot_2020(x0, ybase(ps, y_i, VW), floor_top + qt, z_p3t), COL_VS)
+                     vslot_2020(x0, ybase(ps, y_r, VW), floor_top + qt, z_p3t), COL_VS)
         # лестница
         # 2026-11-07 (Dimitri, фото): рейка у борта — как продольная рейка кровати: на всю длину X P1..Pf, по грани
         # стоек кровати со стороны салона, сквозной болт через стойку и рейку (без уголков) — просто и надёжно
@@ -413,12 +424,12 @@ def bank(S):
         # 2026-11-09 (Dimitri): обе рейки — из одного 10′ strut: у борта 58″, у прохода 62″ − пропил; сзади — как было
         # (у борта — до D-стойки, у прохода — до задней двери), укорачиваются СПЕРЕДИ
         xw0 = AR["wall_x_rear"] if AR.get("wall_x_rear") is not None else x_from_dp(post_in, sd, z_l0, sw, x_rear_frame)
-        xi0 = AR["inner_x_rear"] if AR.get("inner_x_rear") is not None else x_from_dp(y_i + sd, sd, z_l0, sw,
+        xi0 = AR["inner_x_rear"] if AR.get("inner_x_rear") is not None else x_from_dp(y_r + sd, sd, z_l0, sw,
                                                                                       x_rear_frame)
         xw1, xi1 = xw0 + AR["wall_len"], xi0 + AR["inner_len"]
         xw1_old, xi1_old = x_front, x_front                                # было: обе — до проёма сдвижной двери
         yw0 = ybase(ps, post_in, VW)                      # Y-начало рейки у борта (грань стоек кровати со стороны салона)
-        yi0 = ybase(ps, y_i + VW, VW)                     # … рейки со стороны прохода
+        yi0 = ybase(ps, y_r + VW, VW)                     # … рейки со стороны прохода
         # рейка у борта: один профиль 2020; M8 (⌀8.5) насквозь по его центру в P1 и Pf (овалы стоек кровати)
         rw_ = vslot_x(xw0, xw1, yw0, z_l0)
         for xc_ in (xr, xf):
@@ -440,13 +451,13 @@ def bank(S):
             legs_x.append((o_.Shape.BoundBox.XMin + 4.0 + 10.0) if o_ is not None else None)
         legs_x = [x_ for x_ in legs_x if x_ is not None]
         sup_x = legs_x + [xf]                              # центры опор рейки прохода по X
-        y_leg_face = y_i - 8.0                             # грань ножки ящика со стороны борта (|Y|): зазор 8 мм до рейки
+        y_leg_face = y_r                                   # грань ножки ящика со стороны борта (|Y|) = грань рейки: вплотную
         ri_ = vslot_x(xi0, xi1, yi0, z_l0)
         for xc_ in sup_x:
             ri_ = drill_y(ri_, xc_, z_l0 + 10.0, yi0 - 1.0, yi0 + VW + 1.0, 5.5)
         bk_shape("BankRail_Inner", "Продольная рейка со стороны прохода — V-Slot 2020 (20×20), L=%.0f: опоры — ножки направляющих "
-                 "верхнего ящика #1 и #2 (винт M5×40 + проставка 8 мм + угловая скоба снизу) и P3f (винт M5×30); под гранью "
-                 "батарей; назад — до задней рамы" % (xi1 - xi0), ri_, COL_VS)
+                 "верхнего ящика #1 и #2 и P3f — вплотную, без проставок (винт M5×30 + угловая скоба снизу); на %.0f мм ближе "
+                 "к проходу, чем грань батарей (полка доведена до рейки); назад — до задней рамы" % (xi1 - xi0, r_shift), ri_, COL_VS)
 
         def screw_y(name, label, x, z, y_tip, y_head, d, head_d, head_h):
             """Винт вдоль Y: острие в |Y|=y_tip, головка (⌀head_d, высота head_h) на |Y|=y_head."""
@@ -459,18 +470,14 @@ def bank(S):
         for i_, xc in enumerate(sup_x):
             is_leg = i_ < len(legs_x)
             tag = ("Leg%d" % (i_ + 1)) if is_leg else "P3f"
-            y_tip = (y_leg_face - 8.0) if is_leg else (y_i - 8.0)         # острие — в T-гайке в пазу ножки/стойки
+            y_tip = y_r - 8.0                                             # острие — в T-гайке в пазу ножки/стойки
             screw_y("BankRailScrew_%s" % tag, "Винт M5×%d + T-гайка M5: рейка прохода ↔ %s (головка — со стороны щели между рейками)" % (
-                    40 if is_leg else 30, "ножка направляющей ящика #%d" % (i_ + 1) if is_leg else "стойка P3f"),
-                    xc, z_l0 + 10.0, y_tip, y_i + VW, 5.0, 8.5, 3.0)
-            if is_leg:                                                    # проставка 8 мм между гранью ножки и рейкой
-                sp_ = Part.makeBox(VW, 8.0, VW, App.Vector(xc - VW / 2.0, ybase(ps, y_i, 8.0), z_l0))
-                bk_shape("BankLegSpacer_%d" % (i_ + 1), "Проставка 8 мм (алюминий/текстолит 20×8×20, отверстие ⌀5.5): рейка "
-                         "прохода ↔ ножка направляющей #%d (ножка стоит на 8 мм ближе к проходу)" % (i_ + 1), sp_, (0.80, 0.70, 0.45))
+                    30, "ножка направляющей ящика #%d" % (i_ + 1) if is_leg else "стойка P3f"),
+                    xc, z_l0 + 10.0, y_tip, y_r + VW, 5.0, 8.5, 3.0)
             # угловая скоба 20×28 под рейкой: вертикальная полка — на грани ножки/стойки, горизонтальная — под рейкой
             ths = 4.0
-            y_face = y_leg_face if is_leg else y_i                         # грань опоры со стороны борта (|Y|)
-            hz = Part.makeBox(VW, y_i + VW - y_face, ths, App.Vector(xc - VW / 2.0, ybase(ps, y_i + VW, y_i + VW - y_face), z_l0 - ths))
+            y_face = y_r                                                   # грань опоры со стороны борта (|Y|) = грань рейки
+            hz = Part.makeBox(VW, y_r + VW - y_face, ths, App.Vector(xc - VW / 2.0, ybase(ps, y_r + VW, y_r + VW - y_face), z_l0 - ths))
             vt = Part.makeBox(VW, ths, 28.0, App.Vector(xc - VW / 2.0, ybase(ps, y_face + ths, ths), z_l0 - 28.0))
             bk_shape("BankBracket_%s" % tag, "Угловая скоба 2020 (20×28, T-гайки M5) под рейкой прохода у опоры %s — берёт "
                      "вертикальную нагрузку" % tag, hz.fuse(vt), COL_HW)
@@ -478,14 +485,14 @@ def bank(S):
         cx_rear = BK.get("cross_rear_x", None)
         cx_rear = (max(legs_x) if False else (legs_x[0] + 43.0)) if cx_rear is None and legs_x else (xr + 78.0 if cx_rear is None else cx_rear)
         crosses = (("Rear", cx_rear, +1.0), ("Front", xf - BK.get("cross_off", 40.0), -1.0))
-        yc0 = ybase(ps, post_in - VW, byl - 2 * VW)
-        yc1 = yc0 + (byl - 2 * VW)
+        yc0 = ybase(ps, post_in - VW, Lc)
+        yc1 = yc0 + Lc
         for nm, xc, dx_ in crosses:
             bk_shape("BankCross_%s" % nm, "Поперечина лестницы %s — V-Slot 2020 (20×20), L=%.0f (распорка между рейками, сдвинута от "
-                     "опоры); концы — на L-пластинах снизу" % (nm, byl - 2 * VW),
+                     "опоры); концы — на L-пластинах снизу" % (nm, Lc),
                      vslot_y(xc - VW / 2.0, yc0, yc1, z_l0), COL_VS)
             tp_ = 4.0
-            for rl, c_abs, sg_ in (("Wall", post_in - VW / 2.0, -1.0), ("Inner", y_i + VW / 2.0, +1.0)):
+            for rl, c_abs, sg_ in (("Wall", post_in - VW / 2.0, -1.0), ("Inner", y_r + VW / 2.0, +1.0)):
                 xa0, xa1 = (xc - VW / 2.0, xc + VW / 2.0 + 40.0) if dx_ > 0 else (xc - VW / 2.0 - 40.0, xc + VW / 2.0)
                 ya0, ya1 = (c_abs - VW / 2.0 - 50.0, c_abs + VW / 2.0) if sg_ < 0 else (c_abs - VW / 2.0, c_abs + VW / 2.0 + 50.0)
                 armx = Part.makeBox(xa1 - xa0, VW, tp_, App.Vector(xa0, ybase(ps, c_abs + VW / 2.0, VW), z_l0 - tp_))
@@ -498,8 +505,8 @@ def bank(S):
         x_ply1 = xf - sw / 2.0                           # электрика на полке — до передней стойки кровати (как было)
         # 2026-11-09: полка спереди — до конца рейки у борта (длиннее); у прохода за концом своей рейки — свес
         xp0_, xp1_ = min(xw0, xi0), (xw1 if BK.get("shelf_front", "wall") == "wall" else min(xw1, xi1))
-        ply = Part.makeBox(xp1_ - xp0_, post_out - y_i, BK["shelf_th"],
-                           App.Vector(xp0_, ybase(ps, post_out, post_out - y_i), z_l1))
+        ply = Part.makeBox(xp1_ - xp0_, post_out - y_r, BK["shelf_th"],
+                           App.Vector(xp0_, ybase(ps, post_out, post_out - y_r), z_l1))
         for pn_ in ("BedPost_%s_rear" % ("nY" if ps < 0 else "pY"), "BedPost_%s_front" % ("nY" if ps < 0 else "pY")):
             pb = doc.getObject(pn_).Shape.BoundBox
             ply = ply.cut(Part.makeBox(pb.XLength + 4, pb.YLength + 4, BK["shelf_th"] + 2,
@@ -511,7 +518,7 @@ def bank(S):
         ply = Part.makeCompound([sl_ for sl_ in ply.Solids if sl_.Volume > 1e4]).Solids[0] if len(ply.Solids) > 1 else ply
         add_shape(doc, "BankShelf", "Полка — фанера 1/2″ %.0f×%.0f поверх лестницы: батареи + полочка за B2 (до D-стойки) "
                   "+ полочка под бельё (до проёма сдвижной двери); вырезы под стойки кровати" % (
-                      xp1_ - xp0_, post_out - y_i), ply, color=COL_PLY, transparency=10, group=bg)
+                      xp1_ - xp0_, post_out - y_r), ply, color=COL_PLY, transparency=10, group=bg)
         bsh["BankShelf"] = ply
         # батареи на полке: B2 над B1, B3/B4 — над аркой
         xs = [X0 + i * (bxl + BK["gap"]) for i in range(int(BK["n_shelf"]))]
@@ -541,13 +548,12 @@ def bank(S):
         # раскрой V-Slot 2020 (профиль берём любой длины): каждая рейка/поперечина — 2 профиля; стойка — 1
         L_p = z_p3t - floor_top - qt
         vcut = [("рейка у борта", float(xw1 - xw0), 1), ("рейка прохода", float(xi1 - xi0), 1),
-                ("поперечина", float(byl - 2 * VW), 2), ("стойка P3f", float(L_p), 1)]
+                ("поперечина", float(Lc), 2), ("стойка P3f", float(L_p), 1)]
         vcut_total = sum(L_ * n_ for _, L_, n_ in vcut)
         n_sup = len(sup_x)
         vhw = [("L-пластина 2020, 5 отв. (поперечины)", 4),
                ("угловая скоба 20×28 под рейкой прохода", n_sup),
-               ("винт M5×40 + T-гайка (рейка↔ножка ящика) + проставка 8 мм", len(legs_x)),
-               ("винт M5×30 + T-гайка (рейка↔P3f)", 1),
+               ("винт M5×30 + T-гайка (рейка прохода ↔ ножки ящика и P3f, вплотную)", n_sup),
                ("болт M8×60 + гайка + 2 шайбы (рейка↔стойка кровати)", 2),
                ("винт M5×8 + T-гайка (L-пластины, скобы): ~", 4 * 5 + n_sup * 2),
                ("винт M5×10 в торец P3f + пластина снизу", 1)]
@@ -676,7 +682,7 @@ def bank(S):
                         clear_rail=z_rail_b - max(eboxes[n][5] for n in eboxes), ground=(gx, gz - ft),
                         free_x=bx1 - bx0)
         bank_summary = dict(X1=(X0, X1), xs=xs, bx=bxl, z_b1=(z_b1, z_b1 + bz), z_arch=z_arch, z_l=(z_l0, z_l1),
-                            z_s1=z_s1, top=top, floor_top=floor_top, rails=(xw1 - xw0, xi1 - xi0), cross=byl - 2 * VW,
+                            z_s1=z_s1, top=top, floor_top=floor_top, rails=(xw1 - xw0, xi1 - xi0), cross=Lc, rail_shift=r_shift,
                             posts=(L_p, L_p), free=x_ply1 - (xs[-1] + bxl + st), checks=checks,
                             inner=arch_ywall - y_i, under_cross=(z_rail_top - sw) - top, elec=elec, rails_fit=rails_fit,
                             rails_x=((xw0, xw1), (xi0, xi1)), valve=valve_fit)

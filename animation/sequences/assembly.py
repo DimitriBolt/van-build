@@ -36,7 +36,7 @@
 SEQUENCE = 'assembly'
 
 # Для каких моделей эта анимация (имя файла модели без .FCStd).
-# Детали этажерки из V-Slot 2020 (BankRailBolt_*, BankLegSpacer_*, ножки ящика) есть только в van_v1_rect_pan.
+# Детали этажерки из V-Slot 2020 (BankRailBolt_*, BankRailScrew_*, ножки ящика) есть только в van_v1_rect_pan.
 MODELS = ['van_v1_rect_pan']
 
 STEPS = [
@@ -179,7 +179,7 @@ STEPS = [
         'step_time': 0.01,
         'revolutions': -0.113889,
         'parts': [
-            {'name': 'BankShelf', 'vec': (1.0, 0.0, 0.0), 'rot_axis': (1.0, 0.0, 0.0), 'rot_center': (900.0, -753.2667, 500.0)},  # Battery shelf
+            {'name': 'BankShelf', 'vec': (1.0, 0.0, 0.0), 'rot_axis': (1.0, 0.0, 0.0), 'rot_center': (900.0, -745.0, 500.0)},  # Battery shelf
         ],
     },
     {   # 13
@@ -239,7 +239,7 @@ STEPS = [
         ],
     },
     {   # 17
-        'label': '12 Рейка прохода, проставки 8 мм, винты M5 — сверху',
+        'label': '12 Рейка прохода (вплотную к ножкам ящика и P3f), винты M5 — сверху',
         'kind': 'simple',
         'distance': 1550.0,
         'steps': 155,
@@ -247,8 +247,6 @@ STEPS = [
         'revolutions': 0.0,
         'parts': [
             {'name': 'BankRail_Inner', 'vec': (0.0, 0.0, 1.0), 'rot_axis': (0.0, 0.0, 1.0), 'rot_center': (0.0, 0.0, 0.0)},  # Rack rail (aisle side)
-            {'name': 'BankLegSpacer_1', 'vec': (0.0, 0.0, 1.0), 'rot_axis': (0.0, 0.0, 1.0), 'rot_center': (0.0, 0.0, 0.0)},  # Rail spacer 8 mm 1
-            {'name': 'BankLegSpacer_2', 'vec': (0.0, 0.0, 1.0), 'rot_axis': (0.0, 0.0, 1.0), 'rot_center': (0.0, 0.0, 0.0)},  # Rail spacer 8 mm 2
             {'name': 'BankRailScrew_Leg1', 'vec': (0.0, 0.0, 1.0), 'rot_axis': (0.0, 0.0, 1.0), 'rot_center': (0.0, 0.0, 0.0)},  # Rail screw M5 Leg1
             {'name': 'BankRailScrew_Leg2', 'vec': (0.0, 0.0, 1.0), 'rot_axis': (0.0, 0.0, 1.0), 'rot_center': (0.0, 0.0, 0.0)},  # Rail screw M5 Leg2
             {'name': 'BankRailScrew_P3f', 'vec': (0.0, 0.0, 1.0), 'rot_axis': (0.0, 0.0, 1.0), 'rot_center': (0.0, 0.0, 0.0)},  # Rail screw M5 P3f
