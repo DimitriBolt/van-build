@@ -102,7 +102,10 @@ def roof_rack(S):
     MT = R["mount"]
     sx, sy, sz = MT["saddle"]
     t = MT["t"]
-    z_m1 = z_pin + sz + MT["bracket_h"]                   # верх кронштейна = низ рейки
+    z_mt = z_pin + sz + MT["bracket_h"]                   # верх кронштейна
+    side_in = MT.get("side_mount") == "in"                # 3-я итерация: рейка — сбоку к стенке кронштейна, внутри от штыря
+    yr = (yh - sy / 2.0 - t - 10.0) if side_in else yh    # |Y| оси рейки
+    z_m1 = (z_pin + MT["web_hole_z"] - 10.0) if side_in else z_mt   # низ рейки
     nL = R["rail_layers"]
     z_r1 = z_m1 + 20.0 * nL                               # верх рейки
     low = R.get("cross_level", "top") == "lower"          # поперечины между нижними ярусами (2-я итерация)
@@ -177,13 +180,25 @@ def roof_rack(S):
                 Part.makeBox(sx + 2, sy - 2 * t, sz - 6.0 - t, V(x - sx / 2 - 1, yc - sy / 2 + t, z_pin + 6.0)))
             rub = Part.makeBox(sx, sy + 4.0, 6.0, V(x - sx / 2, yc - sy / 2 - 2.0, z_pin))
             # Z-кронштейн: нижняя полка на седле (2 шпильки), стенка 30 мм с внешней стороны, верхняя полка под рейкой
-            yo = ys * (sy / 2.0)                          # стенка — над наружной гранью седла
-            low = Part.makeBox(sx, sy + 12.0, t, V(x - sx / 2, yc - (sy + 12.0) / 2, z_pin + sz))
-            web = Part.makeBox(sx, t, MT["bracket_h"], V(x - sx / 2, yc + yo - (t if ys > 0 else 0.0), z_pin + sz))
-            top = Part.makeBox(sx, fw, t, V(x - sx / 2, yc - fw / 2, z_m1 - t))
+            # стенка — у наружной грани седла (рейка сверху) или, развернув кронштейн на 180°, у внутренней (рейка сбоку)
+            yo = (-ys if side_in else ys) * (sy / 2.0)
+            wy0 = yc + yo if (yo > 0) else yc + yo - t    # стенка — снаружи от грани седла, толщина t
+            lowf = Part.makeBox(sx, sy + 12.0, t, V(x - sx / 2, yc - (sy + 12.0) / 2, z_pin + sz))
+            web = Part.makeBox(sx, t, MT["bracket_h"], V(x - sx / 2, wy0, z_pin + sz))
+            top = Part.makeBox(sx, fw, t, V(x - sx / 2, yc - fw / 2, z_mt - t))
             put("RoofMount_%s_%d" % (side, i + 1),
-                "Кронштейн BSWAN на штырь (нерж. 304, 2 мм): седло 70×28.5×28 + Z 30 мм, верх Z %.0f; к рейке — M5 + T-гайка в "
-                "нижнем пазу" % z_m1, Part.makeCompound([sad, low, web, top]), COL_STEEL)
+                ("Кронштейн BSWAN на штырь (нерж. 304, 2 мм), развёрнут на 180°: стенка к салону; рейка — СБОКУ к стенке, 2 × M5×10 "
+                 "через штатные отверстия стенки в T-гайки бокового паза нижнего яруса (центр отв. ~%.0f мм над дном углубления — "
+                 "оценка по фото, промерить)" % MT["web_hole_z"]) if side_in else
+                ("Кронштейн BSWAN на штырь (нерж. 304, 2 мм): седло 70×28.5×28 + Z 30 мм, верх Z %.0f; к рейке — M5 + T-гайка в "
+                 "нижнем пазу" % z_mt), Part.makeCompound([sad, lowf, web, top]), COL_STEEL)
+            if side_in:
+                for k_, dxh in enumerate(MT["web_holes_dx"]):
+                    yb = wy0 + t if ys > 0 else wy0       # со стороны седла (головка) → в рейку
+                    b_ = Part.makeCylinder(2.5, t + 8.0, V(x + dxh, yb, z_pin + MT["web_hole_z"]), V(0, -ys, 0)).fuse(
+                        Part.makeCylinder(4.25, 3.0, V(x + dxh, yb, z_pin + MT["web_hole_z"]), V(0, ys, 0)))
+                    put("RoofMountBolt_%s_%d%s" % (side, i + 1, "ab"[k_]),
+                        "Винт M5×10 + T-гайка: стенка кронштейна BSWAN → боковой паз нижнего яруса рейки %s" % side, b_, COL_STEEL)
             put("RoofMountRubber_%s_%d" % (side, i + 1), "Резиновый U-профиль седла BSWAN (по углублению крыши)", rub, COL_RUBBER)
 
     # ── продольные рейки: nL ярусов, палки stock; стык нижнего яруса — сзади, верхнего — спереди ──
@@ -193,7 +208,7 @@ def roof_rack(S):
     rail_pieces = []
     splices = []
     for side, ys in (("pY", 1), ("nY", -1)):
-        y0 = ys * yh - 10.0
+        y0 = ys * yr - 10.0
         for k in range(nL):
             zk = z_m1 + 20.0 * k
             if short <= 0:
@@ -211,7 +226,7 @@ def roof_rack(S):
                 xs_ = segs[0][1]
                 splices.append((side, k + 1, xs_))
                 # 2 внутренних соединителя BLCCLOY 100 мм — в боковых пазах (наружном и внутреннем)
-                for f, yy in (("o", ys * yh + ys * 10.0 - ys * 5.0), ("i", ys * yh - ys * 10.0 + ys * 5.0)):
+                for f, yy in (("o", ys * yr + ys * 10.0 - ys * 5.0), ("i", ys * yr - ys * 10.0 + ys * 5.0)):
                     put("RoofSplice_%s_L%d_%s" % (side, k + 1, f),
                         "Стык рейки %s ярус %d (X %.0f): внутренний соединитель BLCCLOY 100×10×5 мм в боковом пазу, 4 установочных M5×6"
                         % (side, k + 1, xs_), Part.makeBox(100.0, 5.0, 10.0, V(xs_ - 50.0, yy - 2.5, zk + 5.0)), COL_ZINC)
@@ -239,7 +254,7 @@ def roof_rack(S):
             for x, f in sorted(set(stations)):
                 if low and f == 1 and min(abs(x - c) for c in cross_x) < 45.0:
                     f = 0                                  # у поперечины внутренняя грань занята торцом и уголком — пластина снаружи
-                yface = ys * yh + (ys * 10.0 if f == 0 else -ys * 10.0)       # 0 — наружная грань, 1 — внутренняя
+                yface = ys * yr + (ys * 10.0 if f == 0 else -ys * 10.0)       # 0 — наружная грань, 1 — внутренняя
                 ypl = yface if (ys * (1 if f == 0 else -1)) > 0 else yface - 4.0
                 n_pl += 1
                 plates.append("RoofTiePlate_%s_%02d" % (side, n_pl))
@@ -247,9 +262,10 @@ def roof_rack(S):
                     % (side, x, ("наружная", "внутренняя")[f]), Part.makeBox(18.0, 4.0, 40.0, V(x - 9.0, ypl, z_m1)), COL_ZINC)
 
     # ── поперечины: под отверстиями рам (у каждого ряда 2) ──
-    yc0, yc1 = (-(yh - 10.0), yh - 10.0) if low else (-(yh + 10.0), yh + 10.0)
+    yc0, yc1 = (-(yr - 10.0), yr - 10.0) if low else (-(yh + 10.0), yh + 10.0)
     n_br = 0
     n_bolt = 0
+    n_bolt_web = 0
     for i, cx in enumerate(cross_x):
         put("RoofCross_%d" % (i + 1), "Поперечина 2020 #%d: X %.0f (под отверстиями рам ряда %d), Y %.0f…%.0f = %.0f мм%s"
             % (i + 1, cx, i // 2 + 1, yc0, yc1, yc1 - yc0,
@@ -258,22 +274,34 @@ def roof_rack(S):
         if low:
             for side, ys in (("pY", 1), ("nY", -1)):
                 # болт M5×35 ISO 7380 снаружи сквозь нижний ярус рейки в торец поперечины (головка — на наружной грани рейки)
-                y_out = ys * (yh + 10.0)
-                bolt = Part.makeCylinder(2.5, 35.0, V(cx, y_out, z_m1 + 10.0), V(0, -ys, 0)).fuse(
+                thru_web = side_in and min(abs(cx - p) for p in pins_x) < sx / 2.0 + 5.0   # торец — напротив стенки кронштейна
+                y_out = ys * (yr + 10.0 + (t if thru_web else 0.0))
+                bl = 40.0 if thru_web else 35.0
+                bolt = Part.makeCylinder(2.5, bl, V(cx, y_out, z_m1 + 10.0), V(0, -ys, 0)).fuse(
                     Part.makeCylinder(4.75, 2.75, V(cx, y_out, z_m1 + 10.0), V(0, ys, 0)))
                 n_bolt += 1
+                n_bolt_web += 1 if thru_web else 0
                 put("RoofCrossBolt_%d_%s" % (i + 1, side),
-                    "Болт M5×35 ISO 7380 + шайба: сквозь нижний ярус рейки %s (отв. ⌀5.5 поперёк, по оси) в резьбу M5 торца "
-                    "поперечины #%d; синий фиксатор" % (side, i + 1), bolt, COL_STEEL)
+                    ("Болт M5×40 ISO 7380 + шайба: сквозь СТЕНКУ кронштейна BSWAN (досверлить ⌀5.5) и нижний ярус рейки %s в резьбу "
+                     "M5 торца поперечины #%d; синий фиксатор" if thru_web else
+                     "Болт M5×35 ISO 7380 + шайба: сквозь нижний ярус рейки %s (отв. ⌀5.5 поперёк, по оси) в резьбу M5 торца "
+                     "поперечины #%d; синий фиксатор") % (side, i + 1), bolt, COL_STEEL)
                 # уголок сверху: полка на поперечине, стенка — на внутренней грани верхнего яруса
                 lg, tb_ = 28.0, 4.0
-                y_in = ys * (yh - 10.0)                   # внутренняя грань рейки
-                hor = Part.makeBox(20.0, lg, tb_, V(cx - 10.0, y_in - (lg if ys > 0 else 0.0), z_c1))
-                ver = Part.makeBox(20.0, tb_, lg, V(cx - 10.0, y_in - (tb_ if ys > 0 else 0.0), z_c1))
+                y_in = ys * (yr - 10.0)                   # внутренняя грань рейки
+                if side_in:                               # уголок в плане (вровень с поперечиной): торец поперечины ↔ внутр. грань
+                    # нижнего яруса — сверху ничего, под панелями свободно
+                    a_ = Part.makeBox(lg, tb_, 20.0, V(cx + 10.0, y_in - (tb_ if ys > 0 else 0.0), z_c0))
+                    b_ = Part.makeBox(tb_, lg, 20.0, V(cx + 10.0, y_in - (lg if ys > 0 else 0.0), z_c0))
+                    where = "сбоку (в плане), к внутренней грани нижнего яруса рейки"
+                else:
+                    a_ = Part.makeBox(20.0, lg, tb_, V(cx - 10.0, y_in - (lg if ys > 0 else 0.0), z_c1))
+                    b_ = Part.makeBox(20.0, tb_, lg, V(cx - 10.0, y_in - (tb_ if ys > 0 else 0.0), z_c1))
+                    where = "сверху, к внутренней грани верхнего яруса рейки"
                 n_br += 1
                 put("RoofCrossBracket_%d_%s" % (i + 1, side),
-                    "Уголок 2020 (литой 20×28×28): верх поперечины #%d ↔ внутренняя грань верхнего яруса рейки %s; 2 × M5×8 + "
-                    "T-гайки (держит поперечину от проворота вокруг болта)" % (i + 1, side), hor.fuse(ver), COL_ZINC)
+                    "Уголок 2020 (литой 20×28×28): поперечина #%d ↔ рейка %s, %s; 2 × M5×8 + T-гайки (держит поперечину от проворота "
+                    "вокруг болта)" % (i + 1, side, where), a_.fuse(b_), COL_ZINC)
             continue
         for side, ys in (("pY", 1), ("nY", -1)):
             for f, dx in (("r", -1), ("f", 1)):
@@ -333,12 +361,13 @@ def roof_rack(S):
     elif flue is not None:
         dx_ = min([abs(flue["x"] - (s + PL)) for s in rows] + [abs(s - flue["x"]) for s in rows])
         chk.append(("колпак дымохода ↔ край панели по X (до центра − r)", dx_ - flue["r"]))
-        chk.append(("колпак дымохода ↔ рейка (по Y)", (yh - 10.0) - (abs(flue["y"]) + flue["r"])))
+        chk.append(("колпак дымохода ↔ рейка (по Y)", (yr - 10.0) - (abs(flue["y"]) + flue["r"])))
         chk.append(("низ колпака над верхом панелей", flue["z0"] - z_p1))
         sh_cap = cap.Shape
         chk.append(("колпак ↔ ближайшая деталь багажника (3D)",
                     min(sh_cap.distToShape(p)[0] for n_, p in parts.items() if not n_.startswith("RoofPin"))))
-    chk.append(("поле панелей ↔ рейка (по Y, панели внутри багажника)", (yh + 10.0) - field_w / 2.0))
+    chk.append(("поле панелей ↔ внутренняя грань рейки (по Y)", (yr - 10.0) - field_w / 2.0))
+    chk.append(("низ рейки над дном углубления штыря", z_m1 - z_pin))
     # роль скана: высота крыши под передним/задним концом рейки
     roof_z = {}
     try:
@@ -384,14 +413,16 @@ def roof_rack(S):
     n_pan_bolts = (len(panels) + (1 if board else 0)) * 4
     tn_plates = len(plates) * 2
     tn_panels = n_pan_bolts
-    tn_mounts = 12                                        # по 2 на кронштейн: штатное отверстие + 1 досверлить ⌀5.5
+    tn_mounts = 12                                        # по 2 на кронштейн
     bom = [
         ("Профиль 2020 V-slot 2440 мм (SeekLiny B0F83QJV1M, 10 шт.)", "%d палок" % len(sticks)),
         ("Кронштейны BSWAN на штыри (B0D9VN67HN, 6 шт.)", "6"),
         ("Внутренний прямой соединитель 2020, 100 мм (BLCCLOY B0CFVB9266, 10 шт. + винты M5×6)", "%d" % (2 * len(splices))),
         ("Уголок 2020 литой 20×28×28 (поперечина ↔ рейка)", "%d" % n_br),
-    ] + ([("Болт M5×35 ISO 7380 + шайба M5 (сквозь нижний ярус рейки в торец поперечины; метчик M5 в торец)", "%d" % n_bolt)]
-         if n_bolt else []) + ([("Фанера 3/4″ exterior/marine под вставку 1011 × 460 (+ лак/краска, жесть на кромку отверстия)", "1")]
+    ] + ([("Болт M5×35 ISO 7380 + шайба M5 (сквозь нижний ярус рейки в торец поперечины; метчик M5 в торец)",
+           "%d" % (n_bolt - n_bolt_web))] if n_bolt else []) + (
+        [("Болт M5×40 ISO 7380 + шайба M5 (то же, но ещё сквозь стенку кронштейна — досверлить в ней ⌀5.5)", "%d" % n_bolt_web)]
+        if n_bolt_web else []) + ([("Фанера 3/4″ exterior/marine под вставку 1011 × 460 (+ лак/краска, жесть на кромку отверстия)", "1")]
                               if board else []) + [
         ("Пластина 2020 прямая 2 отв. 40×18×4, шаг 20 (ярусы реек)", "%d" % len(plates)),
         ("T-гайка M5 под паз 6 мм (hammer-head / drop-in — ставится сбоку в собранный профиль)",
@@ -400,12 +431,13 @@ def roof_rack(S):
         ("Винт M5×8 (уголки, пластины)", "%d" % (tn_brackets + tn_plates)),
         ("Болт M5×12 + шайба M5 (рама панели → поперечина)", "%d" % (len(panels) * 4)),
     ] + ([("Болт M5×30 + шайба M5 (вставка → поперечина)", "4")] if board else []) + [
-        ("Болт M5×12 + кузовная шайба M5×20 (кронштейн → нижний паз рейки)", "%d" % tn_mounts),
+        (("Винт M5×10 + T-гайка (стенка кронштейна → боковой паз нижнего яруса рейки, штатные 2 отв.)" if side_in else
+          "Болт M5×12 + кузовная шайба M5×20 (кронштейн → нижний паз рейки)"), "%d" % tn_mounts),
         ("Заглушка торца 2020", "%d" % (2 * 2 * nL + (0 if low else 2 * n_cross))),
         ("Синий фиксатор резьбы (есть)", "на все M5"),
     ]
     roof_summary = dict(pins_x=pins_x, yh=yh, z=(z_pin, z_m1, z_r1, z_c1, z_p1), rows=rows, cols=cols, gap_after=gap_after,
-                        field=(rows[0], rows[-1] + PL, field_w), rack=(x0, x1, -(yh + 10.0), yh + 10.0), cross_x=cross_x, splices=splices,
+                        field=(rows[0], rows[-1] + PL, field_w), rack=(x0, x1, -max(yr + 10.0, yh + sy / 2.0 + 2.0), max(yr + 10.0, yh + sy / 2.0 + 2.0)), z_mt=z_mt, side_in=side_in, yr=yr, cross_x=cross_x, splices=splices,
                         flue=flue, chk=chk, roof_z=roof_z, res=res, reac=reac, m_cap=(m_cap1, m_capc),
                         mass=(mass_alu, mass_mounts, mass_pan, mass_small, mass_total), sticks=sticks, bom=bom,
                         n_panels=len(panels), short=short, n_plates=len(plates), n_br=n_br, board=board, low=low)
@@ -424,8 +456,12 @@ def report(S):
     print("  Штыри (таблица Ram L2H2): X %s (шаг %.1f и %.1f), Y ±%.0f (между 1480); X от порога — оценка ±25 мм"
           % (", ".join("%.0f" % x for x in px), px[1] - px[0], px[2] - px[1], r["yh"]))
     zp, zm, zr, zc, zt = r["z"]
-    print("  Поперечины: %s" % ("между нижними ярусами реек (болт M5 в торец + уголок сверху)" if r["low"] else "сверху реек (2 уголка)"))
-    print("  Высоты: дно углубления %.0f; верх кронштейна %.0f; верх реек %.0f; верх поперечин %.0f; верх панелей %.0f "
+    print("  Поперечины: %s" % (("между нижними ярусами реек (болт M5 в торец + уголок %s)" % ("сбоку, в плане" if r.get("side_in") else "сверху"))
+                                if r["low"] else "сверху реек (2 уголка)"))
+    if r.get("side_in"):
+        print("  Рейки: сбоку к стенке кронштейна (кронштейн развёрнут на 180°, стенка к салону), ось рейки |Y| %.1f; верх кронштейна %.0f"
+              % (r["rack"][3] and (r["yr"]), r["z_mt"]))
+    print("  Высоты: дно углубления %.0f; низ реек %.0f; верх реек %.0f; верх поперечин %.0f; верх панелей %.0f "
           "(над крышей +%.0f мм)" % (zp, zm, zr, zc, zt, zt - (zp + ANCHORS["roof_pins"]["z_pocket"])))
     x0, x1, y0, y1 = r["rack"]
     print("  Багажник: X %.0f…%.0f (%.0f мм), ширина %.0f мм (Y ±%.0f); свес за штыри: сзади %.0f, спереди %.0f"
@@ -433,8 +469,8 @@ def report(S):
     import math
     for k_, v_ in r["roof_z"].items():
         if not math.isnan(v_) and v_ < zp:
-            print("  Крыша (скан) под %s концом реек: Z≈%.0f — под рейкой %.0f мм (дальше крыша уходит вниз к кабине)"
-                  % ({"зад": "задним", "перед": "передним"}[k_], v_, zm - v_))
+            print("  Крыша (скан, грубо) под %s концом реек: Z≈%.0f — под рейкой ~%.0f мм (там крыша уже скругляется %s)"
+                  % ({"зад": "задним", "перед": "передним"}[k_], v_, zm - v_, {"зад": "к задним дверям", "перед": "к кабине"}[k_]))
     print("  Ряды панелей (X начала): %s; колонки (Y начала): %s; поле %.0f × %.0f мм%s"
           % (", ".join("%.0f" % s for s in r["rows"]), ", ".join("%.0f" % c for c in r["cols"]),
              r["field"][1] - r["field"][0], r["field"][2],

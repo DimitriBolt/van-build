@@ -108,6 +108,10 @@ try:
     _shot(doc, "roof_mount_detail.png", lambda o: o.Name.startswith(("RoofPin", "RoofMount", "RoofRail", "RoofCross", "RoofTiePlate",
                                                                      "RoofSplice")),
           (-0.6, 1.0, -0.45), focus=((m.Center.x, m.Center.y, m.ZMax + 30.0), 420.0))
+    m3 = doc.getObject("RoofMount_nY_3").Shape.BoundBox
+    _shot(doc, "roof_mount_front_detail.png", lambda o: o.Name.startswith(("RoofPin", "RoofMount", "RoofRail", "RoofCross", "RoofTiePlate",
+                                                                           "RoofSplice")),
+          (-0.6, -1.0, -0.5), focus=((m3.Center.x, m3.Center.y, m3.ZMax), 380.0))
     s_ = doc.getObject("RoofSplice_nY_L1_o").Shape.BoundBox
     _shot(doc, "roof_splice_detail.png", lambda o: o.Name.startswith(("RoofRail", "RoofSplice", "RoofTiePlate", "RoofCross")),
           (-0.6, 1.0, -0.45), focus=((s_.Center.x, s_.Center.y, s_.Center.z + 10.0), 380.0))
