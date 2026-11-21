@@ -88,6 +88,8 @@ BUY_URLS = {
     r"RoofSplice_\w+": "https://www.amazon.com/dp/B0CFVB9266",                # BLCCLOY 2020 straight connector 100 мм, 10 шт.
     r"RoofCrossBracket_\w+": "https://www.amazon.com/s?k=2020+corner+bracket+20x28+M5+T+nut+screw+20+sets",
     r"RoofTiePlate_\w+": "https://www.amazon.com/s?k=2020+2+hole+straight+joining+plate+40x18",
+    r"RoofCrossBolt_\w+": "https://www.amazon.com/s?k=M5x35+button+head+ISO+7380+screw+zinc",
+    "RoofFlueBoard": "https://www.homedepot.com/s/3%2F4%20in.%20marine%20plywood",   # фанера 3/4″ marine / exterior
 }
 
 
@@ -204,6 +206,8 @@ EN_LABELS = [
     (r"RoofRail_(pY|nY)_L(\d)([ab]?)", "Roof rail {1} L{2}{3}"), (r"RoofSplice_(pY|nY)_L(\d)_([oi])", "Rail splice {1} L{2} {3}"),
     (r"RoofTiePlate_(pY|nY)_(\d+)", "Rail tie plate {1} #{2}"), (r"RoofCross_(\d)", "Roof crossbar #{1}"),
     (r"RoofCrossBracket_(\d)_(pY|nY)_([rf])", "Crossbar bracket #{1} {2} {3}"),
+    (r"RoofCrossBracket_(\d)_(pY|nY)", "Crossbar bracket #{1} {2}"), (r"RoofCrossBolt_(\d)_(pY|nY)", "Crossbar end bolt #{1} {2}"),
+    (r"RoofFlueBoard", "Flue board (plywood)"),
     (r"SolarPanel_R(\d)C(\d)", "Solar panel R{1}C{2}"), (r"SolarPanel_R(\d)C(\d)_Frame", "Solar panel R{1}C{2} frame"),
     (r"Opening_RearDoors", "Rear doors opening"), (r"RearDoorLeaf_Driver", "Rear door leaf (driver)"),
     (r"RearDoorLeaf_Passenger", "Rear door leaf (passenger)"),

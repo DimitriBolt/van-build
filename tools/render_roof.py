@@ -15,7 +15,7 @@ FC = os.environ.get("VAN_FCSTD") or os.path.join(REPO, "van_v1_rect_pan.FCStd")
 OUT = os.environ.get("RENDER_OUT") or os.path.join(REPO, "docs", "renders")
 W, H = int(os.environ.get("RENDER_W", 1800)), int(os.environ.get("RENDER_H", 1100))
 
-ROOF = ("RoofPin", "RoofMount", "RoofRail", "RoofSplice", "RoofTiePlate", "RoofCross", "SolarPanel")
+ROOF = ("RoofPin", "RoofMount", "RoofRail", "RoofSplice", "RoofTiePlate", "RoofCross", "RoofFlueBoard", "SolarPanel")
 FLUE = ("Shower_Flue", "Shower_FlueCap")
 
 
