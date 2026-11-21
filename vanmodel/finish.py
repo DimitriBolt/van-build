@@ -81,6 +81,13 @@ BUY_URLS = {
     r"BankRailBolt_\w+": "https://www.amazon.com/s?k=M8x60+hex+bolt+nut+washer+set+stainless",
     r"Drawer_Leg_\w+": "https://www.amazon.com/dp/B0F83QJV1M",      # SeekLiny 10Pcs V Slot 2020 Aluminum Extrusion 2440mm (ASIN B0F83QJV1M), $149.99
     "Shower_PanRect": "https://a.co/d/09SdfkLC",      # поддон RecPro RP-SP-3624 36×24×5″, Right Drain (Amazon B089DJX71P)
+    # ── багажник на крыше и панели (2026-11-20) ──
+    r"SolarPanel_R\dC\d(_Frame)?": "https://www.amazon.com/dp/B0FFGWN782",   # Rvpozwer 100W 18BB N-Type, 10 шт.
+    r"RoofMount(Rubber)?_\w+": "https://www.amazon.com/dp/B0D9VN67HN",        # BSWAN Van Roof Rack Mount Kit, 6 шт.
+    r"Roof(Rail|Cross)_\w+": "https://www.amazon.com/dp/B0F83QJV1M",          # SeekLiny V-Slot 2020, 2440 мм, 10 шт.
+    r"RoofSplice_\w+": "https://www.amazon.com/dp/B0CFVB9266",                # BLCCLOY 2020 straight connector 100 мм, 10 шт.
+    r"RoofCrossBracket_\w+": "https://www.amazon.com/s?k=2020+corner+bracket+20x28+M5+T+nut+screw+20+sets",
+    r"RoofTiePlate_\w+": "https://www.amazon.com/s?k=2020+2+hole+straight+joining+plate+40x18",
 }
 
 
@@ -192,6 +199,12 @@ EN_LABELS = [
     (r"CabPass_(\d)_Door", "Cabinet passenger {1} door"), (r"CabDrv_(\d)", "Cabinet driver {1}"),
     (r"CabDrv_(\d)_Door", "Cabinet driver {1} door"),
     (r"Openings", "Door openings"), (r"Opening_SlidingDoor", "Sliding door opening"),
+    (r"RoofRack", "Roof rack + solar"), (r"RoofPin_(pY|nY)_(\d)", "Roof pin {1} #{2}"),
+    (r"RoofMount_(pY|nY)_(\d)", "Roof mount BSWAN {1} #{2}"), (r"RoofMountRubber_(pY|nY)_(\d)", "Roof mount rubber {1} #{2}"),
+    (r"RoofRail_(pY|nY)_L(\d)([ab]?)", "Roof rail {1} L{2}{3}"), (r"RoofSplice_(pY|nY)_L(\d)_([oi])", "Rail splice {1} L{2} {3}"),
+    (r"RoofTiePlate_(pY|nY)_(\d+)", "Rail tie plate {1} #{2}"), (r"RoofCross_(\d)", "Roof crossbar #{1}"),
+    (r"RoofCrossBracket_(\d)_(pY|nY)_([rf])", "Crossbar bracket #{1} {2} {3}"),
+    (r"SolarPanel_R(\d)C(\d)", "Solar panel R{1}C{2}"), (r"SolarPanel_R(\d)C(\d)_Frame", "Solar panel R{1}C{2} frame"),
     (r"Opening_RearDoors", "Rear doors opening"), (r"RearDoorLeaf_Driver", "Rear door leaf (driver)"),
     (r"RearDoorLeaf_Passenger", "Rear door leaf (passenger)"),
 ]

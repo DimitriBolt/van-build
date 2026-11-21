@@ -33,7 +33,8 @@ import FreeCAD as App
 from .common import PROJECT_DIR, SAVE_PATH
 
 SHELL_GROUPS = ("Ribs", "Longitudinals", "Pillars")      # оболочка кузова: упёрлись в неё — «выходит за кузов»
-SKIP_GROUPS = ("Openings", "HoleMarkers", "FactoryThreadedMounts", "ExplodedAssembly")   # реф-объекты, не препятствия
+SKIP_GROUPS = ("Openings", "HoleMarkers", "FactoryThreadedMounts", "ExplodedAssembly",   # реф-объекты, не препятствия
+               "RoofRack")   # 2026-11-20: багажник и панели — снаружи, над крышей (саму крышу анимации тоже не считают препятствием)
 SKIP_SUFFIX = ("_Out", "_ref", "_Open", "_Folded")      # иллюстративные копии (выдвинуто/открыто/сложено) и реф-грани
 TOL_V = 200.0        # мм³ — пересечение меньше этого (сверх исходного) столкновением не считается
 NEAR = 150.0         # мм — «рядом в конце хода» (соседи, которые были так же близко и до хода, не в счёт)

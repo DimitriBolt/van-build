@@ -66,3 +66,18 @@ FREECADCMD="$HOME/Applications/FreeCAD.AppImage --console" FREECAD="$HOME/Applic
 
 `animation_report.md` (van_v0) и `animation_report_<модель>.md` (другие модели, например `van_v1_rect_pan`) — отчёт последней сборки: ходы деталей и порядок сборки из анимаций, проверенные на модели
 (пишет `vanmodel/motion.py` при каждой сборке; описание — `animation/README.md`).
+
+## Багажник на крыше и солнечные панели (`renders/roof_*.png`, 2026-11-20)
+
+Из `van_v1_rect_pan.FCStd`: `xvfb-run -a freecad tools/render_roof.py` (на M6800 — `~/Applications/FreeCAD.AppImage tools/render_roof.py`).
+
+| Файл | Вид |
+|---|---|
+| `roof_iso_with_skin.png`, `roof_iso_driver.png` | фургон (скан) + багажник и 9 панелей: с пассажирской и с водительской стороны |
+| `roof_top.png` | сверху: 3 × 3 панели, разрыв над дымоходом, рейки, кронштейны |
+| `roof_side.png` | с водительского борта: высота над крышей, свес над кабиной, дымоход |
+| `roof_iso.png`, `roof_frame_iso.png` | только багажник — с панелями и без |
+| `roof_mount_detail.png` | средний штырь: кронштейн BSWAN, 2 яруса рейки, пластины, уголки поперечины |
+| `roof_splice_detail.png` | стык нижнего яруса рейки: соединитель в пазу + пластины |
+| `roof_flue_detail.png` | колпак дымохода в разрыве между рядами панелей |
+
